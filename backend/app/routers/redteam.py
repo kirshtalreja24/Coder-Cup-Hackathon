@@ -6,6 +6,7 @@ same `Sandbox` (client, tokens, synthetic people) and appends rows to a `Scoreca
 import base64
 import json
 import random
+import threading
 import time
 from dataclasses import dataclass, field
 
@@ -16,13 +17,16 @@ from sqlalchemy.orm import Session
 
 from .. import audit, rules, scam, seed, vision
 from ..config import get_settings
-from ..db import get_db
+from ..db import SessionLocal, get_db
 from ..identity import name_key
 from ..models import ApiKey, HelperLink, IdempotencyRecord, MockNadraRecord, Payment, Tenant, User
 from ..security import hash_key, hash_password, require_roles
 
 router = APIRouter(tags=["ops"])
 _last: dict = {}
+_state: dict = {"status": "idle"}   # live progress of the background run
+_run_lock = threading.Lock()
+DEFAULT_EXPECTED = 58
 PASSWORD = "RedTeam#9981"
 ALL_CONSENT = {"identity": True, "payment": True, "documents": True, "case_history": True}
 ROLE_NAMES = ("admin", "officer", "auditor", "citizen", "helper", "citizen2", "citizen3")
@@ -331,18 +335,23 @@ def _audit(box: Sandbox, sc: Scorecard) -> None:
 
 
 # ------------------------------------------------------------------------------------------------ orchestration
-def run_redteam(db: Session) -> dict:
+def run_redteam(db: Session, state: dict | None = None) -> dict:
+    """Run every attack. If `state` is given, rows and the current phase are published into it as they happen (live progress)."""
     t0 = time.time()
+    phase = lambda name: state is not None and state.update(phase=name)
+    phase("building the sandbox department")
     box = _build_sandbox(db)
     sc = Scorecard()
-    paid = _security(box, sc, db)
-    _consent(box, sc, db)
-    _ai_and_data(box, sc, db)
-    _hardening(box, sc, paid)
-    _receipts(box, sc, paid)
-    _rules(box, sc, db, paid)
-    _helper(box, sc, db)
-    _audit(box, sc)
+    if state is not None:
+        state["rows"] = sc.rows  # the same list object: the progress endpoint sees each row the moment it is added
+    phase("security"); paid = _security(box, sc, db)
+    phase("consent and take-back"); _consent(box, sc, db)
+    phase("AI safety, bad data, scams"); _ai_and_data(box, sc, db)
+    phase("integrity hardening"); _hardening(box, sc, paid)
+    phase("receipts and notifications"); _receipts(box, sc, paid)
+    phase("rules, Digital Twin, safety gate"); _rules(box, sc, db, paid)
+    phase("Helper Mode"); _helper(box, sc, db)
+    phase("audit chain"); _audit(box, sc)
 
     passed = sum(r["passed"] for r in sc.rows)
     by_cat: dict[str, list[int]] = {}
@@ -363,7 +372,40 @@ def run_redteam(db: Session) -> dict:
     return out
 
 
-@router.post("/redteam/run", summary="RED TEAM: attack this live system and print a pass/fail scorecard")
+def _worker() -> None:
+    with SessionLocal() as db:
+        try:
+            _state.update(status="done", result=run_redteam(db, _state))
+        except Exception as e:  # noqa: BLE001 - report, never crash the server thread
+            _state.update(status="error", error=f"{type(e).__name__}: {str(e)[:200]}")
+
+
+@router.post("/redteam/start", summary="Start the Red-Team in the background (returns at once; poll /redteam/progress)")
+def redteam_start(user: User = Depends(require_roles("admin", "auditor"))):
+    with _run_lock:
+        if _state.get("status") == "running":
+            return {"status": "running", "message": "A run is already in progress."}
+        expected = (_last or {}).get("total", DEFAULT_EXPECTED)
+        _state.clear()
+        _state.update(status="running", started=time.time(), phase="starting", rows=[], expected=expected)
+        threading.Thread(target=_worker, daemon=True, name="redteam").start()
+    return {"status": "running"}
+
+
+@router.get("/redteam/progress", summary="Live scorecard of the current / last background run")
+def redteam_progress(user: User = Depends(require_roles("admin", "auditor"))):
+    rows = list(_state.get("rows", []))
+    out = {"status": _state.get("status", "idle"), "phase": _state.get("phase"), "expected": _state.get("expected", DEFAULT_EXPECTED),
+           "done": len(rows), "passed": sum(r["passed"] for r in rows), "results": rows,
+           "elapsed_s": round(time.time() - _state["started"], 1) if "started" in _state else None}
+    if _state.get("status") == "done":
+        out["result"] = _state["result"]
+    if _state.get("status") == "error":
+        out["error"] = _state.get("error")
+    return out
+
+
+@router.post("/redteam/run", summary="RED TEAM (blocking): run everything and return the scorecard. Prefer /redteam/start on slow links.")
 def redteam_run(user: User = Depends(require_roles("admin", "auditor")), db: Session = Depends(get_db)):
     return run_redteam(db)
 

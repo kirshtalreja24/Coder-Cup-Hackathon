@@ -108,3 +108,20 @@ def test_admin_endpoints_smoke(client, tok):
         assert client.get(path, headers=a).status_code == 200, path
         assert client.get(path, headers=tok("officer1@relief.demo")).status_code == 403, path
     assert all(u["phone"] is None or u["phone"].startswith("*") for u in client.get("/admin/users", headers=a).json())
+
+
+def test_redteam_runs_in_background_with_live_progress(client, tok):
+    import time
+    a = tok("admin@relief.demo")
+    assert client.post("/redteam/start", headers=tok("officer1@relief.demo")).status_code == 403
+    assert client.post("/redteam/start", headers=a).json()["status"] == "running"
+    seen_partial = False
+    for _ in range(180):
+        p = client.get("/redteam/progress", headers=a).json()
+        seen_partial = seen_partial or (p["status"] == "running" and p["done"] > 0)
+        if p["status"] != "running":
+            break
+        time.sleep(1)
+    assert p["status"] == "done", p.get("error")
+    assert not [r["id"] for r in p["results"] if not r["passed"]]
+    assert p["result"]["total"] == len(p["results"]) >= 50
