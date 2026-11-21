@@ -25,7 +25,7 @@ Most AI services try to look smart. Bharosa tries to be *accountable*:
 | **04 Rules that change** | Versioned JSON rules edited in the admin UI. Publish = effective on the next decision, no redeploy. Every decision pins its rule version. |
 | **05 Explain & audit** | Citizen gets a simple reason (Urdu/Roman/English, spoken). Auditor gets the full trace: input, rule version, model version, confidence, expected costs, identity evidence. |
 | **06 Consent & take-back** | One server-side consent gate for all personal data. Withdraw → next request is blocked, and the audit chain shows it. "Who looked at my data" log. Panic button. |
-| **07 Works for everyone** | Voice-first Urdu (Uplift AI speech-to-text and text-to-speech via our own server, pre-rendered clips cached for offline, browser voice as last fallback), icon-only flow, 84 KB gzip app, PWA, saved progress at every step, offline outbox with idempotent sync, photos shrunk for 2G. |
+| **07 Works for everyone** | Voice-first Urdu (Uplift AI speech-to-text and text-to-speech via our own server, pre-rendered clips cached for offline, browser voice as last fallback), icon-only flow, about 166 KB gzip app (JS + CSS), PWA, saved progress at every step, offline outbox with idempotent sync, photos shrunk for 2G. |
 | **08 Scams & fake documents** | Hybrid scam classifier (rules + char-n-gram ML) with an honest confusion matrix and false-alarm rate; document forensics (blur, QR signature, QR-vs-form cross-check, OCR when available). |
 
 ### What makes Bharosa different
@@ -33,7 +33,7 @@ Most entries will be an assistant that fills in forms. Bharosa is a system that 
 
 | | Feature | Why it matters |
 |---|---|---|
-| 1 | **Red-Team page**: the running system attacks itself (50+ attacks) and prints a pass/fail scorecard | "Behaviour over claims": judges press one button and read what actually happened |
+| 1 | **Red-Team page**: the running system attacks itself (61 attacks, run in the background with live progress) and prints a pass/fail scorecard | "Behaviour over claims": judges press one button and read what actually happened |
 | 2 | **Cost-of-wrong engine + Risk Dial**: expected-cost minimisation, thresholds derived from admin-set costs | Auto-approve needs about 99.5% confidence; the numbers are on screen |
 | 3 | **Digital Twin + safety gate**: every rule change is replayed on past cases; a change that raises fraud or lifts automatic payouts by more than 15% is **blocked** unless the admin writes a reason that goes into the audit log | An admin cannot silently make the system less safe |
 | 4 | **"What would change this decision?"**: a computed counterfactual shown to the citizen ("with a clear photo this could be approved automatically, confidence 100%") | Real recourse, produced by re-running the actual engine, in Urdu / Roman Urdu / English |
@@ -43,12 +43,18 @@ Most entries will be an assistant that fills in forms. Bharosa is a system that 
 | 8 | **Offline-first + Urdu voice** (Uplift AI speech-to-text and text-to-speech, cached prompts) | A person who cannot read, on a weak connection, can finish the task |
 
 ### More signature features
-* **🛡️ Red-Team page** — the system attacks *itself* live (50+ attacks: forged JWTs, wrong roles, tenant isolation, consent withdrawal, helper self-consent, forged ID, prompt injection, garbage input, rule changes, SSRF, receipt tampering, audit tampering…) and prints a pass/fail scorecard.
+* **🛡️ Red-Team page** — the system attacks *itself* live (61 attacks: forged JWTs, wrong roles, tenant isolation, consent withdrawal, helper self-consent, forged ID, prompt injection, garbage input, rule changes, SSRF, receipt tampering, audit tampering…) and prints a pass/fail scorecard.
 * **🧪 Digital Twin** — test a rule or cost change on 320 past cases (known ground truth) *before* publishing: who flips, fraud leakage, genuine people affected, spend.
 * **🔗 Hash-chained audit log** — tamper-evident; auditor can verify the chain and *prove* detection by simulating tampering.
 * **👨‍👩‍👧 Helper Mode** — one shared phone, 40 families: per-family OTP consent (mock), 60-second auto-lock, every switch audited.
 * **📴 Offline-first** — claims saved locally, synced later with idempotency keys: no loss, no duplicates.
 * **🗺️ Scam Map** — live view of scam types × areas × time from classified messages, incl. "rising areas".
+
+### The interface
+A calm **Deep Forest × Champagne** design system (forest green, champagne gold, ivory paper) with Urdu / Roman Urdu / English switching on every screen, large tap targets and a prototype banner on every route.
+* **Citizen:** a 7-step claim wizard (one question per screen, voice and icon input, auto-save), a 7-stage case tracker with a distinct screen for *approved*, *under human review*, *needs proof* and *not approved (with appeal)*, a decision receipt, and a "who accessed my data?" page.
+* **Offline and voice:** an offline banner for staff, an **Offline Sync Center** (every claim waiting on the device, for citizens and helpers) and a voice assistant for hands-free help.
+* **Staff:** review queue, case view with handoff brief, Rules editor with Digital Twin and safety gate, Risk dial, Scam Map, Audit, Analytics, Admin and Red-Team pages.
 
 ## Rubric map (where to look)
 | Rubric item | Where |
@@ -57,7 +63,7 @@ Most entries will be an assistant that fills in forms. Bharosa is a system that 
 | Core SaaS | JWT + RBAC (5 roles) · dashboards · cases (create/assign/escalate/close) · public REST API + API keys + Swagger · audit log · consent mgmt · mock identity/payment/data APIs |
 | "Pick 3" (we built 10) | Multi-tenant (2 departments) · rule editor + Digital Twin · notifications (in-app inbox is real; SMS / WhatsApp / email are simulated and labelled) · webhooks (HMAC-signed, SSRF-guarded) · analytics per tenant · review queue (priority + confidence sort) · subscription plans & quotas · background jobs · rate limiting · offline mode |
 | Bonus | Digital Twin · Helper Mode · Offline-first sync · Scam Map (all four) |
-| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 35+ automated tests (`backend/tests`, including the full Red-Team scorecard) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
+| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 36 automated tests (`backend/tests`, including the full Red-Team scorecard) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
 
 ## Real vs simulated
 See [`docs/REAL_VS_SIMULATED.md`](docs/REAL_VS_SIMULATED.md) (also shown in the app under *About*).
@@ -78,7 +84,7 @@ cd frontend && npm install && npm run dev            # http://localhost:5173
 ```
 Copy `.env.example` → `.env` and set `DATABASE_URL` (Supabase Postgres) for the deployed setup. Migrations run automatically on start for Postgres (`alembic upgrade head`).
 
-Tests: `cd backend && python -m pytest tests -q` (35+ tests, includes the full Red-Team scorecard).
+Tests: `cd backend && python -m pytest tests -q` (36 tests, includes the full Red-Team scorecard).
 
 ### Optional services (everything works without them, with fallbacks)
 | Service | `.env` keys | Without it |
@@ -104,7 +110,7 @@ The app seeds synthetic data only when the database is empty. To start from a cl
 | Auditor | `auditor@relief.demo` |
 | Second department (tenant isolation) | `officer@flood.demo`, `admin@flood.demo` |
 
-In the claim flow, tap **🎬 demo** to load a ready scenario (clean widow, blurry photo, forged ID, name variants, claims-widow-but-married, over income, garbage input). Scenario list: `GET /demo/scenarios`.
+In the claim flow, tap **Demo** (top right of the form) and pick a scenario to load a ready scenario (clean widow, blurry photo, forged ID, name variants, claims-widow-but-married, over income, garbage input). Scenario list: `GET /demo/scenarios`.
 
 ## Test the server-side security with curl
 ```bash
