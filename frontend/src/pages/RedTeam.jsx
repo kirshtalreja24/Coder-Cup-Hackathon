@@ -19,7 +19,7 @@ export default function RedTeam() {
 
   const start = async () => {
     setErr(null); clearTimeout(timer.current)
-    try { await apiPost('/redteam/start'); setProg({ status: 'running', results: [], done: 0, passed: 0, expected: prog?.expected || 58, phase: 'starting' }); poll() } catch (e) { setErr(e) }
+    try { await apiPost('/redteam/start'); setProg({ status: 'running', results: [], done: 0, passed: 0, expected: prog?.expected || 61, phase: 'starting' }); poll() } catch (e) { setErr(e) }
   }
 
   const running = prog?.status === 'running'
@@ -33,7 +33,7 @@ export default function RedTeam() {
       <div className="banner info">Behaviour over claims. This button fires {prog?.expected || '50+'} attacks (forged tokens, wrong roles, tenant isolation, consent withdrawal, helper self-consent, forged IDs, prompt injection, garbage input, rule changes and the safety gate, SSRF, receipt tampering, audit tampering…) at the <b>running</b> system inside a throw-away department, and prints what actually happened. Failures are shown, not hidden.</div>
       <div className="row"><button onClick={start} disabled={running} style={{ fontSize: '1.15rem', padding: '14px 26px' }}>{running ? '⏳ attacking…' : '🚀 Run the attacks'}</button>
         {running && <span className="muted">phase: <b>{prog.phase}</b> · {prog.elapsed_s ?? 0}s</span>}</div>
-      {running && <div><Bar value={Math.min(0.98, (prog.done || 0) / (prog.expected || 58))} /><div className="hint">{prog.done} of about {prog.expected} attacks done · {prog.passed} passed so far</div></div>}
+      {running && <div><Bar value={Math.min(0.98, (prog.done || 0) / (prog.expected || 61))} /><div className="hint">{prog.done} of about {prog.expected} attacks done · {prog.passed} passed so far</div></div>}
       <ErrorBox e={err} />
       {prog?.status === 'error' && <div className="banner bad">The run stopped: {prog.error}</div>}
       {rows.length > 0 && <>

@@ -26,7 +26,7 @@ router = APIRouter(tags=["ops"])
 _last: dict = {}
 _state: dict = {"status": "idle"}   # live progress of the background run
 _run_lock = threading.Lock()
-DEFAULT_EXPECTED = 58
+DEFAULT_EXPECTED = 61
 PASSWORD = "RedTeam#9981"
 ALL_CONSENT = {"identity": True, "payment": True, "documents": True, "case_history": True}
 ROLE_NAMES = ("admin", "officer", "auditor", "citizen", "helper", "citizen2", "citizen3")
