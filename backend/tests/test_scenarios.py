@@ -65,3 +65,17 @@ def test_no_consent_means_nothing_is_read(client, tok):
     cid = client.post("/cases", json={"data": s["form"]}, headers=h).json()["id"]
     r = client.post(f"/cases/{cid}/submit", json={"consent": {}}, headers=h).json()
     assert r["route"] == "NEEDS_CONSENT"
+
+
+def test_ocr_misread_does_not_override_a_valid_signed_qr(monkeypatch):
+    """Regression: Tesseract on the live server read 345 as 848 and wrongly held a genuine widow. QR + form agreement must win."""
+    from app import vision
+    s = demo.SCENARIOS["widow_clean"]
+    img = demo.make_card("widow_clean")
+    monkeypatch.setattr(vision, "_ocr_cnic", lambda _img: {"available": True, "candidates": ["4210112848672"], "cnic": "4210112848672"})
+    out = vision.analyze_document(img, claimed=s["form"])
+    assert out["flag"] is None and out["authenticity"] >= 0.95, out
+    assert any("OCR read error" in f for f in out["flags"])
+    # ...but OCR still raises the alarm when NO valid QR backs the typed number
+    forged = vision.analyze_document(demo.make_card("forged_card"), claimed=s["form"])
+    assert forged["flag"] in ("forged", "mismatch")

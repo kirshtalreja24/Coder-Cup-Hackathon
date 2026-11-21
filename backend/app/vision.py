@@ -92,13 +92,24 @@ def ocr_available() -> bool:
 
 
 def _ocr_cnic(img_bgr: np.ndarray) -> dict:
+    """Best-effort OCR of the printed 13-digit number. OCR is error-prone (it once read 345 as 848), so it is a WEAK signal:
+    several preprocessing variants are tried and every 13-digit candidate is returned."""
     if not ocr_available():
         return {"available": False, "note": "OCR engine not installed on this server; relying on QR + form cross-check."}
     try:
         import pytesseract, re
-        txt = pytesseract.image_to_string(Image.fromarray(cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)))
-        m = re.search(r"(\d{5})\D?(\d{7})\D?(\d)", txt)
-        return {"available": True, "cnic": "".join(m.groups()) if m else None, "text_sample": txt[:200]}
+        gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+        big = cv2.resize(gray, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+        _, otsu = cv2.threshold(big, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        cands: list[str] = []
+        for variant in (otsu, big):
+            for cfg in ("--psm 6 -c tessedit_char_whitelist=0123456789-", "--psm 11 -c tessedit_char_whitelist=0123456789-"):
+                txt = pytesseract.image_to_string(Image.fromarray(variant), config=cfg)
+                for m in re.finditer(r"(\d{5})\D?(\d{7})\D?(\d)", txt):
+                    c = "".join(m.groups())
+                    if c not in cands:
+                        cands.append(c)
+        return {"available": True, "candidates": cands, "cnic": cands[0] if cands else None}
     except Exception as e:  # noqa
         return {"available": False, "note": f"OCR failed: {type(e).__name__}"}
 
@@ -167,12 +178,23 @@ def analyze_document(data: bytes, claimed: dict | None = None) -> dict:
     ela["suspicious"] = False  # informational only: ELA is unreliable on flat graphics, so it never blocks anyone on its own
     ela["note"] = "Error-level analysis shown for the reviewer; not used to block (too many false alarms on clean cards)."
 
-    # OCR cross-check (when engine installed)
-    if ocr.get("available") and ocr.get("cnic") and claimed.get("cnic"):
-        if ocr["cnic"] != clean_cnic(claimed["cnic"]):
-            flags.append("Printed CNIC (OCR) differs from the CNIC typed in the form.")
-            score -= 0.4
-            flag = flag or "mismatch"
+    # OCR cross-check (when engine installed). A weak signal: it can only RAISE a mismatch when the signed QR does not already
+    # vouch for the number typed in the form. Otherwise a disagreement is treated as an OCR read error and noted for the reviewer.
+    typed = clean_cnic(claimed.get("cnic"))
+    qr_vouches = bool(qr.get("signature_valid")) and typed and (qr.get("payload") or {}).get("cnic") == typed
+    if ocr.get("available") and typed and ocr.get("candidates") is not None:
+        cands = ocr.get("candidates") or []
+        if typed in cands:
+            ocr["confirms_form"] = True
+        elif cands:
+            ocr["confirms_form"] = False
+            if qr_vouches:
+                flags.append(f"OCR read the printed number as {cands[0]}, which differs from the form, but the signed QR matches the form, so this is treated as an OCR read error.")
+                score -= 0.02
+            else:
+                flags.append("Printed CNIC (OCR) differs from the CNIC typed in the form, and no valid QR backs the form.")
+                score -= 0.4
+                flag = flag or "mismatch"
     v = validate_cnic(claimed.get("cnic"), claimed.get("gender"))
     if not v["valid"]:
         flags.append("CNIC number is structurally invalid: " + "; ".join(v["issues"]))

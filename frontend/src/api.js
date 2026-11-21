@@ -1,5 +1,11 @@
 // API client: token handling, timeouts, offline detection, tiny responses.
-export const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '')
+// Safety net: a VITE_API_URL saved without "https://" (or with spaces / a trailing slash) must not break the whole app.
+function normalizeBase(u) {
+  u = (u || 'http://localhost:8000').trim().replace(/\/+$/, '')
+  if (!/^https?:\/\//i.test(u)) u = (/^(localhost|127\.|192\.168\.)/.test(u) ? 'http://' : 'https://') + u
+  return u
+}
+export const BASE = normalizeBase(import.meta.env.VITE_API_URL)
 
 export const getToken = () => localStorage.getItem('bh_token')
 export const setSession = (token, user) => { localStorage.setItem('bh_token', token); localStorage.setItem('bh_user', JSON.stringify(user)) }
