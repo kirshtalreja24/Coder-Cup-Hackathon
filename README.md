@@ -3,6 +3,13 @@
 > **PROTOTYPE ONLY. Not an official service.** Every identity, payment, SMS and data service here is a **mock**; every person is **synthetic**. No real personal data is used anywhere.
 > Built for Coder's Cup '26 · AI Hackathon · *The Last Mile: AI on Public Rails*.
 
+| | |
+|---|---|
+| **Live app** | _add the deployed frontend URL here_ |
+| **Live API / Swagger** | _add the deployed API URL here_ (`/docs`) |
+| **Demo video** | _add the public Google Drive link here_ |
+| **Repository** | https://github.com/kirshtalreja24/Coder-Cup-Hackathon |
+
 **We help widows and low-literacy households (and the helpers who serve them) claim a relief payment, even though they cannot read the forms, have a weak signal, and are flooded with fake "relief" SMS.**
 
 One task, end to end: **relief claim** → identity check → document check → eligibility → decision → (mock) payment → receipt, wrapped in a scam shield, a consent broker and a tamper-evident audit trail.
@@ -18,7 +25,7 @@ Most AI services try to look smart. Bharosa tries to be *accountable*:
 | **04 Rules that change** | Versioned JSON rules edited in the admin UI. Publish = effective on the next decision, no redeploy. Every decision pins its rule version. |
 | **05 Explain & audit** | Citizen gets a simple reason (Urdu/Roman/English, spoken). Auditor gets the full trace: input, rule version, model version, confidence, expected costs, identity evidence. |
 | **06 Consent & take-back** | One server-side consent gate for all personal data. Withdraw → next request is blocked, and the audit chain shows it. "Who looked at my data" log. Panic button. |
-| **07 Works for everyone** | Voice-first (Urdu), icon-only flow, 84 KB gzip app, PWA, saved progress at every step, offline outbox with idempotent sync, photos shrunk for 2G. |
+| **07 Works for everyone** | Voice-first Urdu (Uplift AI speech-to-text and text-to-speech via our own server, pre-rendered clips cached for offline, browser voice as last fallback), icon-only flow, 84 KB gzip app, PWA, saved progress at every step, offline outbox with idempotent sync, photos shrunk for 2G. |
 | **08 Scams & fake documents** | Hybrid scam classifier (rules + char-n-gram ML) with an honest confusion matrix and false-alarm rate; document forensics (blur, QR signature, QR-vs-form cross-check, OCR when available). |
 
 ### Signature features (beyond a typical AI SaaS)
@@ -32,11 +39,11 @@ Most AI services try to look smart. Bharosa tries to be *accountable*:
 ## Rubric map (where to look)
 | Rubric item | Where |
 |---|---|
-| ≥3 AI features | RAG (`/ask`) · agent with tool calls (`app/agent.py`) · classification & routing (`/scam/check`, decision engine) · computer vision (`app/vision.py`) · voice (browser STT/TTS + pre-rendered Urdu clips) · structured outputs (Pydantic `ClaimForm`) · guardrails + human approval · explainability · anomaly detection (IsolationForest + rules) · memory (saved progress/consent) · evaluation dashboard (`/s/analytics`) |
+| ≥3 AI features | RAG (`/ask`) · agent with tool calls (`app/agent.py`) · classification & routing (`/scam/check`, decision engine) · computer vision (`app/vision.py`) · voice (Uplift AI Urdu speech-to-text and text-to-speech through our server, 21 pre-rendered Urdu clips for offline, browser speech as fallback) · structured outputs (Pydantic `ClaimForm`) · guardrails + human approval · explainability · anomaly detection (IsolationForest + rules) · memory (saved progress/consent) · evaluation dashboard (`/s/analytics`) |
 | Core SaaS | JWT + RBAC (5 roles) · dashboards · cases (create/assign/escalate/close) · public REST API + API keys + Swagger · audit log · consent mgmt · mock identity/payment/data APIs |
 | "Pick 3" | Multi-tenant (2 departments) · rule editor · notifications (in-app + mock SMS) · webhooks · analytics per tenant · review queue (priority + confidence sort) · subscription plans & quotas · background jobs · rate limiting · offline mode |
 | Bonus | Digital Twin · Helper Mode · Offline-first sync · Scam Map (all four) |
-| Engineering | Postgres + Alembic migrations · Docker · tests (`backend/tests`, 20) · `/health` `/metrics` · structured error handling |
+| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 24 automated tests (`backend/tests`) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
 
 ## Real vs simulated
 See [`docs/REAL_VS_SIMULATED.md`](docs/REAL_VS_SIMULATED.md) (also shown in the app under *About*).
@@ -55,7 +62,20 @@ cd frontend && npm install && npm run dev            # http://localhost:5173
 ```
 Copy `.env.example` → `.env` and set `DATABASE_URL` (Supabase Postgres) for the deployed setup. Migrations run automatically on start for Postgres (`alembic upgrade head`).
 
-Tests: `cd backend && python -m pytest tests -q` (20 tests, includes the full 40-attack scorecard).
+Tests: `cd backend && python -m pytest tests -q` (24 tests, includes the full 40-attack scorecard).
+
+### Optional services (everything works without them, with fallbacks)
+| Service | `.env` keys | Without it |
+|---|---|---|
+| **Uplift AI** Urdu voice (speech-to-text + text-to-speech) | `UPLIFT_API_KEY`, `UPLIFT_VOICE_ID` | pre-rendered clips + browser speech |
+| **LLM** (any OpenAI-compatible endpoint, e.g. Groq) | `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` (or `GROQ_API`, `GROQ_BASE_URL`) | deterministic extractive answers and templated explanations |
+| **Tesseract OCR** | installed by the `Dockerfile` | QR signature + form cross-check only (reported honestly) |
+
+Re-generate the 21 spoken Urdu prompts (after editing `PROMPTS` in `backend/app/routers/ai.py`):
+`cd backend && .venv\Scripts\python scripts/generate_voice_prompts.py --force`
+
+### Reset the demo database
+The app seeds synthetic data only when the database is empty. To start from a clean slate (fresh audit chain, no live cases), drop the app tables in Supabase (or delete `backend/bharosa.db` for local SQLite) and start the API again. Seeding over a far-away Postgres can take a few minutes; it is quick when the API runs near the database.
 
 ## Demo accounts (password for all: `Demo#12345`)
 | Role | Email |

@@ -1,5 +1,5 @@
 from collections import Counter, defaultdict
-from datetime import timedelta
+from datetime import timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
@@ -56,8 +56,9 @@ def scam_map(days: int = 30, user: User = Depends(require_roles("officer", "admi
     for r in flagged:
         cell[r.area or "Unknown"][r.scam_type or "other"] += 1
     half = now() - timedelta(days=days / 2)
-    recent = Counter(r.area or "Unknown" for r in flagged if r.created_at >= half)
-    older = Counter(r.area or "Unknown" for r in flagged if r.created_at < half)
+    aw = lambda d: d if d.tzinfo else d.replace(tzinfo=timezone.utc)  # SQLite returns naive datetimes
+    recent = Counter(r.area or "Unknown" for r in flagged if aw(r.created_at) >= half)
+    older = Counter(r.area or "Unknown" for r in flagged if aw(r.created_at) < half)
     rising = [{"area": a, "recent": recent[a], "earlier": older.get(a, 0)} for a in recent if recent[a] > older.get(a, 0) * 1.5 and recent[a] >= 3]
     return {"window_days": days, "total_reports": len(rows), "flagged": len(flagged), "by_area": by_area.most_common(), "by_type": by_type.most_common(),
             "by_day": sorted(by_day.items()), "area_x_type": {a: dict(c) for a, c in cell.items()}, "rising_areas": sorted(rising, key=lambda x: -x["recent"]),
@@ -210,7 +211,7 @@ def evaluation(user: User = Depends(require_roles("admin", "officer", "auditor")
     m = METRICS.snapshot()
     return {
         "decisions_on_synthetic_history": base["before"],
-        "headline": {"wrong_approvals": base["before"]["wrong_approvals"], "genuine_declined": base["before"]["wrongful_declines"],
+        "headline": {"wrong_approvals": base["before"]["wrong_approvals"], "genuine_declined": base["before"]["genuine_declined_by_rule"],
                      "auto_rate": base["before"]["auto_rate"], "human_rate": base["before"]["human_rate"], "avg_cost_per_case_pkr": base["before"]["avg_cost_per_case_pkr"]},
         "calibration": {"brier_score": brier, "reliability_bins": bins, "note": "predicted P(genuine) vs actual share genuine, per bin"},
         "scam": scam.evaluate(),

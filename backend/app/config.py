@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = ""
     llm_timeout_s: float = 12.0
+    # Uplift AI (Pakistani Urdu TTS + STT). Key stays on the server; the browser only talks to our /voice/* endpoints.
+    uplift_api_key: str = ""
+    uplift_base_url: str = "https://api.upliftai.org/v1"
+    uplift_voice_id: str = "v_8eelc901"
     groq_api: str = ""
     groq_base_url: str = ""
     rate_limit_per_min: int = 120

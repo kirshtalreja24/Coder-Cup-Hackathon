@@ -150,6 +150,14 @@ def _seed_scam_messages(db: Session, r: random.Random, tid: str):
     }
     weights = {"Karachi East": 6, "Karachi West": 8, "Korangi": 7, "Malir": 5, "Hyderabad": 4, "Lahore": 3, "Sukkur": 3,
                "Larkana": 3, "Peshawar": 2, "Quetta": 2, "Multan": 2, "Karachi Central": 4}
+    real_samples = [("8171", "Your relief payment of Rs 25000 is ready at your nearest retailer. Take your original ID. No charges apply."),
+                    ("K-Electric", "Your bill of Rs 4,210 is due 28 Nov. Pay via the K-Electric app. Ignore if paid."),
+                    ("HBL", "Rs 3,000 debited from your account at an ATM. If this was not you call 111-111-425."),
+                    ("Mother", "Beta aaj raat khana ghar par khana, bhai aa raha hai"), ("School", "Parent-teacher meeting on Saturday 10am. Please attend.")]
+    for _ in range(40):
+        area = r.choice(list(weights)); sender, text = r.choice(real_samples); res = scam.classify(text, sender)
+        db.add(ScamMessage(tenant_id=tid, sender=sender, text=text, area=area, verdict=res["verdict"], score=res["score"], scam_type=None,
+                           reasons=[x["code"] for x in res["reasons"]], created_at=datetime.now(timezone.utc) - timedelta(days=r.randint(0, 29), hours=r.randint(0, 23))))
     for _ in range(90):
         area = r.choices(list(weights), weights=list(weights.values()))[0]
         stype = r.choices(list(samples), weights=[30, 18, 20, 12, 8, 6])[0]
@@ -172,8 +180,11 @@ def _seed_history(db: Session, r: random.Random, tenant: Tenant, admin: User, n:
         income = int(r.choices([r.randint(4000, 28000), r.randint(30001, 60000)], weights=[85, 15])[0])
         widowed = r.random() < 0.4
         hh = r.randint(1, 9)
-        p_weight = r.gauss(28, 4)
-        flag, auth, risk, conflicts, days_since = None, r.gauss(0.93, 0.04), r.random() * 0.08, [], 9999
+        p_weight = r.gauss(36, 3)  # clean exact-ID matches score ~38 in the live pipeline
+        # clean documents score 1.0 in the live checker; anomaly risk is zero for most clean claims
+        auth = 1.0 if r.random() < 0.85 else r.uniform(0.9, 1.0)
+        risk = 0.0 if r.random() < 0.92 else r.uniform(0.0, 0.08)
+        flag, conflicts, days_since = None, [], 9999
         ident = "MATCH"
         has_doc = r.random() > 0.05
         if not fraud:

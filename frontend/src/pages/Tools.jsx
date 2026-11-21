@@ -10,8 +10,9 @@ const COLORS = { SCAM: ['stop', '🚫'], SUSPICIOUS: ['wait', '⚠️'], LIKELY_
 
 function Mic({ onText, lang = 'ur-PK' }) {
   const [rec, setRec] = useState(false)
+  const stopRef = useRef(null)
   if (!canListen()) return null
-  return <button type="button" className={'small ' + (rec ? 'danger' : 'ghost')} onClick={() => { setRec(true); listen({ lang, onResult: onText, onEnd: () => setRec(false), onError: () => setRec(false) }) }}>{rec ? '● …' : '🎤'}</button>
+  return <button type="button" className={'small ' + (rec ? 'danger' : 'ghost')} onClick={() => { if (rec) { stopRef.current?.(); return } setRec(true); stopRef.current = listen({ lang, onResult: onText, onEnd: () => setRec(false), onError: () => setRec(false) }) }}>{rec ? '⏹ …' : '🎤'}</button>
 }
 
 export function ScamPage({ pub }) {

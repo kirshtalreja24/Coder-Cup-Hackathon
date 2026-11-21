@@ -14,7 +14,7 @@ from . import jobs, seed
 from .config import BACKEND, get_settings
 from .db import Base, SessionLocal, engine
 from .metrics import METRICS
-from .routers import ai, auth, cases, consents, public, staff
+from .routers import ai, auth, cases, consents, public, staff, voice
 from .security import client_ip, rate_limited
 
 settings = get_settings()
@@ -52,12 +52,6 @@ app = FastAPI(title="Bharosa API (PROTOTYPE)", version="1.0.0", description=DESC
                   {"name": "auth"}, {"name": "cases"}, {"name": "consent"}, {"name": "helper-mode"}, {"name": "staff"}, {"name": "ai"},
                   {"name": "public-api"}, {"name": "mock-services"}, {"name": "ops"}])
 
-origins = [o.strip() for o in settings.cors_origins.split(",")] if settings.cors_origins else ["*"]
-app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False, allow_methods=["*"], allow_headers=["*"],
-                   expose_headers=["X-Request-ID", "Retry-After"])
-app.add_middleware(GZipMiddleware, minimum_size=500)  # low-bandwidth: compress responses
-
-
 @app.middleware("http")
 async def guard(request: Request, call_next):
     rid = request.headers.get("x-request-id") or uuid.uuid4().hex[:12]
@@ -80,12 +74,19 @@ async def guard(request: Request, call_next):
     return resp
 
 
+origins = [o.strip() for o in settings.cors_origins.split(",")] if settings.cors_origins else ["*"]
+app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False, allow_methods=["*"], allow_headers=["*"],
+                   expose_headers=["X-Request-ID", "Retry-After"])
+app.add_middleware(GZipMiddleware, minimum_size=500)  # low-bandwidth: compress responses
+
+
 app.include_router(auth.router)
 app.include_router(cases.router)
 app.include_router(consents.router)
 app.include_router(consents.helper_router)
 app.include_router(staff.router)
 app.include_router(ai.router)
+app.include_router(voice.router)
 app.include_router(public.router)
 try:
     from .routers import redteam

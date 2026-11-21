@@ -19,8 +19,14 @@ function fmtCnic(d) { d = d.replace(/\D/g, '').slice(0, 13); return [d.slice(0, 
 
 function Mic({ onText, numeric }) {
   const [rec, setRec] = useState(false)
+  const stopRef = useRef(null)
   if (!canListen()) return <span className="hint">🎤 not available on this browser - use the buttons</span>
-  return <button type="button" className={'mic ' + (rec ? 'rec' : '')} aria-label="speak" onClick={() => { stop(); setRec(true); listen({ lang: 'ur-PK', onResult: (x) => onText(numeric ? spokenNumber(x) : x), onEnd: () => setRec(false), onError: () => setRec(false) }) }}>🎤</button>
+  const click = () => {
+    if (rec) { stopRef.current?.(); return }   // tap again to finish early
+    stop(); setRec(true)
+    stopRef.current = listen({ lang: 'ur-PK', onResult: (x) => onText(numeric ? spokenNumber(x) : x), onEnd: () => setRec(false), onError: () => setRec(false) })
+  }
+  return <button type="button" className={'mic ' + (rec ? 'rec' : '')} aria-label="speak" onClick={click}>{rec ? '⏹' : '🎤'}</button>
 }
 
 function NumPad({ value, onChange, max = 13 }) {

@@ -92,3 +92,9 @@ th { font-size: .78rem; text-transform: uppercase; letter-spacing: .5px; color: 
 .hint { font-size: .8rem; color: var(--muted); }
 @media (max-width: 640px) { body { font-size: 16px; } .grid.g2 { grid-template-columns: 1fr; } h1 { font-size: 1.35rem; } }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+button.ghost:hover:not(:disabled) { background: var(--green-soft); color: var(--green-2); }
+button.ghost.danger-ghost:hover { background: var(--red-soft); }
+input[type='range'] { accent-color: var(--green); padding: 0; min-height: 28px; }
+input[type='checkbox'] { accent-color: var(--green); }
+/* citizen/helper phones: big-button home replaces the text tab bar, keep the header short */
+@media (max-width: 700px) { .topbar.simple nav.tabs { display: none; } .topbar.simple .container { gap: 8px; } }

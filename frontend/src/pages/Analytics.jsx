@@ -18,7 +18,7 @@ export default function Analytics() {
         <K l="Auto-approve rate" v={pct(A.auto_rate, 1)} sub="only when very sure" />
         <K l="Human-review rate" v={pct(A.human_rate, 1)} sub="'I am not sure' handoffs" color="var(--blue)" />
         <K l="Wrong approvals (history)" v={H.wrong_approvals} sub="fraud paid, in synthetic replay" color={H.wrong_approvals ? 'var(--red)' : 'var(--green)'} />
-        <K l="Genuine people declined" v={H.genuine_declined} sub="wrongful block = a cost too" />
+        <K l="Genuine people declined by rule" v={H.genuine_declined} sub="policy, appealable. A wrongful block is a cost too" />
         <K l="Avg cost / case" v={money(H.avg_cost_per_case_pkr)} />
       </div>
       <div className="grid g2">

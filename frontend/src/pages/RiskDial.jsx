@@ -43,7 +43,7 @@ export default function RiskDial() {
           <p className="hint">Lines = expected cost of each action. The lowest line wins at that confidence level.</p></div>
       </div>
       {twin && <div className="card col"><h3>🧪 Effect on {twin.cases_replayed} past (synthetic) cases</h3><div className="grid">
-        {[['Auto-approve rate', pct(twin.before.auto_rate), pct(twin.after.auto_rate)], ['Wrong approvals', twin.before.wrong_approvals, twin.after.wrong_approvals], ['Genuine people declined', twin.before.wrongful_declines, twin.after.wrongful_declines], ['Genuine people waiting', twin.before.genuine_people_waiting, twin.after.genuine_people_waiting], ['Total cost', money(twin.before.total_cost_pkr), money(twin.after.total_cost_pkr)]].map(([l, a, b]) => <div key={l} className="card flat"><div className="kpi-l">{l}</div><div><span className="muted">{a}</span> → <b className="kpi" style={{ fontSize: '1.3rem' }}>{b}</b></div></div>)}</div>
+        {[['Auto-approve rate', pct(twin.before.auto_rate), pct(twin.after.auto_rate)], ['Wrong approvals', twin.before.wrong_approvals, twin.after.wrong_approvals], ['Genuine people waiting', twin.before.genuine_people_waiting, twin.after.genuine_people_waiting], ['Total cost', money(twin.before.total_cost_pkr), money(twin.after.total_cost_pkr)]].map(([l, a, b]) => <div key={l} className="card flat"><div className="kpi-l">{l}</div><div><span className="muted">{a}</span> → <b className="kpi" style={{ fontSize: '1.3rem' }}>{b}</b></div></div>)}</div>
         {twin.summary.map((s, i) => <div key={i} className="banner info">{s}</div>)}</div>}
     </div>
   )

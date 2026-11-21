@@ -14,7 +14,7 @@
 | OCR | **Real if Tesseract installed** | Otherwise skipped and reported. |
 | Scam classifier | **Real model, synthetic training data** | Small dataset; honest confusion matrix at `/scam/eval`. |
 | RAG | **Real retrieval (BM25), MOCK policy documents** | Policy pack is written for this demo, modelled on public BISP/PTA advice. |
-| Voice | **Real** | Browser speech recognition/synthesis + pre-rendered Urdu clips. |
+| Voice | **Real** | Uplift AI Urdu speech-to-text and text-to-speech (called from our server, key never in the browser); pre-rendered clips for offline; browser speech as the last fallback. |
 | NADRA / Verisys identity service | **SIMULATED** | `/mock/nadra/*`, synthetic people. |
 | Raast / payments | **SIMULATED** | `/mock/raast/*`, `MOCK-` references, no money moves. |
 | SMS / WhatsApp / email | **SIMULATED** | Written to the notifications table as `[MOCK SMS]`. |

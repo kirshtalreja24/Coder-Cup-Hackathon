@@ -47,7 +47,7 @@ function Shell({ user, children }) {
   return (
     <div className={!staff && rtl ? 'rtl' : ''}>
       <div className="proto-bar">{t('proto')} · MOCK data only</div>
-      <header className="topbar">
+      <header className={"topbar" + (staff ? "" : " simple")}>
         <div className="container">
           <Link to={HOME[user.role]} className="brand">🛡️ {t('app')}</Link>
           <nav className="tabs">{tabs.map(([to, l]) => <NavLink key={to} to={to} end={to === '/c' || to === '/h'}>{l}</NavLink>)}</nav>
