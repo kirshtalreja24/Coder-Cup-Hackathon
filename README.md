@@ -49,6 +49,8 @@ Most AI services try to look smart. Bharosa tries to be *accountable*:
 See [`docs/REAL_VS_SIMULATED.md`](docs/REAL_VS_SIMULATED.md) (also shown in the app under *About*).
 
 ## Run it locally
+> Full step-by-step guide (Windows/macOS/Linux, demo accounts, voice, phone testing, troubleshooting): **[`docs/HOW_TO_RUN.md`](docs/HOW_TO_RUN.md)**. There is no live deployment yet.
+
 ```bash
 # backend (Python 3.11+)
 cd backend
