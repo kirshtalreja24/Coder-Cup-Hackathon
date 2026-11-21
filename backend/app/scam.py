@@ -5,7 +5,6 @@ import random
 import re
 from functools import lru_cache
 
-import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
@@ -118,12 +117,12 @@ def _corpus(seed: int, n: int = 500):
         lambda: f"آپ کی رقم {amt()} روپے تیار ہے۔ اصل شناختی کارڈ کے ساتھ قریبی مجاز ریٹیلر سے وصول کریں۔",
         lambda: f"Your K-Electric bill of Rs {r.randint(800, 9000)} is due on {r.randint(10, 28)}th. Pay at any bank branch or app. Ignore if already paid.",
         lambda: f"Your Raast transfer of Rs {r.randint(500, 9000)} to Ali Raza was successful. Ref {r.randint(100000, 999999)}.",
-        lambda: f"Reminder: your appointment at the district office is on Monday 10am. Bring your original ID card.",
-        lambda: f"Salam, kal shaam ghar aa jayen, khana hai. Ammi ne bulaya hai.",
+        lambda: "Reminder: your appointment at the district office is on Monday 10am. Bring your original ID card.",
+        lambda: "Salam, kal shaam ghar aa jayen, khana hai. Ammi ne bulaya hai.",
         lambda: f"Your parcel has been dispatched and will arrive in {r.randint(2, 5)} days. Track in the official app.",
         lambda: f"Dear customer, your mobile package of Rs {r.randint(100, 900)} has been activated. Dial *123# to check balance.",
-        lambda: f"Assalam o Alaikum, meeting 5 baje hai office mein. Please confirm.",
-        lambda: f"Your school fee voucher for November is available at the school office. Last date is the 25th.",
+        lambda: "Assalam o Alaikum, meeting 5 baje hai office mein. Please confirm.",
+        lambda: "Your school fee voucher for November is available at the school office. Last date is the 25th.",
         lambda: f"Payment received: Rs {amt()}. Thank you. Reference {r.randint(100000, 999999)}.",
     ]
     X, y = [], []

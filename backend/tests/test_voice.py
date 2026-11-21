@@ -1,6 +1,5 @@
 """Voice endpoints: server-side Uplift proxy with graceful fallback (provider is mocked: no network, no key needed)."""
 import httpx
-import pytest
 
 from app.config import get_settings
 

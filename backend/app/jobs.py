@@ -18,8 +18,11 @@ def enqueue(db, kind: str, payload: dict) -> Job:
 
 def run_one(db, job: Job) -> None:
     from . import webhooks
-    job.status, job.attempts = "running", job.attempts + 1
+    claimed = db.query(Job).filter(Job.id == job.id, Job.status == "queued").update({"status": "running", "attempts": job.attempts + 1})
     db.commit()
+    if not claimed:  # another worker already took this job
+        return
+    db.refresh(job)
     try:
         if job.kind == "webhook":
             job.result = webhooks.deliver(db, job)

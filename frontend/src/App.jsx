@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import { clearSession, getUser } from './api'
+import { api, clearSession, getUser } from './api'
 import { LangSwitch, useLang } from './i18n'
 import { loadBox, onBox } from './offline'
 import Login from './pages/Login'
@@ -20,6 +20,8 @@ import Analytics from './pages/Analytics'
 import Admin from './pages/Admin'
 import RedTeam from './pages/RedTeam'
 import About from './pages/About'
+import Inbox from './pages/Inbox'
+import Verify from './pages/Verify'
 
 const HOME = { citizen: '/c', helper: '/h', officer: '/s/queue', admin: '/s/rules', auditor: '/s/audit' }
 
@@ -29,10 +31,22 @@ function useOnline() {
   return on
 }
 
+function useUnread() {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    let alive = true
+    const load = () => navigator.onLine && api('/notifications?unread_only=true&limit=1').then((d) => alive && setN(d.unread)).catch(() => {})
+    load(); const id = setInterval(load, 30000)
+    return () => { alive = false; clearInterval(id) }
+  }, [])
+  return n
+}
+
 function Shell({ user, children }) {
   const nav = useNavigate()
   const { t, rtl } = useLang()
   const online = useOnline()
+  const unread = useUnread()
   const [box, setBox] = useState(loadBox())
   useEffect(() => onBox(setBox), [])
   const pend = box.filter((x) => x.state !== 'done').length
@@ -52,6 +66,7 @@ function Shell({ user, children }) {
           <Link to={HOME[user.role]} className="brand">🛡️ {t('app')}</Link>
           <nav className="tabs">{tabs.map(([to, l]) => <NavLink key={to} to={to} end={to === '/c' || to === '/h'}>{l}</NavLink>)}</nav>
           <span className="badge" style={{ background: online ? '#c9efe0' : '#ffd98a', color: '#13302a' }}>{online ? '● ' + t('online') : '○ ' + t('offline')}{pend ? ` · ${pend} ⏳` : ''}</span>
+          <Link to="/inbox" className="badge" style={{ textDecoration: 'none', background: unread ? '#ffd98a' : 'rgba(255,255,255,.2)', color: unread ? '#2b1b00' : '#fff' }} title="Inbox">🔔{unread ? ' ' + unread : ''}</Link>
           <LangSwitch />
           <button className="small" onClick={() => { clearSession(); nav('/login') }}>{user.name.split(' ')[0]} · {t('logout')}</button>
         </div>
@@ -75,6 +90,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/verify" element={<Verify />} />
+      <Route path="/inbox" element={<Guard><Inbox /></Guard>} />
       <Route path="/public/scam" element={<div className="container narrow"><ScamPage pub /></div>} />
       <Route path="/" element={<Navigate to={user ? HOME[user.role] : '/login'} replace />} />
       {/* citizen */}

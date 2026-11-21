@@ -4,7 +4,9 @@ import { api, apiDel, apiGet, apiPost, money, when } from '../api'
 import { useLang } from '../i18n'
 import { shrinkImage } from '../offline'
 import { playPrompt, speak } from '../voice'
-import { ErrorBox, RouteBadge, Spinner, StatusBadge, useAsync } from '../ui'
+import { ErrorBox, ROUTE_UI, Spinner, StatusBadge, useAsync } from '../ui'
+import Recourse from '../components/Recourse'
+import Receipt from '../components/Receipt'
 
 export function MyCases() {
   const { t } = useLang()
@@ -46,9 +48,11 @@ export function CaseView({ helper }) {
   return (
     <div className="col narrow">
       <div className="row spread"><h2>📄 #{x.id.slice(0, 6)}</h2><StatusBadge s={x.status} /></div>
-      {dec.data && <div className={'result ' + ({ AUTO_APPROVE: 'good', ASK_PROOF: 'wait', HUMAN_REVIEW: 'human', DECLINE_WITH_APPEAL: 'stop' }[dec.data.route] || 'wait')} dir={lang === 'ur' ? 'rtl' : 'ltr'}>
+      {dec.data && <div className={'result ' + (ROUTE_UI[dec.data.route]?.[0] || 'wait')} dir={lang === 'ur' ? 'rtl' : 'ltr'}>
         <p style={{ fontSize: '1.2rem' }}>{reason}</p><button className="ghost" onClick={() => speak(reason, L)}>🔊</button>
         <div className="small muted" dir="ltr">Decided with rule v{dec.data.rule_version} · confidence {Math.round(dec.data.confidence * 100)}% · {when(dec.data.created_at)}</div></div>}
+      <Recourse items={dec.data?.reason_user?.recourse} />
+      {dec.data && <Receipt caseId={id} />}
       <ErrorBox e={err} />
       {x.status === 'needs_proof' && <label className="btn" style={{ textAlign: 'center' }}>📷 {t('takephoto')}<input type="file" accept="image/*" capture="environment" hidden onChange={retake} /></label>}
       {['declined', 'rejected', 'needs_proof'].includes(x.status) && <button className="warn" onClick={async () => { await apiPost(`/cases/${id}/appeal?note=please re-check`); c.reload() }}>🙋 {t('appeal')}</button>}

@@ -6,8 +6,7 @@ from sqlalchemy.orm import Session
 
 from . import decision as dec, rag, rules, scam
 from .identity import name_key
-from .mock_services import norm_dob
-from .models import (ApiKey, Case, Decision, HelperLink, MockNadraRecord, ScamMessage, Tenant, User, uid)
+from .models import (ApiKey, Case, Decision, HelperLink, MockNadraRecord, ScamMessage, Tenant, User)
 from .security import hash_key, hash_password
 
 MALE = ["Muhammad Ali", "Ahmed Raza", "Imran Khan", "Bilal Ahmed", "Usman Ghani", "Hassan Raza", "Abdul Rehman", "Yousuf Khan",
@@ -88,9 +87,9 @@ def seed_all(db: Session) -> None:
         u = User(tenant_id=tenant.id, email=email, name=name, role=role, password_hash=pw, locale=kw.pop("locale", "ur"), **kw)
         db.add(u); return u
     admin = mk(t1, "admin@relief.demo", "Admin (Relief Dept)", "admin", locale="en")
-    off1 = mk(t1, "officer1@relief.demo", "Officer Saima Hashmi", "officer", locale="en")
-    off2 = mk(t1, "officer2@relief.demo", "Officer Daniyal Qazi", "officer", locale="en")
-    aud = mk(t1, "auditor@relief.demo", "Auditor Hira Naeem", "auditor", locale="en")
+    mk(t1, "officer1@relief.demo", "Officer Saima Hashmi", "officer", locale="en")
+    mk(t1, "officer2@relief.demo", "Officer Daniyal Qazi", "officer", locale="en")
+    mk(t1, "auditor@relief.demo", "Auditor Hira Naeem", "auditor", locale="en")
     helper = mk(t1, "helper@relief.demo", "Helper Shabnam (serves 40 families)", "helper")
     mk(t2, "admin@flood.demo", "Admin (Flood Cell)", "admin", locale="en")
     mk(t2, "officer@flood.demo", "Officer (Flood Cell)", "officer", locale="en")

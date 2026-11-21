@@ -4,7 +4,7 @@ import secrets
 import time
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,7 @@ from .. import mock_services as ms, rag, rules, scam
 from ..db import get_db
 from ..metrics import METRICS
 from ..models import ApiKey, Tenant, User
-from ..security import api_key_auth, require_roles, current_user
+from ..security import api_key_auth, require_roles
 from .ai import AskIn
 
 router = APIRouter()
@@ -26,6 +26,12 @@ def health(db: Session = Depends(get_db)):
 
 @router.get("/metrics", tags=["ops"], summary="Request counts, error counts, latency percentiles")
 def metrics():
+    m = METRICS.snapshot()
+    return {k: m[k] for k in ("uptime_s", "requests", "by_status", "latency_ms")}  # no routes / error details for the public
+
+
+@router.get("/metrics/detail", tags=["ops"], summary="Full metrics incl. top routes and recent errors (admin/auditor)")
+def metrics_detail(user: User = Depends(require_roles("admin", "auditor"))):
     return METRICS.snapshot()
 
 

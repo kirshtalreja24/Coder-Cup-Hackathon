@@ -1,6 +1,5 @@
 """Server-side security checks (what judges will curl) + the full self-attack scorecard."""
 from app import demo
-from conftest import login
 
 
 def test_rbac_matrix(client, tok):

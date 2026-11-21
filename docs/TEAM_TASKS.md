@@ -1,13 +1,13 @@
 # Team tasks
 
-**Status (Sat 21 Nov, evening):** backend and frontend are built and tested (24 automated tests; Red-Team scorecard 40/40; all roles and pages checked in a headless browser). Urdu voice (Uplift AI) is wired in and all 21 prompts are pre-rendered. Supabase is migrated and seeded. **Still to do: deploy, real-phone testing, Urdu wording review, demo video.**
+**Status (Sat 21 Nov, evening):** backend and frontend are built and tested (35+ automated tests; Red-Team scorecard all green; all roles and pages checked in a headless browser). Urdu voice (Uplift AI) is wired in and all 21 prompts are pre-rendered. Supabase is migrated and seeded. **Still to do: deploy, real-phone testing, Urdu wording review, demo video.**
 
 Deadline: **Sun 22 Nov, 6:00 PM PKT**. Feature freeze: **Sun 2:00 PM** (bug fixes only after that). Final evaluation: Mon 23 Nov, FAST-NUCES Karachi Library.
 
 ## Kirsh — deploy + backend owner
 - [ ] Choose the host for the API and deploy it (Render needs a card; see `docs/DEPLOY.md`). Env vars: `DATABASE_URL` (Supabase **Session pooler** URL), `JWT_SECRET`, `UPLIFT_API_KEY`, `GROQ_API`/`GROQ_BASE_URL` (or `LLM_*`), `ENV=prod`. Prefer a region near Supabase (Sydney / Singapore).
 - [ ] Deploy the frontend on Vercel (root `frontend`, env `VITE_API_URL` = API URL). Set the API `CORS_ORIGINS` to the Vercel URL.
-- [ ] Smoke test the live link: `/health`, log in as each role, Red-Team page 40/40, one voice round trip.
+- [ ] Smoke test the live link: `/health`, log in as each role, Red-Team page (all attacks green), one voice round trip.
 - [ ] Wipe + re-seed the demo database right before the final demo (see README "Reset the demo database").
 - [ ] Rotate the Supabase password and keys after the hackathon (they were shown in logs during development).
 

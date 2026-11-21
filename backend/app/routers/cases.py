@@ -7,16 +7,18 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import agent, audit, consent, mock_services as ms, vision
+from .. import agent, audit, consent, helper_lock, mock_services as ms, vision
 from ..config import get_settings
 from ..db import get_db
-from ..models import Case, CaseEvent, Decision, Document, HelperLink, IdempotencyRecord, Notification, Tenant, User, now
+from ..models import Case, CaseEvent, Decision, Document, HelperLink, IdempotencyRecord, Tenant, User, now
+from ..notify import notify
 from ..security import current_user, require_roles
 from ..views import case_detail, case_summary, decision_view
 from ..webhooks import emit
 
 router = APIRouter(tags=["cases"])
 OPEN_FOR_EDIT = ("draft", "needs_consent", "needs_proof", "awaiting_payment_consent", "declined")
+FINAL = ("paid", "closed", "rejected")  # a finished case cannot be reopened, re-escalated or closed again
 MAX_UPLOAD = 5 * 1024 * 1024
 
 
@@ -37,6 +39,7 @@ def _owner_check(db: Session, c: Case, user: User):
     if user.id == c.citizen_id:
         return
     if user.role == "helper" and db.query(HelperLink).filter_by(helper_id=user.id, citizen_id=c.citizen_id).first():
+        helper_lock.require_active(user.id, c.citizen_id)
         consent.require_access(db, subject_id=c.citizen_id, accessor=user, scope="case_history", resource_type="case", resource_id=c.id)
         return
     raise HTTPException(403, "Only the citizen (or their consented helper) can do this")
@@ -78,6 +81,7 @@ def create_case(body: CaseCreate, user: User = Depends(require_roles("citizen", 
         if not body.citizen_id or not db.query(HelperLink).filter_by(helper_id=user.id, citizen_id=body.citizen_id).first():
             raise HTTPException(403, "citizen_id must be one of your linked families")
         cid = body.citizen_id
+        helper_lock.require_active(user.id, cid)
         consent.require_access(db, subject_id=cid, accessor=user, scope="case_history")
     t = db.get(Tenant, user.tenant_id)
     if t.usage_this_month >= t.monthly_quota:  # subscription plan limit
@@ -157,6 +161,9 @@ def get_document_file(doc_id: str, user: User = Depends(current_user), db: Sessi
     if not d or d.deleted:
         raise HTTPException(404, "Document not found")
     if user.id != d.owner_id:
+        owner = db.get(User, d.owner_id)
+        if not owner or owner.tenant_id != user.tenant_id:  # never reveal another department's documents
+            raise HTTPException(404, "Document not found")
         consent.require_access(db, subject_id=d.owner_id, accessor=user, scope="documents", resource_type="document", resource_id=d.id)
         audit.log(db, action="data.read", actor=user, resource_type="document", resource_id=d.id, details={"subject": d.owner_id, "scope": "documents"})
     return FileResponse(d.path, media_type="image/jpeg", filename=d.filename)
@@ -233,6 +240,8 @@ def get_case(case_id: str, user: User = Depends(current_user), db: Session = Dep
 @router.get("/cases/{case_id}/timeline")
 def timeline(case_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
     c = _load(db, case_id, user)
+    if user.id != c.citizen_id:
+        audit.log(db, action="data.read", actor=user, resource_type="case_timeline", resource_id=c.id, details={"subject": c.citizen_id, "scope": "case_history"})
     ev = db.query(CaseEvent).filter_by(case_id=c.id).order_by(CaseEvent.created_at.asc()).all()
     ds = db.query(Decision).filter_by(case_id=c.id).order_by(Decision.created_at.asc()).all()
     return {"events": [{"kind": e.kind, "note": e.note, "at": e.created_at.isoformat(), "actor": e.actor_id} for e in ev],
@@ -292,10 +301,12 @@ class EscalateIn(BaseModel):
 @router.post("/cases/{case_id}/escalate")
 def escalate(case_id: str, body: EscalateIn, user: User = Depends(require_roles("officer", "admin")), db: Session = Depends(get_db)):
     c = _load(db, case_id, user)
+    if c.status in FINAL or c.status in ("draft", "escalated"):
+        raise HTTPException(409, f"A case in status '{c.status}' cannot be escalated")
     c.status, c.priority, c.assigned_to = "escalated", 1, None
     _event(db, c, user, "escalated", body.reason)
     for a in db.query(User).filter_by(tenant_id=c.tenant_id, role="admin").all():
-        db.add(Notification(user_id=a.id, channel="in_app", body=f"Case {c.id[:8]} escalated: {body.reason}"))
+        notify(db, a.id, f"Case {c.id[:8]} escalated: {body.reason}", channels=("in_app",))
     db.commit()
     audit.log(db, action="case.escalate", actor=user, resource_type="case", resource_id=c.id, details={"reason": body.reason})
     emit(db, c.tenant_id, "case.escalated", {"case_id": c.id})
@@ -338,8 +349,7 @@ def review(case_id: str, body: ReviewIn, user: User = Depends(require_roles("off
     if d:
         d.final_outcome = {"approve": "approved_human", "reject": "rejected_human", "request_proof": "proof_requested"}[body.action]
     _event(db, c, user, f"review.{body.action}", body.note)
-    db.add(Notification(user_id=c.citizen_id, channel="in_app", body=msg))
-    db.add(Notification(user_id=c.citizen_id, channel="sms", body="[MOCK SMS] " + msg))
+    notify(db, c.citizen_id, msg, channels=("in_app", "sms", "whatsapp"))
     db.commit()
     audit.log(db, action=f"officer.{body.action}", actor=user, resource_type="case", resource_id=c.id,
               details={"note": body.note, "ai_route": d.route if d else None, "human_overrides_ai": overrides_ai})
@@ -354,6 +364,8 @@ def close(case_id: str, user: User = Depends(current_user), db: Session = Depend
         raise HTTPException(403, "Not allowed")
     if user.role in ("citizen", "helper"):
         _owner_check(db, c, user)
+    if c.status in FINAL:
+        raise HTTPException(409, f"A case in status '{c.status}' is already final")
     c.status, c.closed_at = "closed", now()
     _event(db, c, user, "closed")
     db.commit()

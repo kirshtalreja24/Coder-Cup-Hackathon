@@ -20,6 +20,7 @@ Project Settings → Database → Connection string → **Session pooler** (port
 | `JWT_SECRET` | long random text (30+ characters) |
 | `ENV` | `prod` |
 | `CORS_ORIGINS` | `https://coder-cup-hackathon.vercel.app` (the web app origin, no trailing slash) |
+| `DEMO_SHOW_OTP` | optional, demo only: `true` also returns the helper one-time code in the API response. Leave unset in normal use. |
 | `UPLIFT_API_KEY` | optional: Urdu voice |
 | `GROQ_API`, `GROQ_BASE_URL` | optional: LLM |
 
@@ -33,7 +34,7 @@ Import the repository: **Root Directory** `frontend`, framework Vite. Environmen
 curl -s https://bharosa-api-production.up.railway.app/health
 curl -s https://bharosa-api-production.up.railway.app/v1/status -H "X-API-Key: bh_demo_public_key_mock_0001"
 ```
-Open the app → log in as `admin@relief.demo` (password `Demo#12345`) → **Red-Team** → run: expect 40/40 (takes about 2 minutes because the database is in another country).
+Open the app → log in as `admin@relief.demo` (password `Demo#12345`) → **Red-Team** → run: expect all green (takes about 2 minutes because the database is in another country).
 Admin-only diagnostics: `GET /ops/diag` shows the Railway region and the database round-trip time.
 
 ## Known issues and fixes

@@ -83,9 +83,9 @@ The login page also has one-click buttons for the main accounts. A suspicious me
 ## 7. Check everything works
 ```bash
 cd backend
-python -m pytest tests -q          # 24 tests, includes the 40-attack Red-Team scorecard
+python -m pytest tests -q          # 35+ tests, includes the full Red-Team scorecard
 ```
-In the app: log in as **admin** → **Red-Team** → *Run the attacks*. The score should be **40/40**.
+In the app: log in as **admin** → **Red-Team** → *Run the attacks*. Every attack should pass (the score is shown as passed/total).
 
 Try the server-side security with curl (what judges will do):
 ```bash

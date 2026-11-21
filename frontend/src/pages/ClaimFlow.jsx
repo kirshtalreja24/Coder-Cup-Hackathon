@@ -3,31 +3,17 @@ import { Link, useNavigate } from 'react-router-dom'
 import { api, apiPost, BASE } from '../api'
 import { useLang } from '../i18n'
 import { clearDraft, flush, loadDraft, queueClaim, saveDraft, shrinkImage } from '../offline'
-import { canListen, listen, playPrompt, speak, spokenNumber, stop } from '../voice'
-import { ErrorBox } from '../ui'
+import { playPrompt, speak, stop } from '../voice'
+import { ErrorBox, ROUTE_UI } from '../ui'
+import Mic from '../components/Mic'
+import Recourse from '../components/Recourse'
+import Receipt from '../components/Receipt'
 
 const DISTRICTS = ['Karachi East', 'Karachi West', 'Karachi Central', 'Hyderabad', 'Sukkur', 'Larkana', 'Lahore', 'Multan', 'Faisalabad', 'Rawalpindi', 'Peshawar', 'Mardan', 'Quetta', 'Turbat', 'Islamabad']
 const STEPS = ['name', 'cnic', 'father', 'status', 'income', 'household', 'district', 'photo', 'consent']
 const PROMPT = { name: 'say_name', cnic: 'say_cnic', income: 'say_income', household: 'say_household', photo: 'take_photo', consent: 'consent_identity' }
 const EMPTY = { name: '', father_name: '', cnic: '', marital_status: '', monthly_income: '', household_size: 4, district: 'Karachi East', dob: '' }
-const RESULT_UI = {
-  AUTO_APPROVE: ['good', '✅', 'approved'], APPROVED_WAITING_PAYMENT_CONSENT: ['wait', '⏳', 'need_proof'], ASK_PROOF: ['wait', '📷', 'need_proof'],
-  HUMAN_REVIEW: ['human', '🤝', 'human_review'], DECLINE_WITH_APPEAL: ['stop', '🛑', 'declined_appeal'], NEEDS_CONSENT: ['wait', '🔒', 'consent_identity'],
-}
-
 function fmtCnic(d) { d = d.replace(/\D/g, '').slice(0, 13); return [d.slice(0, 5), d.slice(5, 12), d.slice(12)].filter(Boolean).join('-') }
-
-function Mic({ onText, numeric }) {
-  const [rec, setRec] = useState(false)
-  const stopRef = useRef(null)
-  if (!canListen()) return <span className="hint">🎤 not available on this browser - use the buttons</span>
-  const click = () => {
-    if (rec) { stopRef.current?.(); return }   // tap again to finish early
-    stop(); setRec(true)
-    stopRef.current = listen({ lang: 'ur-PK', onResult: (x) => onText(numeric ? spokenNumber(x) : x), onEnd: () => setRec(false), onError: () => setRec(false) })
-  }
-  return <button type="button" className={'mic ' + (rec ? 'rec' : '')} aria-label="speak" onClick={click}>{rec ? '⏹' : '🎤'}</button>
-}
 
 function NumPad({ value, onChange, max = 13 }) {
   const press = (k) => { if (k === '⌫') onChange(value.slice(0, -1)); else if (value.length < max) onChange(value + k) }
@@ -55,7 +41,7 @@ export default function ClaimFlow({ helper }) {
   useEffect(() => { saveDraft({ d, photo, forFamily: family?.id || null }) }, [d, photo])   // progress is saved at every step
   useEffect(() => { if (!result && PROMPT[key]) playPrompt(PROMPT[key], t(key === 'cnic' ? 'cnic' : key), L) ; return stop }, [step]) // eslint-disable-line
 
-  const canNext = { name: d.name.trim().length > 1, cnic: d.cnic.replace(/\D/g, '').length === 13, father: true, status: !!d.marital_status, income: d.monthly_income !== '', household: true, district: true, photo: true, consent: consent.identity }[key]
+  const canNext = { name: d.name.trim().length > 1, cnic: d.cnic.replace(/\D/g, '').length === 13, father: true, status: !!d.marital_status, income: d.monthly_income !== '', household: true, district: true, photo: true, consent: helper || consent.identity }[key]
 
   const loadDemo = async () => {
     if (!demos) { try { setDemos((await api('/demo/scenarios', { auth: false })).scenarios) } catch (e) { setErr(e) } }
@@ -77,7 +63,8 @@ export default function ClaimFlow({ helper }) {
   const submit = async () => {
     setBusy(true); setErr(null)
     const body = payload()
-    const flags = { identity: consent.identity, documents: consent.documents, case_history: consent.documents, payment: consent.payment }
+    // A helper never sends consent flags: only the family's own one-time code can grant consent (the server ignores flags from helpers anyway)
+    const flags = helper ? {} : { identity: consent.identity, documents: consent.documents, case_history: consent.documents, payment: consent.payment }
     try {
       if (!navigator.onLine) throw Object.assign(new Error('offline'), { offline: true })
       const created = await apiPost('/cases', { data: body, citizen_id: family?.id }, { headers: { 'Idempotency-Key': 'c-' + Date.now() } })
@@ -87,7 +74,7 @@ export default function ClaimFlow({ helper }) {
       }
       const r = await apiPost(`/cases/${created.id}/submit`, { consent: flags }, { timeout: 40000 })
       setResult({ ...r, caseId: created.id }); clearDraft()
-      const ui = RESULT_UI[r.route] || RESULT_UI.HUMAN_REVIEW
+      const ui = ROUTE_UI[r.route] || ROUTE_UI.HUMAN_REVIEW
       playPrompt(ui[2], r.reason_user?.[L], L)
     } catch (e) {
       if (e.offline) { queueClaim({ data: body, consent: flags, photo, citizen_id: family?.id }); clearDraft(); setQueued(true); playPrompt('offline_saved', t('saved_offline'), L) }
@@ -102,7 +89,7 @@ export default function ClaimFlow({ helper }) {
       const small = await shrinkImage(f); const blob = await (await fetch(small)).blob(); const fd = new FormData(); fd.append('file', blob, 'id.jpg')
       const up = await api(`/cases/${result.caseId}/documents`, { method: 'POST', formData: fd, timeout: 40000 })
       const r = await apiPost(`/cases/${result.caseId}/submit`, {}, { timeout: 40000 })
-      setResult({ ...r, caseId: result.caseId, note: up.message?.[L] }); const ui = RESULT_UI[r.route] || RESULT_UI.HUMAN_REVIEW; playPrompt(ui[2], r.reason_user?.[L], L)
+      setResult({ ...r, caseId: result.caseId, note: up.message?.[L] }); const ui = ROUTE_UI[r.route] || ROUTE_UI.HUMAN_REVIEW; playPrompt(ui[2], r.reason_user?.[L], L)
     } catch (x) { setErr(x) } finally { setBusy(false) }
   }
 
@@ -111,7 +98,7 @@ export default function ClaimFlow({ helper }) {
   )
 
   if (result) {
-    const ui = RESULT_UI[result.route] || RESULT_UI.HUMAN_REVIEW
+    const ui = ROUTE_UI[result.route] || ROUTE_UI.HUMAN_REVIEW
     const reason = result.reason_user?.[lang === 'roman' ? 'roman' : lang === 'ur' ? 'ur' : 'en']
     return (
       <div className="col narrow">
@@ -123,6 +110,9 @@ export default function ClaimFlow({ helper }) {
         </div>
         {result.route === 'ASK_PROOF' && <label className="btn" style={{ textAlign: 'center' }}>📷 {t('takephoto')}<input type="file" accept="image/*" capture="environment" hidden onChange={retake} /></label>}
         {result.route === 'DECLINE_WITH_APPEAL' && <button className="warn" onClick={async () => { await apiPost(`/cases/${result.caseId}/appeal?note=please re-check`); nav(helper ? '/h' : '/c/cases') }}>🙋 {t('appeal')}</button>}
+        <Recourse items={result.reason_user?.recourse} />
+        {result.decision_id && <Receipt caseId={result.caseId} />}
+        {helper && result.route === 'NEEDS_CONSENT' && <div className="banner offline">Ask the family for their one-time code on the family page, then submit again.</div>}
         <ErrorBox e={err} />
         <details className="card"><summary>🔎 {t('why')} · what the system did, step by step</summary>
           <ul className="step-list" dir="ltr">{result.steps?.map((s, i) => <li key={i} className={s.outcome === 'denied' ? 'denied' : ''}><b>{s.tool}</b><br />{s.summary}</li>)}</ul></details>
@@ -154,7 +144,8 @@ export default function ClaimFlow({ helper }) {
           <div className="result" style={{ background: 'var(--sand)' }}>{photo ? <img src={photo} alt="ID" style={{ maxWidth: '100%', borderRadius: 12, maxHeight: 220 }} /> : <div className="ico">🪪</div>}</div>
           <label className="btn" style={{ textAlign: 'center' }}>📷 {t('takephoto')}<input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={onPhoto} /></label>
           <p className="hint">Flat, all four corners, QR code visible. Photos are shrunk to load on weak signal.</p></>}
-        {key === 'consent' && <>
+        {key === 'consent' && helper && <div className="banner info">🔒 Consent for this family was given by the family itself with a one-time code (see the family page). Nothing is read without it.</div>}
+        {key === 'consent' && !helper && <>
           <p className="muted small">You decide. You can take this back any time under "{t('mydata')}".</p>
           {[['identity', '🪪', t('c_identity'), true], ['documents', '📄', t('c_documents')], ['payment', '💸', t('c_payment')]].map(([k, ic, label, must]) => (
             <div className="toggle" key={k}><span className="ico">{ic}</span><span style={{ flex: 1 }}>{label}{must ? ' *' : ''}</span>

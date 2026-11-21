@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     uplift_voice_id: str = "v_8eelc901"
     groq_api: str = ""
     groq_base_url: str = ""
+    # DEMO ONLY: also return the helper one-time code in the API response. Off by default: the code must reach the family, not the helper.
+    demo_show_otp: bool = False
     rate_limit_per_min: int = 120
     seed_on_start: bool = True
 

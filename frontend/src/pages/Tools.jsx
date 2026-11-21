@@ -1,19 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api, apiPost, getToken } from '../api'
 import { useLang } from '../i18n'
-import { canListen, listen, playPrompt, speak } from '../voice'
-import { ErrorBox, MockTag } from '../ui'
+import { playPrompt, speak } from '../voice'
+import { ErrorBox } from '../ui'
+import Mic from '../components/Mic'
 
 const AREAS = ['Karachi East', 'Karachi West', 'Karachi Central', 'Korangi', 'Malir', 'Hyderabad', 'Sukkur', 'Larkana', 'Lahore', 'Peshawar', 'Quetta', 'Multan']
 const COLORS = { SCAM: ['stop', '🚫'], SUSPICIOUS: ['wait', '⚠️'], LIKELY_REAL: ['good', '✅'], UNSURE: ['human', '🤔'] }
-
-function Mic({ onText, lang = 'ur-PK' }) {
-  const [rec, setRec] = useState(false)
-  const stopRef = useRef(null)
-  if (!canListen()) return null
-  return <button type="button" className={'small ' + (rec ? 'danger' : 'ghost')} onClick={() => { if (rec) { stopRef.current?.(); return } setRec(true); stopRef.current = listen({ lang, onResult: onText, onEnd: () => setRec(false), onError: () => setRec(false) }) }}>{rec ? '⏹ …' : '🎤'}</button>
-}
 
 export function ScamPage({ pub }) {
   const { t, lang } = useLang()
@@ -45,7 +39,7 @@ export function ScamPage({ pub }) {
         <div><label>{t('paste')}</label><textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="BISP relief approved. Send CNIC and fee Rs 500 to ..." dir="auto" /></div>
         <div className="row"><div style={{ flex: 1, minWidth: 160 }}><label>{t('sender')}</label><input value={sender} onChange={(e) => setSender(e.target.value)} placeholder="8171 / 0300-1234567" /></div>
           <div style={{ flex: 1, minWidth: 160 }}><label>{t('district')}</label><select value={area} onChange={(e) => setArea(e.target.value)}>{AREAS.map((a) => <option key={a}>{a}</option>)}</select></div></div>
-        <div className="row"><button disabled={busy || !text.trim()} onClick={check}>🔍 {t('check')}</button><Mic onText={(x) => setText((p) => p + ' ' + x)} /></div>
+        <div className="row"><button disabled={busy || !text.trim()} onClick={check}>🔍 {t('check')}</button><Mic variant="small" onText={(x) => setText((p) => p + ' ' + x)} /></div>
         {samples.length > 0 && <details><summary className="small muted">Try a sample message</summary><div className="col" style={{ marginTop: 8 }}>{samples.map((s, i) => <button key={i} className="ghost small" style={{ textAlign: 'left', fontWeight: 400 }} onClick={() => { setText(s.text); setSender(s.sender); setRes(null) }}>[{s.sender}] {s.text.slice(0, 90)}…</button>)}</div></details>}
       </div>
       <ErrorBox e={err} />
@@ -79,7 +73,7 @@ export function AskPage() {
     <div className="col">
       <h2>❓ {t('ask')}</h2>
       <div className="card col">
-        <div className="row"><input style={{ flex: 1 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Is there a fee to apply?" onKeyDown={(e) => e.key === 'Enter' && ask()} dir="auto" /><Mic onText={setQ} /><button disabled={busy || q.length < 2} onClick={() => ask()}>{t('check')}</button></div>
+        <div className="row"><input style={{ flex: 1 }} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Is there a fee to apply?" onKeyDown={(e) => e.key === 'Enter' && ask()} dir="auto" /><Mic variant="small" onText={setQ} /><button disabled={busy || q.length < 2} onClick={() => ask()}>{t('check')}</button></div>
         <div className="row">{suggestions.map((s) => <button key={s} className="ghost small" onClick={() => { setQ(s); ask(s) }}>{s}</button>)}</div>
       </div>
       <ErrorBox e={err} />

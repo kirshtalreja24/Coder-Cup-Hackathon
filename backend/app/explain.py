@@ -83,3 +83,29 @@ def handoff_brief(case_data: dict, decision: dict, rule_eval: dict, identity: di
         "expected_cost_if_reviewed_pkr": decision["action_costs"].get("HUMAN_REVIEW"),
         "submitted": {k: v for k, v in case_data.items() if k not in ("signals",)},
     }
+
+
+_ROUTE_PHRASE = {
+    "AUTO_APPROVE": {"en": "this could be approved automatically", "ur": "یہ خود بخود منظور ہو سکتی ہے", "roman": "yeh khud ba khud manzoor ho sakti hai"},
+    "HUMAN_REVIEW": {"en": "a person would then check it quickly", "ur": "پھر ایک انسان اسے جلدی دیکھے گا", "roman": "phir ek insaan ise jaldi dekhega"},
+    "ASK_PROOF": {"en": "we might still ask for one more thing", "ur": "ہم شاید ایک اور چیز مانگیں", "roman": "hum shayad ek aur cheez mangein"},
+}
+
+
+def recourse_lines(items: list[dict]) -> list[dict]:
+    """Turn engine-computed counterfactuals into simple sentences (EN / UR / Roman) for the citizen."""
+    out = []
+    for it in items:
+        if it["kind"] == "rule":
+            out.append({"en": f"Not met: {it['label']} (yours: {it['actual']}).", "ur": f"پوری نہیں ہوئی: {it.get('label_ur') or it['label']} (آپ کا: {it['actual']})۔",
+                        "roman": "Ek shart poori nahi hui. Aap appeal kar sakte hain.", "would_route": None})
+        else:
+            what = ASK_TEXT.get(it["ask"])
+            phrase = _ROUTE_PHRASE.get(it["would_route"], _ROUTE_PHRASE["HUMAN_REVIEW"])
+            conf = f"{it['p_legit_after']:.1%}"
+            out.append({
+                "en": f"If you give {what['en']}, {phrase['en']} (confidence {conf}).",
+                "ur": f"اگر آپ {what['ur']} دیں تو {phrase['ur']} (اعتماد {conf})۔",
+                "roman": f"Agar aap {what['roman']} dein to {phrase['roman']} (aitemaad {conf}).",
+                "would_route": it["would_route"], "p_legit_after": it["p_legit_after"]})
+    return out

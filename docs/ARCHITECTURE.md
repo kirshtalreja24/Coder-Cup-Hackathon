@@ -33,3 +33,12 @@ The cheapest wins, then **hard safety overrides** apply (forged/mismatched docum
 
 ## Reliability
 LLM optional behind a circuit breaker; deterministic fallbacks everywhere; idempotency keys on create/submit/sync; global error shield returns a safe message and logs the stack trace.
+
+## Modules added in the hardening pass
+* `receipts.py` + `routers/receipts.py`: HMAC-signed decision receipts and a public verification endpoint.
+* `decision.recourse()` + `explain.recourse_lines()`: counterfactual "what would change this" produced by re-running `decide()`.
+* `routers/staff.py` (rules, Twin, risk, audit, analytics) and `routers/admin.py` (users, API keys, webhooks, jobs, plan).
+* Publish **safety gate** in `staff.publish_rule`: Twin replay before every publish; blocks extra fraud or a >15% rise in automatic payouts unless a written reason is given.
+* `helper_lock.py`: server-side 60 s Helper Mode session lock; `consent.SCOPE_GRANTS`: one definition of what each consent opens; helper consent only via a one-time code sent to the family.
+* `notify.py` + `routers/notifications.py`: in-app inbox (real) and simulated SMS / WhatsApp / email rows.
+* `routers/redteam.py`: one function per attack category, run in a throw-away department.

@@ -1,5 +1,4 @@
 """End-to-end behaviour tests of the claim agent on the demo scenarios (all synthetic)."""
-import pytest
 from app import demo
 
 ALL_CONSENT = {"identity": True, "payment": True, "documents": True, "case_history": True}

@@ -45,6 +45,12 @@ const S = {
   paste: { ur: 'پیغام یہاں ڈالیں', roman: 'Paigham yahan daalein', en: 'Paste the message here' },
   sender: { ur: 'بھیجنے والا (نمبر/نام)', roman: 'Bhejne wala (number/naam)', en: 'Sender (number/name)' },
   check: { ur: 'چیک کریں', roman: 'Check karein', en: 'Check' },
+  whatwould: { ur: 'کیا بدلے تو فیصلہ بدل سکتا ہے؟', roman: 'Kya badle to faisla badal sakta hai?', en: 'What would change this?' },
+  autoposs: { ur: 'خود بخود منظوری ممکن', roman: 'Khud ba khud manzoori mumkin', en: 'could be auto-approved' },
+  receipt: { ur: 'فیصلے کی رسید', roman: 'Faisle ki raseed', en: 'Decision receipt' },
+  receiptnote: { ur: 'کوئی بھی اسے بغیر لاگ اِن جانچ سکتا ہے۔ اس میں آپ کی ذاتی معلومات نہیں ہیں۔', roman: 'Koi bhi ise bina login jaanch sakta hai. Is mein aap ki zaati maloomat nahi.', en: 'Anyone can verify it without logging in. It contains none of your personal data.' },
+  verify: { ur: 'جانچیں', roman: 'Jaanchein', en: 'Verify' },
+  inbox: { ur: 'پیغامات', roman: 'Paighamat', en: 'Inbox' },
 }
 
 const Ctx = createContext(null)

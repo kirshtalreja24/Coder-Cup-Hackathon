@@ -6,7 +6,7 @@ import json
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from . import audit
+from . import audit, helper_lock
 from .models import Consent, HelperLink, User, now
 
 SCOPES = ("profile", "identity", "documents", "case_history", "payment")
@@ -56,7 +56,26 @@ def withdraw(db: Session, *, consent: Consent, actor: User) -> Consent:
     return consent
 
 
+# What each consent a citizen (or, via OTP, a family) gives actually opens. One definition, used by every path.
+SCOPE_GRANTS = {
+    "identity": [("service", "mock_nadra", "identity"), ("role", "officer", "identity"), ("role", "officer", "profile")],
+    "documents": [("role", "officer", "documents"), ("role", "officer", "case_history")],
+    "payment": [("service", "mock_raast", "payment")],
+}
+
+
+def grant_scopes(db: Session, *, subject: User, actor: User, scopes: list[str], purpose: str) -> list[Consent]:
+    out = []
+    for sc in scopes:
+        for gt, g, scope in SCOPE_GRANTS.get(sc, []):
+            out.append(grant(db, subject=subject, actor=actor, grantee_type=gt, grantee=g, scope=scope, purpose=purpose))
+    return out
+
+
 def _has_consent(db: Session, subject_id: str, accessor: User, scope: str) -> Consent | None:
+    subject = db.get(User, subject_id)
+    if not subject or subject.tenant_id != accessor.tenant_id:  # consent never crosses departments
+        return None
     q = db.query(Consent).filter(Consent.subject_id == subject_id, Consent.status == "active",
                                  Consent.scope.in_([scope, "*"]))
     for c in q.all():
@@ -80,7 +99,7 @@ def check_access(db: Session, *, subject_id: str, accessor: User, scope: str,
         return True
     if accessor.role == "helper":
         linked = db.query(HelperLink).filter_by(helper_id=accessor.id, citizen_id=subject_id).first()
-        if linked and _has_consent(db, subject_id, accessor, scope):
+        if linked and _has_consent(db, subject_id, accessor, scope) and helper_lock.is_active(accessor.id, subject_id):
             return True
         return False
     if accessor.role == "officer":

@@ -3,8 +3,6 @@
 Four actions:  AUTO_APPROVE | ASK_PROOF | HUMAN_REVIEW | DECLINE_WITH_APPEAL
 Wrong approvals are far more expensive than slow ones, so the AUTO band is deliberately narrow (see thresholds()).
 """
-from typing import Any
-
 DEFAULT_COSTS = {
     "wrong_approval": 50_000,   # PKR: payout lost + recovery effort + harm to genuine claimants who then miss out
     "human_review": 150,        # PKR: officer minutes
@@ -41,7 +39,7 @@ def thresholds(c: dict) -> dict:
     """Break-even probabilities, derived (not guessed). Used by the Risk Dial UI and the README."""
     wa, hr, dh, res = c["wrong_approval"], c["human_review"], c["delay_harm_human"], c["human_residual_error"]
     # AUTO cost == HUMAN cost  ->  (1-p)*wa = hr + p*dh + (1-p)*wa*res
-    p_auto = 1 - (hr + dh) / (wa * (1 - res) + dh)
+    p_auto = 1 - (hr + dh) / max(wa * (1 - res) + dh, 1e-9)  # guarded: a zero cost matrix must never crash decisions
     # ASK beats HUMAN somewhere in the middle: find by scan
     p_ask_min = None
     for i in range(0, 1001):
@@ -149,3 +147,32 @@ def decide(*, p_identity: float | None, identity_decision: str, doc: dict | None
         "can_ask": can_ask,
         "notes": reasons_internal,
     }
+
+
+# ---------------------------------------------------------------------------------------------------------------------
+# RECOURSE: "what would change this decision?"  Not a canned tip: each hypothetical is run through the SAME decision engine.
+# ---------------------------------------------------------------------------------------------------------------------
+_PERFECT_DOC = {"authenticity": 1.0, "flag": None}
+
+
+def recourse(*, p_identity: float | None, identity_decision: str, doc: dict | None, anomaly: dict, rule_eval: dict,
+             conflicts: list[str], costs: dict, has_doc_proof: bool, route: str, asks: list[str]) -> list[dict]:
+    """Smallest actions that could change the outcome, each with the route and confidence the engine would then give."""
+    items: list[dict] = []
+    for t in rule_eval.get("trace", []):
+        if t["passed"] is False and t["hard"]:
+            items.append({"kind": "rule", "rule_id": t["id"], "label": t["label"], "label_ur": t.get("label_ur"), "actual": t["actual"], "would_route": None})
+    if route == "AUTO_APPROVE" or rule_eval["verdict"] == "INELIGIBLE" or conflicts or (doc or {}).get("flag") in ("forged", "mismatch"):
+        return items  # nothing the citizen can simply "add" to fix these: a person decides
+    base = dict(p_identity=p_identity, identity_decision=identity_decision, doc=doc, anomaly=anomaly, rule_eval=rule_eval,
+                conflicts=conflicts, costs=costs, has_doc_proof=has_doc_proof)
+    for ask in dict.fromkeys(asks):
+        if ask in ("upload_id_photo", "retake_id_photo"):
+            hyp = {**base, "doc": _PERFECT_DOC, "has_doc_proof": True}
+        elif ask == "confirm_father_name_or_dob":
+            hyp = {**base, "p_identity": 0.99999, "identity_decision": "MATCH"}
+        else:
+            continue
+        after = decide(**hyp)
+        items.append({"kind": "proof", "ask": ask, "would_route": after["route"], "p_legit_after": after["p_legit"]})
+    return items

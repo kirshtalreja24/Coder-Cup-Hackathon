@@ -28,8 +28,22 @@ Most AI services try to look smart. Bharosa tries to be *accountable*:
 | **07 Works for everyone** | Voice-first Urdu (Uplift AI speech-to-text and text-to-speech via our own server, pre-rendered clips cached for offline, browser voice as last fallback), icon-only flow, 84 KB gzip app, PWA, saved progress at every step, offline outbox with idempotent sync, photos shrunk for 2G. |
 | **08 Scams & fake documents** | Hybrid scam classifier (rules + char-n-gram ML) with an honest confusion matrix and false-alarm rate; document forensics (blur, QR signature, QR-vs-form cross-check, OCR when available). |
 
-### Signature features (beyond a typical AI SaaS)
-* **🛡️ Red-Team page** — the system attacks *itself* live (40 attacks: forged JWTs, wrong roles, tenant isolation, consent withdrawal, forged ID, prompt injection, garbage input, rule change, audit tampering…) and prints a pass/fail scorecard.
+### What makes Bharosa different
+Most entries will be an assistant that fills in forms. Bharosa is a system that is **accountable for being wrong**, and it proves that live:
+
+| | Feature | Why it matters |
+|---|---|---|
+| 1 | **Red-Team page**: the running system attacks itself (50+ attacks) and prints a pass/fail scorecard | "Behaviour over claims": judges press one button and read what actually happened |
+| 2 | **Cost-of-wrong engine + Risk Dial**: expected-cost minimisation, thresholds derived from admin-set costs | Auto-approve needs about 99.5% confidence; the numbers are on screen |
+| 3 | **Digital Twin + safety gate**: every rule change is replayed on past cases; a change that raises fraud or lifts automatic payouts by more than 15% is **blocked** unless the admin writes a reason that goes into the audit log | An admin cannot silently make the system less safe |
+| 4 | **"What would change this decision?"**: a computed counterfactual shown to the citizen ("with a clear photo this could be approved automatically, confidence 100%") | Real recourse, produced by re-running the actual engine, in Urdu / Roman Urdu / English |
+| 5 | **Verifiable decision receipts**: a signed QR that anyone can verify with no login and no personal data, tied to the hash-chained audit log | A citizen carries proof of a decision; tampering is detected |
+| 6 | **Helper Mode where only the family can consent**: the one-time code goes to the *family*, helpers cannot self-consent, and the session locks itself after 60 s (enforced on the server) | One shared phone, 40 families, no way for a helper to quietly consent for someone |
+| 7 | **Tamper-evident audit chain** with a "prove detection" button | Auditable AI decisions, not a log you must trust |
+| 8 | **Offline-first + Urdu voice** (Uplift AI speech-to-text and text-to-speech, cached prompts) | A person who cannot read, on a weak connection, can finish the task |
+
+### More signature features
+* **🛡️ Red-Team page** — the system attacks *itself* live (50+ attacks: forged JWTs, wrong roles, tenant isolation, consent withdrawal, helper self-consent, forged ID, prompt injection, garbage input, rule changes, SSRF, receipt tampering, audit tampering…) and prints a pass/fail scorecard.
 * **🧪 Digital Twin** — test a rule or cost change on 320 past cases (known ground truth) *before* publishing: who flips, fraud leakage, genuine people affected, spend.
 * **🔗 Hash-chained audit log** — tamper-evident; auditor can verify the chain and *prove* detection by simulating tampering.
 * **👨‍👩‍👧 Helper Mode** — one shared phone, 40 families: per-family OTP consent (mock), 60-second auto-lock, every switch audited.
@@ -39,11 +53,11 @@ Most AI services try to look smart. Bharosa tries to be *accountable*:
 ## Rubric map (where to look)
 | Rubric item | Where |
 |---|---|
-| ≥3 AI features | RAG (`/ask`) · agent with tool calls (`app/agent.py`) · classification & routing (`/scam/check`, decision engine) · computer vision (`app/vision.py`) · voice (Uplift AI Urdu speech-to-text and text-to-speech through our server, 21 pre-rendered Urdu clips for offline, browser speech as fallback) · structured outputs (Pydantic `ClaimForm`) · guardrails + human approval · explainability · anomaly detection (IsolationForest + rules) · memory (saved progress/consent) · evaluation dashboard (`/s/analytics`) |
+| ≥3 AI features | RAG (`/ask`) · agent with tool calls (`app/agent.py`: a deterministic, auditable tool-calling pipeline; the LLM never decides) · classification & routing (`/scam/check`, decision engine) · computer vision (`app/vision.py`) · voice (Uplift AI Urdu speech-to-text and text-to-speech through our server, 21 pre-rendered Urdu clips for offline, browser speech as fallback) · structured outputs (Pydantic `ClaimForm`) · guardrails + human approval · explainability (user reason + auditor trace + computed recourse + verifiable receipt) · anomaly detection (IsolationForest + rules) · memory (saved progress/consent) · evaluation dashboard (`/s/analytics`) |
 | Core SaaS | JWT + RBAC (5 roles) · dashboards · cases (create/assign/escalate/close) · public REST API + API keys + Swagger · audit log · consent mgmt · mock identity/payment/data APIs |
-| "Pick 3" | Multi-tenant (2 departments) · rule editor · notifications (in-app + mock SMS) · webhooks · analytics per tenant · review queue (priority + confidence sort) · subscription plans & quotas · background jobs · rate limiting · offline mode |
+| "Pick 3" (we built 10) | Multi-tenant (2 departments) · rule editor + Digital Twin · notifications (in-app inbox is real; SMS / WhatsApp / email are simulated and labelled) · webhooks (HMAC-signed, SSRF-guarded) · analytics per tenant · review queue (priority + confidence sort) · subscription plans & quotas · background jobs · rate limiting · offline mode |
 | Bonus | Digital Twin · Helper Mode · Offline-first sync · Scam Map (all four) |
-| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 24 automated tests (`backend/tests`) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
+| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 35+ automated tests (`backend/tests`, including the full Red-Team scorecard) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
 
 ## Real vs simulated
 See [`docs/REAL_VS_SIMULATED.md`](docs/REAL_VS_SIMULATED.md) (also shown in the app under *About*).
@@ -64,7 +78,7 @@ cd frontend && npm install && npm run dev            # http://localhost:5173
 ```
 Copy `.env.example` → `.env` and set `DATABASE_URL` (Supabase Postgres) for the deployed setup. Migrations run automatically on start for Postgres (`alembic upgrade head`).
 
-Tests: `cd backend && python -m pytest tests -q` (24 tests, includes the full 40-attack scorecard).
+Tests: `cd backend && python -m pytest tests -q` (35+ tests, includes the full Red-Team scorecard).
 
 ### Optional services (everything works without them, with fallbacks)
 | Service | `.env` keys | Without it |
@@ -101,6 +115,8 @@ curl -i $API/audit -H "Authorization: Bearer $TOKEN"            # 403 - officer 
 curl -s $API/v1/status -H "X-API-Key: bh_demo_public_key_mock_0001"   # public API (mock data)
 curl -s -X POST $API/public/scam-check -H "Content-Type: application/json" -d '{"text":"BISP relief approved. Send CNIC and fee Rs 500 to 0300-1234567","sender":"0300"}'
 ```
+Verify a decision receipt with no login (the code is on the citizen's receipt screen): `curl "$API/public/verify-receipt?t=<receipt-code>"`.
+
 Consent: as a citizen submit a claim with consent, then `POST /consents/{id}/withdraw`; the officer's next `GET /cases/{id}` returns `redacted:true` and `POST /cases/{id}/review` returns **403**; `GET /audit?action=access.denied` shows it.
 
 ## Architecture (short)
@@ -112,7 +128,12 @@ FastAPI + SQLAlchemy + Alembic · Postgres (Supabase) · React PWA · scikit-lea
 * Scam classifier and forgery checks are trained/tested on a **small synthetic set**; numbers show behaviour, not production accuracy. ELA (edit detection) is informational only because it gave false alarms on clean cards.
 * OCR needs Tesseract on the server (installed in the Docker image); without it the system relies on QR signature + form cross-check and says so.
 * Browser Urdu speech recognition depends on the device; every voice step has an icon/tap fallback.
-* Single-process job runner and in-memory rate limiter: fine for a prototype, not for horizontal scale.
+* Single-process job runner, in-memory rate limiter and in-memory helper session lock: fine for a prototype, not for horizontal scale.
+* The claim agent is a deliberately **deterministic** tool-calling pipeline, not an LLM that improvises; the LLM only explains and answers questions.
+* Helper one-time codes are delivered to the family's *simulated* SMS / in-app inbox. For a single-person demo, set `DEMO_SHOW_OTP=true` to also return the code in the API response (off by default, clearly labelled when on).
+* Demo logins and the demo API key are public on purpose (so judges can try everything); they only unlock synthetic data.
+* The Red-Team run creates a throw-away sandbox department in the database each time (synthetic users only; real demo data is untouched).
+* The anomaly detector flags 8+ claims from one account within an hour, which is intentional (batch-filing is a fraud signal) but means a very busy helper's batch would be reviewed by a person.
 
 ## Team
 Kirsh · Krishna · Sanjna · Shivam

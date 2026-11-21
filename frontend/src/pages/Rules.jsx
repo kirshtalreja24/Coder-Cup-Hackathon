@@ -26,6 +26,8 @@ export default function Rules() {
   const [err, setErr] = useState(null)
   const [msg, setMsg] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [gate, setGate] = useState(null)
+  const [reason, setReason] = useState('')
   useEffect(() => { if (pub.data && !draft) setDraft(JSON.parse(JSON.stringify(pub.data.definition))) }, [pub.data])
   if (pub.loading || !draft) return <Spinner />
   const setCond = (i, patch) => setDraft({ ...draft, conditions: draft.conditions.map((c, j) => (j === i ? { ...c, ...patch } : c)) })
@@ -33,9 +35,13 @@ export default function Rules() {
   const runTwin = () => run(async () => setTwin(await apiPost('/rules/twin', { definition: draft })))
   const publish = () => run(async () => {
     const d = await apiPost('/rules/draft', { definition: draft, note: 'edited in rule editor' })
-    const r = await apiPost(`/rules/${d.id}/publish`)
-    setMsg(`Published as v${r.published_version} (was v${r.previous_version}). Effective immediately - no redeploy. Old decisions keep their old version.`)
-    pub.reload(); list.reload(); setTwin(null)
+    try {
+      const r = await apiPost(`/rules/${d.id}/publish`, reason.trim() ? { override_reason: reason.trim() } : undefined)
+      setMsg(`Published as v${r.published_version} (was v${r.previous_version}). Effective immediately, no redeploy. Old decisions keep their old version.` + (r.safety_gate?.override_reason ? ' Safety gate overridden with a recorded reason.' : ''))
+      pub.reload(); list.reload(); setTwin(null); setGate(null); setReason('')
+    } catch (e) {
+      if (e.status === 409 && e.detail?.error === 'safety_gate') { setGate({ ...e.detail, draftId: d.id }); setTwin(e.detail.twin) } else throw e
+    }
   })
   return (
     <div className="col">
@@ -57,6 +63,11 @@ export default function Rules() {
             <button className="ghost" onClick={() => { setDraft(JSON.parse(JSON.stringify(pub.data.definition))); setTwin(null) }}>↺ Reset</button></div>
           {!admin && <p className="hint">Only admins can publish. Officers and auditors can still run the Twin.</p>}
         </div>
+        {gate && <div className="card col" style={{ borderColor: 'var(--red)', borderWidth: 2 }}><h3>🛡️ Blocked by the safety gate</h3>
+          <div className="banner bad">{gate.message}</div>
+          <p className="small">Before publishing, the system replays every change on past cases. Rules that raise automatic payouts by more than 15%, or that would approve more fraud, need a written reason that is stored in the audit log.</p>
+          <label>Written justification (10+ characters)</label><input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Director-approved pilot for flood-affected districts" />
+          <div className="row"><button className="danger" disabled={busy || reason.trim().length < 10} onClick={publish}>Publish anyway (audited)</button><button className="ghost" onClick={() => { setGate(null); setReason('') }}>Cancel</button></div></div>}
         {twin && <div className="card col"><h3>🧪 Digital Twin result · {twin.cases_replayed} past cases replayed <span className="badge grey">nothing was changed</span></h3>
           <div className="grid">{[['Auto-approved', twin.before.routes.AUTO_APPROVE || 0, twin.after.routes.AUTO_APPROVE || 0], ['Sent to humans', twin.before.routes.HUMAN_REVIEW || 0, twin.after.routes.HUMAN_REVIEW || 0], ['Asked for proof', twin.before.routes.ASK_PROOF || 0, twin.after.routes.ASK_PROOF || 0], ['Declined (appealable)', twin.before.routes.DECLINE_WITH_APPEAL || 0, twin.after.routes.DECLINE_WITH_APPEAL || 0], ['Wrong approvals (fraud paid)', twin.before.wrong_approvals, twin.after.wrong_approvals], ['Genuine people declined by the rule', twin.before.genuine_declined_by_rule, twin.after.genuine_declined_by_rule], ['Genuine people NEWLY declined by this change', 0, twin.after.wrongful_declines], ['Auto-spend', money(twin.before.auto_spend_pkr), money(twin.after.auto_spend_pkr)], ['Total expected cost', money(twin.before.total_cost_pkr), money(twin.after.total_cost_pkr)]].map(([l, a, b]) => <div key={l} className="card flat"><div className="kpi-l">{l}</div><div className="row"><span className="muted">{a}</span>→<b className="kpi" style={{ fontSize: '1.4rem' }}>{b}</b></div></div>)}</div>
           {twin.summary.map((s, i) => <div key={i} className={'banner ' + (s.startsWith('WARNING') ? 'bad' : 'info')}>{s}</div>)}

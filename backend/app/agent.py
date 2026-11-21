@@ -1,18 +1,20 @@
-"""The claim agent: plans and finishes the relief-claim task step by step by calling MOCK identity / payment / data tools.
-Every tool call is recorded in the audit chain with actor_type='agent'. The agent is deterministic in what it is allowed
-to DO (safety) and uses the LLM only to assist (explanations, Q&A), never to approve money.
+"""The claim agent: finishes the relief-claim task step by step by calling MOCK identity / payment / data tools.
 
-Plan: validate_form -> consent_gate -> registry_lookup -> document_analysis -> anomaly_check -> rules -> decide -> act -> notify
+It is a deliberately DETERMINISTIC tool-calling pipeline, not an LLM that improvises: what it may do is fixed in code (safety),
+and the LLM, when configured, only helps explain and answer questions, never approves money. Every tool call is recorded in the
+audit chain with actor_type='agent'.
+
+Pipeline: validate_form -> consent_gate -> registry_lookup -> document_analysis -> anomaly_check -> rules -> decide -> act -> notify
 """
-import json
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
-from . import anomaly, audit, consent, decision as dec, explain, mock_services as ms, rules, vision
-from .identity import clean_cnic, fs_compare, name_similarity, validate_cnic
-from .models import Case, CaseEvent, Decision, Document, Notification, Tenant, User, now
+from . import anomaly, audit, consent, decision as dec, explain, mock_services as ms, rules
+from .identity import clean_cnic, validate_cnic
+from .models import Case, CaseEvent, Decision, Document, Tenant, User, now
+from .notify import notify
 from .webhooks import emit
 
 # --------------------------- structured, validated input (bad data tolerant) --------------------------
@@ -79,10 +81,6 @@ def clean_form(raw: dict) -> tuple[ClaimForm | None, list[str]]:
 
 
 # --------------------------- helpers -------------------------------------------
-class Step(dict):
-    pass
-
-
 def _step(db: Session, steps: list, actor: User, case: Case, tool: str, summary: str, data: Any = None, outcome="ok", persist=True):
     s = {"tool": tool, "summary": summary, "outcome": outcome, "data": data}
     steps.append(s)
@@ -140,6 +138,8 @@ def run_claim(db: Session, case: Case, actor: User, *, consent_flags: dict | Non
           {"cnic_issues": cn["issues"], "missing": [k for k, v in form.model_dump().items() if v is None]}, persist=persist)
 
     # 2. consent gate -----------------------------------------------------------------
+    if actor.role == "helper":
+        consent_flags = None  # a helper can never grant consent for a family: only the family's own one-time code can
     if consent_flags is not None and persist:
         mapping = {"identity": ("service", "mock_nadra", "identity"), "payment": ("service", "mock_raast", "payment"),
                    "documents": ("role", "officer", "documents"), "case_history": ("role", "officer", "case_history"),
@@ -215,7 +215,10 @@ def run_claim(db: Session, case: Case, actor: User, *, consent_flags: dict | Non
     limit = costs.get("auto_payment_limit", 30_000)
     if d["route"] == "AUTO_APPROVE" and amount > limit:
         d["route"], d["override"] = "HUMAN_REVIEW", f"guardrail: amount PKR {amount:,} exceeds auto-payment limit PKR {limit:,}"
+    d["recourse"] = dec.recourse(p_identity=p_identity, identity_decision=ident["decision"], doc=doc_result, anomaly=an, rule_eval=rule_eval,
+                                 conflicts=conflicts, costs=costs, has_doc_proof=bool(docs), route=d["route"], asks=d["asks"])
     reason = explain.user_reason(d["route"], d, rule_eval, amount)
+    reason["recourse"] = explain.recourse_lines(d["recourse"])
     brief = explain.handoff_brief(case.data or {}, d, rule_eval, ident, doc_result) if d["route"] == "HUMAN_REVIEW" else None
     _step(db, steps, actor, case, "decide",
           f"Route {d['route']} (P(legit) {d['p_legit']:.1%}; expected cost auto={d['action_costs'].get('AUTO_APPROVE')} vs review={d['action_costs'].get('HUMAN_REVIEW')}).",
@@ -238,6 +241,7 @@ def run_claim(db: Session, case: Case, actor: User, *, consent_flags: dict | Non
     dd = Decision(case_id=case.id, tenant_id=case.tenant_id, route=d["route"], p_legit=d["p_legit"], confidence=d["confidence"],
                   rule_version_id=rv.id, rule_version=rv.version, trace=trace, reason_user=reason)
     db.add(dd)
+    db.flush()  # assigns dd.id, so the audit entry below can reference it (receipts and auditors rely on this link)
     case.data = {**(case.data or {}), "signals": signals}
     case.amount = amount
     case.priority = risk_priority(d["p_legit"], an["risk"], amount)
@@ -269,8 +273,7 @@ def run_claim(db: Session, case: Case, actor: User, *, consent_flags: dict | Non
         note = "Handed to a human reviewer with case notes."
     case.progress = {**(case.progress or {}), "step": case.status}
     db.add(CaseEvent(case_id=case.id, actor_id="claim-agent", kind=f"decision.{d['route']}", note=note))
-    db.add(Notification(user_id=case.citizen_id, channel="in_app", body=reason["ur"] if citizen.locale == "ur" else reason["en"]))
-    db.add(Notification(user_id=case.citizen_id, channel="sms", body="[MOCK SMS] " + reason["roman"]))
+    notify(db, case.citizen_id, reason["ur"] if citizen.locale == "ur" else reason["en"], short=reason["roman"], channels=("in_app", "sms", "whatsapp"))
     audit.log(db, action="ai.decision", actor_type="ai", actor_id="bharosa-decider-1.0", tenant_id=case.tenant_id,
               resource_type="case", resource_id=case.id,
               details={"route": d["route"], "p_legit": d["p_legit"], "rule_version": rv.version, "decision_id": dd.id,

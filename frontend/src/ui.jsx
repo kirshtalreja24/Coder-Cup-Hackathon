@@ -5,6 +5,12 @@ export const MockTag = ({ children = 'MOCK' }) => <span className="mock-tag" tit
 const STATUS_COLOR = { paid: '', approved: '', closed: 'grey', declined: 'red', rejected: 'red', needs_proof: 'amber', needs_consent: 'amber', awaiting_human: 'blue', escalated: 'red', draft: 'grey', awaiting_payment_consent: 'amber' }
 export const StatusBadge = ({ s }) => <span className={'badge ' + (STATUS_COLOR[s] ?? '')}>{(s || '').replaceAll('_', ' ')}</span>
 
+// One shared look for every decision route: [result tone, icon, spoken prompt id]
+export const ROUTE_UI = {
+  AUTO_APPROVE: ['good', '✅', 'approved'], APPROVED_WAITING_PAYMENT_CONSENT: ['wait', '⏳', 'need_proof'], ASK_PROOF: ['wait', '📷', 'need_proof'],
+  HUMAN_REVIEW: ['human', '🤝', 'human_review'], DECLINE_WITH_APPEAL: ['stop', '🛑', 'declined_appeal'], NEEDS_CONSENT: ['wait', '🔒', 'consent_identity'],
+}
+
 const ROUTE_COLOR = { AUTO_APPROVE: '', ASK_PROOF: 'amber', HUMAN_REVIEW: 'blue', DECLINE_WITH_APPEAL: 'red', NEEDS_CONSENT: 'amber' }
 export const RouteBadge = ({ r }) => <span className={'badge ' + (ROUTE_COLOR[r] ?? 'grey')}>{(r || '').replaceAll('_', ' ')}</span>
 

@@ -9,6 +9,10 @@ def mask_cnic(c: str | None) -> str | None:
     return None if not c else "*" * max(len(c) - 4, 0) + c[-4:]
 
 
+def mask_phone(p: str | None) -> str | None:
+    return None if not p else "*" * 6 + str(p)[-3:]
+
+
 def mask_name(n: str | None) -> str | None:
     if not n:
         return n
@@ -21,7 +25,7 @@ def mask_form(d: dict | None) -> dict | None:
         return None
     out = dict(d)
     if "cnic" in out: out["cnic"] = mask_cnic(out["cnic"])
-    if "phone" in out and out["phone"]: out["phone"] = "*" * 6 + str(out["phone"])[-3:]
+    if "phone" in out and out["phone"]: out["phone"] = mask_phone(out["phone"])
     if "name" in out: out["name"] = mask_name(out["name"])
     if "father_name" in out: out["father_name"] = mask_name(out["father_name"])
     if "dob" in out and out["dob"]: out["dob"] = str(out["dob"])[:4] + "-**-**"
@@ -41,7 +45,6 @@ def case_summary(db: Session, c: Case, viewer: User) -> dict:
 def case_detail(db: Session, c: Case, viewer: User) -> dict:
     out = case_summary(db, c, viewer)
     out["progress"] = c.progress
-    owner_view = viewer.id in (c.citizen_id, c.created_by) or viewer.role == "helper"
     if viewer.id == c.citizen_id:
         out["data"] = {k: v for k, v in (c.data or {}).items() if k != "signals"}
         out["redacted"] = False

@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import audit, demo, llm, rag, scam, twin
+from .. import audit, demo, helper_lock, llm, rag, scam, twin
 from ..db import get_db
 from ..metrics import METRICS
-from ..models import Case, Decision, IdempotencyRecord, ScamMessage, Tenant, User, now
+from ..models import Case, Decision, IdempotencyRecord, ScamMessage, User, now
 from ..security import client_ip, current_user, rate_limited, require_roles
 from . import cases as cases_router
 
@@ -25,7 +25,9 @@ class ScamIn(BaseModel):
 
 def _check(db: Session, body: ScamIn, user: User | None, tenant_id: str | None) -> dict:
     res = scam.classify(body.text, body.sender)
-    if body.report:
+    duplicate = db.query(ScamMessage).filter(ScamMessage.text == body.text[:2000], ScamMessage.area == body.area, ScamMessage.tenant_id == tenant_id,
+                                             ScamMessage.created_at >= now() - timedelta(hours=24)).first() is not None
+    if body.report and not duplicate:
         db.add(ScamMessage(tenant_id=tenant_id, reporter_id=user.id if user else None, sender=body.sender, text=body.text[:2000], area=body.area,
                            verdict=res["verdict"], score=res["score"], scam_type=res["scam_type"], reasons=[r["code"] for r in res["reasons"]]))
         db.commit()
@@ -67,8 +69,10 @@ def scam_map(days: int = 30, user: User = Depends(require_roles("officer", "admi
 
 @router.get("/scam/recent")
 def scam_recent(limit: int = 30, user: User = Depends(require_roles("officer", "admin", "auditor")), db: Session = Depends(get_db)):
-    rows = db.query(ScamMessage).order_by(ScamMessage.created_at.desc()).limit(limit).all()
-    return [{"id": r.id, "area": r.area, "verdict": r.verdict, "score": r.score, "type": r.scam_type, "text": r.text[:160], "at": r.created_at.isoformat()} for r in rows]
+    rows = (db.query(ScamMessage).filter((ScamMessage.tenant_id == user.tenant_id) | (ScamMessage.tenant_id.is_(None)))
+            .order_by(ScamMessage.created_at.desc()).limit(limit).all())
+    return [{"id": r.id, "area": r.area, "verdict": r.verdict, "score": r.score, "type": r.scam_type, "text": r.text[:160], "at": r.created_at.isoformat(),
+             "source": "department" if r.tenant_id else "public (unverified)"} for r in rows]
 
 
 @router.get("/scam/eval", summary="Honest evaluation incl. false-alarm rate")
@@ -112,8 +116,9 @@ class SyncIn(BaseModel):
 @router.post("/sync/batch", summary="Offline-first sync: replay queued operations with idempotency keys (no loss, no duplicates)")
 def sync_batch(body: SyncIn, user: User = Depends(require_roles("citizen", "helper")), db: Session = Depends(get_db)):
     results, id_map = [], {}
+    bypass_token = helper_lock.bypass.set(True)
     for op in body.ops:
-        key = f"sync:{op.op_id}"[:80]
+        key = f"sync:{user.id}:{op.op_id}"[:80]
         prev = db.get(IdempotencyRecord, key)
         if prev and prev.user_id == user.id:
             results.append({"op_id": op.op_id, "status": "duplicate_ignored", "result": prev.response})
@@ -144,6 +149,7 @@ def sync_batch(body: SyncIn, user: User = Depends(require_roles("citizen", "help
         except Exception as e:  # never crash a whole batch
             db.rollback()
             results.append({"op_id": op.op_id, "status": "error", "error": type(e).__name__})
+    helper_lock.bypass.reset(bypass_token)
     audit.log(db, action="sync.batch", actor=user, details={"ops": len(body.ops), "applied": sum(1 for r in results if r["status"] == "applied")})
     return {"results": results, "temp_id_map": id_map}
 

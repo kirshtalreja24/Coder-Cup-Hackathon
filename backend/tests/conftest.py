@@ -22,8 +22,12 @@ def client():
         yield c
 
 
+_ip = iter(range(1, 10**6))
+
+
 def login(client, email, pw=PW):
-    r = client.post("/auth/login", data={"username": email, "password": pw})
+    # each test login comes from its own address, like real users (the login rate limiter is per IP)
+    r = client.post("/auth/login", data={"username": email, "password": pw}, headers={"x-forwarded-for": f"10.9.{next(_ip) % 250}.{next(_ip) % 250}"})
     assert r.status_code == 200, r.text
     return {"Authorization": f"Bearer {r.json()['access_token']}"}
 

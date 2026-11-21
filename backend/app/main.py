@@ -14,7 +14,7 @@ from . import jobs, seed
 from .config import BACKEND, get_settings
 from .db import Base, SessionLocal, engine
 from .metrics import METRICS
-from .routers import ai, auth, cases, consents, public, staff, voice
+from .routers import admin, ai, auth, cases, consents, notifications, public, receipts, staff, voice
 from .security import client_ip, rate_limited
 
 settings = get_settings()
@@ -85,8 +85,11 @@ app.include_router(cases.router)
 app.include_router(consents.router)
 app.include_router(consents.helper_router)
 app.include_router(staff.router)
+app.include_router(admin.router)
 app.include_router(ai.router)
 app.include_router(voice.router)
+app.include_router(notifications.router)
+app.include_router(receipts.router)
 app.include_router(public.router)
 try:
     from .routers import redteam
