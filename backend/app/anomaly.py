@@ -10,6 +10,13 @@ from .identity import clean_cnic
 from .models import Case, Payment, now
 
 
+def _int(x) -> int:
+    try:
+        return int(x)
+    except (TypeError, ValueError):
+        return 0
+
+
 def features_for(db: Session, case: Case, data: dict) -> dict:
     cnic = clean_cnic(data.get("cnic"))
     phone = (data.get("phone") or "").strip()
@@ -26,7 +33,7 @@ def features_for(db: Session, case: Case, data: dict) -> dict:
                                                      Case.created_at >= now() - timedelta(hours=1)).scalar() or 0
     return {"same_cnic_open": same_cnic, "phone_shared_with_other_cnics": len(same_phone_ids),
             "paid_last_90d": int(paid_recent), "claims_by_creator_last_hour": int(last_hour),
-            "income": data.get("monthly_income") or 0, "household": data.get("household_size") or 0}
+            "income": _int(data.get("monthly_income")), "household": _int(data.get("household_size"))}
 
 
 @lru_cache(maxsize=1)

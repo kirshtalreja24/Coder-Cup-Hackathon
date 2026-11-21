@@ -1,97 +1,96 @@
-# BHAROSA (بھروسہ)
+# Bharosa (بھروسہ) — AI on Public Rails
 
-> **PROTOTYPE ONLY.** All identity, payment and data services are mocked. No real personal data is used.
+> **PROTOTYPE ONLY. Not an official service.** Every identity, payment, SMS and data service here is a **mock**; every person is **synthetic**. No real personal data is used anywhere.
+> Built for Coder's Cup '26 · AI Hackathon · *The Last Mile: AI on Public Rails*.
 
-Hackathon project: a public-service system that helps **widows and low-literacy households (and the helpers who serve them)** claim a **mock emergency relief payment**, even though they can't read the forms, have weak signal, and are flooded with fake "relief" SMS.
+**We help widows and low-literacy households (and the helpers who serve them) claim a relief payment, even though they cannot read the forms, have a weak signal, and are flooded with fake "relief" SMS.**
 
-The flow is: identity check → document check → eligibility → payment (mock Raast) → receipt, wrapped in a scam shield and a helper mode.
+One task, end to end: **relief claim** → identity check → document check → eligibility → decision → (mock) payment → receipt, wrapped in a scam shield, a consent broker and a tamper-evident audit trail.
 
-The idea behind it: a public-service system designed around being wrong. Uncertainty, cost, reversibility and proof are first-class objects. The decision core is **rules plus calibrated scores, not an LLM**. The LLM only explains and assists, and always has a deterministic fallback.
+## The idea: a system designed around being wrong
+Most AI services try to look smart. Bharosa tries to be *accountable*:
 
-See [`PLAN.md`](PLAN.md) for the full design and schedule.
+| Challenge from the brief | What the running system does |
+|---|---|
+| **01 Cost of being wrong** | Expected-cost decision engine. Admin sets what a wrong approval / review / wrongful block costs; the system picks the cheapest of *act alone · ask for proof · hand to a human*. Auto-approve needs P(genuine) ≥ **99.5%** with the default costs. See **Risk Dial** page. |
+| **02 "I am not sure"** | Low confidence → clear handoff with a **case brief** (what we know, what we doubt, suggested questions). Also in scam checker and RAG (abstains: "not in official documents"). |
+| **03 Bad data** | Fellegi–Sunter probabilistic matching + Urdu/Roman name canonicalisation (Muhammad/Mohammad/Muhammed…). Missing fields add *zero* evidence, so thin data can never auto-match. Garbage input never crashes. |
+| **04 Rules that change** | Versioned JSON rules edited in the admin UI. Publish = effective on the next decision, no redeploy. Every decision pins its rule version. |
+| **05 Explain & audit** | Citizen gets a simple reason (Urdu/Roman/English, spoken). Auditor gets the full trace: input, rule version, model version, confidence, expected costs, identity evidence. |
+| **06 Consent & take-back** | One server-side consent gate for all personal data. Withdraw → next request is blocked, and the audit chain shows it. "Who looked at my data" log. Panic button. |
+| **07 Works for everyone** | Voice-first (Urdu), icon-only flow, 84 KB gzip app, PWA, saved progress at every step, offline outbox with idempotent sync, photos shrunk for 2G. |
+| **08 Scams & fake documents** | Hybrid scam classifier (rules + char-n-gram ML) with an honest confusion matrix and false-alarm rate; document forensics (blur, QR signature, QR-vs-form cross-check, OCR when available). |
 
-## Features
+### Signature features (beyond a typical AI SaaS)
+* **🛡️ Red-Team page** — the system attacks *itself* live (40 attacks: forged JWTs, wrong roles, tenant isolation, consent withdrawal, forged ID, prompt injection, garbage input, rule change, audit tampering…) and prints a pass/fail scorecard.
+* **🧪 Digital Twin** — test a rule or cost change on 320 past cases (known ground truth) *before* publishing: who flips, fraud leakage, genuine people affected, spend.
+* **🔗 Hash-chained audit log** — tamper-evident; auditor can verify the chain and *prove* detection by simulating tampering.
+* **👨‍👩‍👧 Helper Mode** — one shared phone, 40 families: per-family OTP consent (mock), 60-second auto-lock, every switch audited.
+* **📴 Offline-first** — claims saved locally, synced later with idempotency keys: no loss, no duplicates.
+* **🗺️ Scam Map** — live view of scam types × areas × time from classified messages, incl. "rising areas".
 
-- **Decision engine / Risk Dial**: picks AUTO, ASK-FOR-PROOF or HUMAN review by minimizing expected cost from an admin-set cost matrix.
-- **Versioned rules + Digital Twin**: edit rules in a draft and replay them on synthetic cases before publishing. Each decision pins its rule version.
-- **Identity matching**: Fellegi–Sunter probabilistic linkage over name phonetics, father's name, DOB and district. Possible matches go to a human and are never auto-merged.
-- **Consent broker + tamper-evident audit**: every data read passes one server-side gate, withdrawal gives an instant 403, and the audit log is a verifiable hash chain.
-- **Scam Shield**: official-sender rule (genuine BISP messages come only from 8171), URL and lookalike checks, red-flag phrases, and a small text classifier.
-- **Vision**: OCR, QR cross-check and forgery heuristics on synthetic, watermarked sample cards.
-- **RAG with citations**, an **agent with tool calls**, anomaly detection (duplicate and burst claims), and explanations.
-- **Auth and RBAC**: JWT login with five roles (Citizen, Helper, Officer, Admin, Auditor), enforced server-side. Includes a Helper Mode, rate limiting and a public REST API with OpenAPI docs.
-- **Red-Team endpoint**: fires canned attacks at the running system and returns a pass/fail scorecard (dev only).
+## Rubric map (where to look)
+| Rubric item | Where |
+|---|---|
+| ≥3 AI features | RAG (`/ask`) · agent with tool calls (`app/agent.py`) · classification & routing (`/scam/check`, decision engine) · computer vision (`app/vision.py`) · voice (browser STT/TTS + pre-rendered Urdu clips) · structured outputs (Pydantic `ClaimForm`) · guardrails + human approval · explainability · anomaly detection (IsolationForest + rules) · memory (saved progress/consent) · evaluation dashboard (`/s/analytics`) |
+| Core SaaS | JWT + RBAC (5 roles) · dashboards · cases (create/assign/escalate/close) · public REST API + API keys + Swagger · audit log · consent mgmt · mock identity/payment/data APIs |
+| "Pick 3" | Multi-tenant (2 departments) · rule editor · notifications (in-app + mock SMS) · webhooks · analytics per tenant · review queue (priority + confidence sort) · subscription plans & quotas · background jobs · rate limiting · offline mode |
+| Bonus | Digital Twin · Helper Mode · Offline-first sync · Scam Map (all four) |
+| Engineering | Postgres + Alembic migrations · Docker · tests (`backend/tests`, 20) · `/health` `/metrics` · structured error handling |
 
-## Real vs Simulated
+## Real vs simulated
+See [`docs/REAL_VS_SIMULATED.md`](docs/REAL_VS_SIMULATED.md) (also shown in the app under *About*).
 
-| Area | Status |
-|------|--------|
-| Identity lookup (NADRA-like) | **Simulated.** `mock_services.py`, synthetic citizens only |
-| Payments (Raast-like) | **Simulated.** No money moves |
-| SMS / WhatsApp notifications | **Simulated.** Written to a log |
-| CNIC images and QR codes | **Simulated.** Generated by us and watermarked "SAMPLE" |
-| Citizen, SMS and case data | **Simulated.** Reproducible seed script |
-| CNIC format validation | Real. Public format: 13 digits, province digit, odd/even gender digit |
-| Decision engine, rules, identity matching, consent, audit chain, RBAC, rate limiting | Real, running code |
-| Scam classifier, anomaly detection, OCR / forgery checks | Real code, trained and tested on synthetic data only |
-| LLM explanations / RAG answers | Real when an LLM endpoint is configured, otherwise deterministic templates |
-
-Anything mock is labeled MOCK in API responses.
-
-## Project layout
-
-```
-backend/
-  app/
-    main.py            FastAPI app and router wiring
-    routers/           auth, cases, consents, staff, ai, public, redteam
-    decision.py        cost-based AUTO / ASK / HUMAN engine
-    rules.py, twin.py  versioned rules and Digital Twin replay
-    identity.py        probabilistic identity matching
-    consent.py, audit.py, security.py
-    scam.py, vision.py, rag.py, agent.py, anomaly.py, explain.py, llm.py
-    mock_services.py   mock identity and payment services
-    seed.py, demo.py   synthetic data
-  tests/               pytest suite (scenarios, security, AI)
-PLAN.md
-```
-
-## Getting started
-
-Requires Python 3.12 and (optionally) Tesseract for OCR.
-
+## Run it locally
 ```bash
+# backend (Python 3.11+)
 cd backend
-python -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+python -m venv .venv && .venv\Scripts\activate      # (Windows)  source .venv/bin/activate (mac/linux)
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8000            # seeds synthetic data on first start (SQLite if no DATABASE_URL)
+# http://localhost:8000/docs  -> Swagger
+
+# frontend
+cd frontend && npm install && npm run dev            # http://localhost:5173
 ```
+Copy `.env.example` → `.env` and set `DATABASE_URL` (Supabase Postgres) for the deployed setup. Migrations run automatically on start for Postgres (`alembic upgrade head`).
 
-The app seeds synthetic data on startup. Open <http://localhost:8000/docs> for the Swagger UI.
+Tests: `cd backend && python -m pytest tests -q` (20 tests, includes the full 40-attack scorecard).
 
-### Configuration
+## Demo accounts (password for all: `Demo#12345`)
+| Role | Email |
+|---|---|
+| Citizen (widow, clean) | `widow-clean@citizen.demo` |
+| Citizen (name variants) | `widow-variant@citizen.demo` |
+| Helper (40 families) | `helper@relief.demo` |
+| Officer | `officer1@relief.demo` |
+| Admin | `admin@relief.demo` |
+| Auditor | `auditor@relief.demo` |
+| Second department (tenant isolation) | `officer@flood.demo`, `admin@flood.demo` |
 
-Settings are read from environment variables or a `.env` file (see `backend/app/config.py`). All have dev defaults.
+In the claim flow, tap **🎬 demo** to load a ready scenario (clean widow, blurry photo, forged ID, name variants, claims-widow-but-married, over income, garbage input). Scenario list: `GET /demo/scenarios`.
 
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `DATABASE_URL` | SQLAlchemy URL (SQLite locally, Postgres in production) | local SQLite file |
-| `JWT_SECRET` | JWT signing key. **Change in production.** | dev placeholder |
-| `CORS_ORIGINS` | Allowed origins | `*` |
-| `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | Optional OpenAI-compatible LLM endpoint | unset (fallbacks used) |
-| `RATE_LIMIT_PER_MIN` | Per-client rate limit | `120` |
-| `SEED_ON_START` | Seed synthetic data on startup | `true` |
-
-Never commit `.env`. It is git-ignored.
-
-## Tests
-
+## Test the server-side security with curl
 ```bash
-cd backend
-pytest
+API=http://localhost:8000
+curl -i $API/cases                                              # 401 - no token
+TOKEN=$(curl -s -X POST $API/auth/login -d "username=officer1@relief.demo&password=Demo#12345" | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])")
+curl -i $API/audit -H "Authorization: Bearer $TOKEN"            # 403 - officer is not auditor
+curl -s $API/v1/status -H "X-API-Key: bh_demo_public_key_mock_0001"   # public API (mock data)
+curl -s -X POST $API/public/scam-check -H "Content-Type: application/json" -d '{"text":"BISP relief approved. Send CNIC and fee Rs 500 to 0300-1234567","sender":"0300"}'
 ```
+Consent: as a citizen submit a claim with consent, then `POST /consents/{id}/withdraw`; the officer's next `GET /cases/{id}` returns `redacted:true` and `POST /cases/{id}/review` returns **403**; `GET /audit?action=access.denied` shows it.
 
-## License
+## Architecture (short)
+FastAPI + SQLAlchemy + Alembic · Postgres (Supabase) · React PWA · scikit-learn / OpenCV / rapidfuzz / rank-bm25 · optional LLM through any OpenAI-compatible endpoint (**the platform never depends on it**: every LLM step has a deterministic fallback). Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-No license has been chosen yet. All rights reserved by the authors until one is added.
+**The decision core is not an LLM.** Rules + calibrated probabilities + explicit costs decide; the LLM (if configured) only explains and answers questions from retrieved documents, and its output is never allowed to approve money.
+
+## Honest limits
+* Scam classifier and forgery checks are trained/tested on a **small synthetic set**; numbers show behaviour, not production accuracy. ELA (edit detection) is informational only because it gave false alarms on clean cards.
+* OCR needs Tesseract on the server (installed in the Docker image); without it the system relies on QR signature + form cross-check and says so.
+* Browser Urdu speech recognition depends on the device; every voice step has an icon/tap fallback.
+* Single-process job runner and in-memory rate limiter: fine for a prototype, not for horizontal scale.
+
+## Team
+Kirsh · Krishna · Sanjna · Shivam

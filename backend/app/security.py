@@ -110,4 +110,6 @@ def api_key_auth(scope: str | None = None):
 
 
 def client_ip(request: Request) -> str:
-    return request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[0].strip()
+    # Take the LAST hop: it is appended by our own trusted proxy; earlier entries can be forged by the client.
+    xff = request.headers.get("x-forwarded-for")
+    return xff.split(",")[-1].strip() if xff else (request.client.host if request.client else "?")

@@ -41,6 +41,20 @@ _SYN = {"paisay": "payment", "paise": "payment", "raqam": "payment", "rupay": "p
         "ijazat": "consent", "permission": "consent", "dhundli": "blurry", "dhoka": "fake", "helpline": "helpline"}
 
 
+_STOP = set("""a an the is are was were be to of for in on at by with from and or but if it its this that these those i me my we our you your he she they them
+how what who whom when where why which do does did can could should would will shall may might must not no yes any some please tell about know get make use take give want need apply
+there here as so than then also very just more most much many been being have has had am into over under again real آپ کا کی کے کو کہ ہے ہیں سکتا سکتی کون کیا کب کہاں کیسے اور سے میں پر یہ وہ ہو ہوں
+kitne kya kaise ko kar sakta sakti hai hain ka ki ke mein se par aur""".split())
+
+
+def _stem(t: str) -> str:
+    return t[:-1] if len(t) > 4 and t.endswith("s") else t
+
+
+def _content(q: str) -> list[str]:
+    return [_stem(t) for t in _tok(q) if t not in _STOP and len(t) > 1]
+
+
 def _tok(s: str) -> list[str]:
     toks = re.findall(r"[\w؀-ۿ]+", s.lower())
     return [_SYN.get(t, t) for t in toks]
@@ -73,6 +87,11 @@ def ask(db: Session, question: str, lang: str = "en", k: int = 3) -> dict:
     # Prefer chunks in the user's language when scores tie closely
     top = [(s, c) for s, c in ranked[: k + 3] if s > 0][: k]
     best = top[0][0] if top else 0.0
+    content = _content(question)
+    vocab = {_stem(t) for _, c in top for t in _tok(c.source + " " + c.section + " " + c.text)}
+    coverage = (sum(1 for t in content if t in vocab) / len(content)) if content else 0.0
+    if content and coverage < 0.5:  # a key word of the question appears in NO official document (e.g. 'passport') -> abstain
+        return _abstain(f"key terms not found in the official documents ({coverage:.0%} covered)")
     if best < 1.2:  # relevance floor -> abstain instead of guessing
         return _abstain("no official document covers this question", ranked=[(round(s, 2), c) for s, c in ranked[:2]])
     srcs = [{"n": i + 1, "source": c.source, "section": c.section, "lang": c.lang, "score": round(s, 2), "text": c.text}
@@ -82,7 +101,7 @@ def ask(db: Session, question: str, lang: str = "en", k: int = 3) -> dict:
         ctx = "\n".join(f"[{s['n']}] {s['text']}" for s in srcs)
         sys = ("You answer ONLY from the numbered official excerpts. Use very simple words (reader may have low literacy). "
                "Cite like [1]. If the excerpts do not answer, say exactly: NOT_SURE. Reply in " + ("Urdu" if lang == "ur" else "English") + ".")
-        out = llm.chat([{"role": "system", "content": sys}, {"role": "user", "content": f"Excerpts:\n{ctx}\n\nQuestion: {question}"}], max_tokens=250)
+        out = llm.chat([{"role": "system", "content": sys}, {"role": "user", "content": f"Excerpts:\n{ctx}\n\nQuestion: {question}"}], max_tokens=700)
         if out and "NOT_SURE" not in out:
             answer, mode = out.strip(), "llm_grounded"
     if not answer:

@@ -37,7 +37,8 @@ def rule_features(text: str, sender: str | None) -> dict:
     is_official = s == OFFICIAL_SENDER
     f = {
         "relief_claim": _has(RELIEF, t),
-        "fee_request": _has(FEE, t) and _has(r"(pay|send|deposit|جمع|ادا|rs\.?\s?\d|\d+\s?rs|فیس)", t),
+        "fee_request": _has(FEE, t) and _has(r"(\b(pay|send|deposit)\b|جمع|ادا|rs\.?\s?\d|\d+\s?rs|فیس)", t)
+                       and not _has(r"(\bno\s+(fee|fees|charge|charges)\b|free of charge|کوئی فیس نہیں|koi fee nahi)", t),
         "sensitive_request": _has(SENSITIVE, t) and _has(SEND, t),
         "bad_link": bool(non_gov),
         "shortener": any(x in t.lower() for x in SHORTENERS),

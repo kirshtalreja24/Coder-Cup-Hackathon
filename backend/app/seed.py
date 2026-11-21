@@ -53,6 +53,10 @@ def _record(r: random.Random, female: bool | None = None) -> dict:
 PERSONAS = [  # fixed demo people (SYNTHETIC)
     dict(key="widow_clean", cnic="4210112345672", name="Fatima Bibi", father_name="Muhammad Yousuf", dob="1978-03-14", gender="F",
          district="Karachi East", marital_status="widowed", spouse_status="deceased", monthly_income=14000, household_size=6),
+    dict(key="widow_blurry", cnic="4210122233346", name="Zainab Bibi", father_name="Ghulam Hussain", dob="1982-06-18", gender="F",
+         district="Karachi Central", marital_status="widowed", spouse_status="deceased", monthly_income=11000, household_size=5),
+    dict(key="widow_forged", cnic="4210199900018", name="Ayesha Khatoon", father_name="Abdul Karim", dob="1979-12-01", gender="F",
+         district="Karachi East", marital_status="widowed", spouse_status="deceased", monthly_income=13000, household_size=4),
     dict(key="widow_variant", cnic="4220198765434", name="Rukhsana Parveen", father_name="Abdul Rehman", dob="1985-07-22", gender="F",
          district="Karachi West", marital_status="widowed", spouse_status="deceased", monthly_income=12000, household_size=4),
     dict(key="shopkeeper", cnic="4230155544413", name="Muhammad Aslam", father_name="Nazir Ahmad", dob="1972-11-02", gender="M",

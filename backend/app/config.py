@@ -24,13 +24,20 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = ""
     llm_timeout_s: float = 12.0
+    groq_api: str = ""
+    groq_base_url: str = ""
     rate_limit_per_min: int = 120
     seed_on_start: bool = True
 
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if not s.llm_api_key and s.groq_api:  # Groq is OpenAI-compatible: accept GROQ_API / GROQ_BASE_URL as the LLM config
+        s.llm_api_key = s.groq_api
+        s.llm_base_url = s.llm_base_url or s.groq_base_url or "https://api.groq.com/openai/v1"
+        s.llm_model = s.llm_model or "openai/gpt-oss-120b"
+    return s
 
 
 def normalized_db_url(url: str) -> str:

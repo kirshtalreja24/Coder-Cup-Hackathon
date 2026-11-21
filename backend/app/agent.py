@@ -197,7 +197,7 @@ def run_claim(db: Session, case: Case, actor: User, *, consent_flags: dict | Non
         _step(db, steps, actor, case, "vision.analyze_document", "No document yet; will ask for one.", None, persist=persist)
 
     # 5. anomaly -----------------------------------------------------------------------
-    an = anomaly.assess(db, case, case.data or {})
+    an = anomaly.assess(db, case, {**(case.data or {}), **form.model_dump(exclude_none=True)})
     _step(db, steps, actor, case, "anomaly.assess", f"Anomaly risk {an['risk']:.0%}. {'; '.join(an['flags']) or 'No flags.'}", an["features"], persist=persist)
 
     # 6. rules (versioned, data-driven) -------------------------------------------------
