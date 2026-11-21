@@ -1,5 +1,8 @@
 """Public REST API (API-key auth, scoped, rate-limited) + MOCK national services + health/metrics."""
+import os
 import secrets
+import time
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -9,7 +12,7 @@ from .. import mock_services as ms, rag, rules, scam
 from ..db import get_db
 from ..metrics import METRICS
 from ..models import ApiKey, Tenant, User
-from ..security import api_key_auth, current_user
+from ..security import api_key_auth, require_roles, current_user
 from .ai import AskIn
 
 router = APIRouter()
@@ -118,3 +121,21 @@ def mock_transfer(body: MockPay, key: ApiKey = Depends(api_key_auth("mock:raast"
          "to": "*" * 9 + "".join(c for c in body.to_cnic if c.isdigit())[-4:], "reference": "MOCK-" + secrets.token_hex(5).upper()}
     _seen_pay[body.idempotency_key] = r
     return r
+
+
+# ------------------------------------------------------------------ diagnostics (admin/auditor)
+@router.get("/ops/diag", tags=["ops"], summary="Where is the API running and how far is the database? (admin/auditor)")
+def diag(user: User = Depends(require_roles("admin", "auditor")), db: Session = Depends(get_db)):
+    from sqlalchemy import text
+    from ..config import get_settings
+    from ..db import engine
+    rtts = []
+    for _ in range(6):
+        t0 = time.perf_counter()
+        db.execute(text("select 1"))
+        rtts.append(round((time.perf_counter() - t0) * 1000, 1))
+    host = urlparse(get_settings().database_url).hostname
+    return {"db_host": host, "db_roundtrip_ms": rtts, "typical_ms": sorted(rtts)[len(rtts) // 2],
+            "platform_region": os.getenv("RAILWAY_REPLICA_REGION") or os.getenv("RAILWAY_REGION") or os.getenv("FLY_REGION"),
+            "pool": engine.pool.status() if hasattr(engine.pool, "status") else None,
+            "hint": "Under ~30 ms is excellent; 100 ms is Singapore-Sydney; 300+ ms means the API and database are on different continents."}

@@ -101,3 +101,10 @@ def test_redteam_scorecard_all_green(client, tok):
     out = r.json()
     failed = [x for x in out["results"] if not x["passed"]]
     assert not failed, [(x["id"], x["attack"], x["actual"]) for x in failed]
+
+
+def test_diag_is_admin_only(client, tok):
+    assert client.get("/ops/diag").status_code == 401
+    assert client.get("/ops/diag", headers=tok("officer1@relief.demo")).status_code == 403
+    d = client.get("/ops/diag", headers=tok("admin@relief.demo")).json()
+    assert len(d["db_roundtrip_ms"]) == 6 and "typical_ms" in d
