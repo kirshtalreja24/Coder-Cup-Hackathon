@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { LangProvider } from './i18n'
 import { startAutoSync } from './offline'
+import { ToastProvider } from './ui'
 import './styles.css'
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -15,7 +16,7 @@ createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <LangProvider>
-        <App />
+        <ToastProvider><App /></ToastProvider>
       </LangProvider>
     </BrowserRouter>
   </React.StrictMode>

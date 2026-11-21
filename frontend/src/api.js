@@ -8,12 +8,31 @@ function normalizeBase(u) {
 export const BASE = normalizeBase(import.meta.env.VITE_API_URL)
 
 export const getToken = () => localStorage.getItem('bh_token')
-export const setSession = (token, user) => { localStorage.setItem('bh_token', token); localStorage.setItem('bh_user', JSON.stringify(user)) }
-export const clearSession = () => { localStorage.removeItem('bh_token'); localStorage.removeItem('bh_user') }
-export const getUser = () => { try { return JSON.parse(localStorage.getItem('bh_user') || 'null') } catch { return null } }
+
+export const setSession = (token, user) => {
+  localStorage.setItem('bh_token', token)
+  localStorage.setItem('bh_user', JSON.stringify(user))
+}
+
+export const clearSession = () => {
+  localStorage.removeItem('bh_token')
+  localStorage.removeItem('bh_user')
+}
+
+export const getUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('bh_user') || 'null')
+  } catch {
+    return null
+  }
+}
 
 export class ApiError extends Error {
-  constructor(status, detail) { super(typeof detail === 'string' ? detail : JSON.stringify(detail)); this.status = status; this.detail = detail }
+  constructor(status, detail) {
+    super(typeof detail === 'string' ? detail : JSON.stringify(detail))
+    this.status = status
+    this.detail = detail
+  }
 }
 
 export async function api(path, { method = 'GET', body, form, formData, headers = {}, timeout = 20000, auth = true } = {}) {
@@ -22,23 +41,40 @@ export async function api(path, { method = 'GET', body, form, formData, headers 
   const h = { ...headers }
   if (auth && getToken()) h.Authorization = 'Bearer ' + getToken()
   let payload
-  if (form) { h['Content-Type'] = 'application/x-www-form-urlencoded'; payload = new URLSearchParams(form).toString() }
-  else if (formData) { payload = formData }
-  else if (body !== undefined) { h['Content-Type'] = 'application/json'; payload = JSON.stringify(body) }
+  if (form) {
+    h['Content-Type'] = 'application/x-www-form-urlencoded'
+    payload = new URLSearchParams(form).toString()
+  } else if (formData) {
+    payload = formData
+  } else if (body !== undefined) {
+    h['Content-Type'] = 'application/json'
+    payload = JSON.stringify(body)
+  }
   try {
     const res = await fetch(BASE + path, { method, headers: h, body: payload, signal: ctrl.signal })
     const text = await res.text()
     let data = null
-    try { data = text ? JSON.parse(text) : null } catch { data = text }
+    try {
+      data = text ? JSON.parse(text) : null
+    } catch {
+      data = text
+    }
     if (!res.ok) {
-      if (res.status === 401 && auth) { clearSession(); if (!location.pathname.startsWith('/login')) location.href = '/login' }
+      if (res.status === 401 && auth) {
+        clearSession()
+        if (!location.pathname.startsWith('/login')) location.href = '/login'
+      }
       throw new ApiError(res.status, data?.detail ?? data)
     }
     return data
   } catch (e) {
     if (e instanceof ApiError) throw e
-    const err = new ApiError(0, 'offline'); err.offline = true; throw err
-  } finally { clearTimeout(timer) }
+    const err = new ApiError(0, 'offline')
+    err.offline = true
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
 export const apiGet = (p, o) => api(p, o)

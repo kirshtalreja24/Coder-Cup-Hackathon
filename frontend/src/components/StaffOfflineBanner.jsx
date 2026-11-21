@@ -1,0 +1,56 @@
+import React from 'react'
+import { WifiOff } from 'lucide-react'
+import { useLang } from '../i18n'
+
+export default function StaffOfflineBanner({ online, pend, onOpenSyncCenter }) {
+  const { t } = useLang()
+  if (online) return null
+
+  return (
+    <div style={{ padding: '0 24px 16px 24px' }}>
+      <div
+        className="banner offline"
+        style={{
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '12px 18px',
+          borderRadius: 'var(--radius-md, 10px)',
+          background: 'var(--amber-soft, #FDF0D9)',
+          border: '1.5px solid var(--amber, #E39B2B)'
+        }}
+        onClick={onOpenSyncCenter}
+        role="alert"
+      >
+        <div className="row" style={{ gap: 10, alignItems: 'center' }}>
+          <WifiOff size={20} style={{ color: 'var(--gold-dark, #92400E)', flexShrink: 0 }} />
+          <div>
+            <strong style={{ color: 'var(--forest-dark, #0D2318)' }}>
+              Offline Mode — Working Locally
+            </strong>
+            <div className="small subtle" style={{ marginTop: 2 }}>
+              {t('saved_offline')} · Local audit logs and staging queue available ({pend} pending)
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="btn small"
+          style={{
+            background: 'var(--forest, #173D32)',
+            color: '#FFFEFA',
+            fontSize: '0.78rem',
+            padding: '6px 14px'
+          }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpenSyncCenter()
+          }}
+        >
+          Sync Center
+        </button>
+      </div>
+    </div>
+  )
+}

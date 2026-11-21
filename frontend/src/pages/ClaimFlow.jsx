@@ -1,166 +1,1533 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import {
+  User,
+  CreditCard,
+  Users as UsersIcon,
+  Camera,
+  FileCheck,
+  ShieldCheck,
+  Send,
+  ArrowLeft,
+  ArrowRight,
+  Volume2,
+  Mic as MicIcon,
+  Square,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Upload,
+  Plus,
+  Minus,
+  Edit2,
+  Sparkles,
+  WifiOff,
+  Image as ImageIcon,
+  Check,
+  RotateCcw,
+  Clock,
+  HelpCircle,
+  UserCheck,
+  Shield,
+  Receipt
+} from 'lucide-react'
 import { api, apiPost, BASE } from '../api'
 import { useLang } from '../i18n'
 import { clearDraft, flush, loadDraft, queueClaim, saveDraft, shrinkImage } from '../offline'
-import { playPrompt, speak, stop } from '../voice'
-import { ErrorBox, ROUTE_UI } from '../ui'
-import Mic from '../components/Mic'
+import { canListen, listen, playPrompt, speak, spokenNumber, stop } from '../voice'
+import { ErrorBox, MockTag } from '../ui'
 import Recourse from '../components/Recourse'
-import Receipt from '../components/Receipt'
+import DecisionReceipt from '../components/Receipt'
 
-const DISTRICTS = ['Karachi East', 'Karachi West', 'Karachi Central', 'Hyderabad', 'Sukkur', 'Larkana', 'Lahore', 'Multan', 'Faisalabad', 'Rawalpindi', 'Peshawar', 'Mardan', 'Quetta', 'Turbat', 'Islamabad']
-const STEPS = ['name', 'cnic', 'father', 'status', 'income', 'household', 'district', 'photo', 'consent']
-const PROMPT = { name: 'say_name', cnic: 'say_cnic', income: 'say_income', household: 'say_household', photo: 'take_photo', consent: 'consent_identity' }
-const EMPTY = { name: '', father_name: '', cnic: '', marital_status: '', monthly_income: '', household_size: 4, district: 'Karachi East', dob: '' }
-function fmtCnic(d) { d = d.replace(/\D/g, '').slice(0, 13); return [d.slice(0, 5), d.slice(5, 12), d.slice(12)].filter(Boolean).join('-') }
+const DISTRICTS = [
+  'Karachi East',
+  'Karachi West',
+  'Karachi Central',
+  'Hyderabad',
+  'Sukkur',
+  'Larkana',
+  'Lahore',
+  'Multan',
+  'Faisalabad',
+  'Rawalpindi',
+  'Peshawar',
+  'Mardan',
+  'Quetta',
+  'Turbat',
+  'Islamabad'
+]
 
-function NumPad({ value, onChange, max = 13 }) {
-  const press = (k) => { if (k === '⌫') onChange(value.slice(0, -1)); else if (value.length < max) onChange(value + k) }
-  return <div className="numpad">{['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((k, i) => k === '' ? <span key={i} /> : <button type="button" key={k} onClick={() => press(k)}>{k}</button>)}</div>
+// 7 Wizard steps with clear icons and bilingual labels
+const WIZARD_STEPS = [
+  { id: 1, key: 'personal', title: 'Personal Info', urdu: 'ذاتی معلومات', icon: User },
+  { id: 2, key: 'identity', title: 'CNIC Identity', urdu: 'شناختی کارڈ', icon: CreditCard },
+  { id: 3, key: 'household', title: 'Household', urdu: 'گھرانہ و آمدنی', icon: UsersIcon },
+  { id: 4, key: 'document', title: 'ID Photo', urdu: 'کارڈ کی تصویر', icon: Camera },
+  { id: 5, key: 'review', title: 'Review', urdu: 'درخواست کا جائزہ', icon: FileCheck },
+  { id: 6, key: 'consent', title: 'Consent', urdu: 'آپ کی اجازت', icon: ShieldCheck },
+  { id: 7, key: 'submit', title: 'Confirmation', urdu: 'حتمی تصدیق', icon: Send }
+]
+
+const PROMPTS = {
+  1: 'say_name',
+  2: 'say_cnic',
+  3: 'say_income',
+  4: 'take_photo',
+  6: 'consent_identity'
+}
+
+const EMPTY_FORM = {
+  name: '',
+  father_name: '',
+  cnic: '',
+  marital_status: '',
+  monthly_income: '',
+  household_size: 4,
+  district: 'Karachi East',
+  dob: ''
+}
+
+const RESULT_UI = {
+  AUTO_APPROVE: ['good', CheckCircle2, 'approved'],
+  APPROVED_WAITING_PAYMENT_CONSENT: ['wait', AlertTriangle, 'need_proof'],
+  ASK_PROOF: ['wait', Camera, 'need_proof'],
+  HUMAN_REVIEW: ['human', UsersIcon, 'human_review'],
+  DECLINE_WITH_APPEAL: ['stop', XCircle, 'declined_appeal'],
+  NEEDS_CONSENT: ['wait', ShieldCheck, 'consent_identity']
+}
+
+function fmtCnic(d) {
+  if (!d) return ''
+  d = d.replace(/\D/g, '').slice(0, 13)
+  return [d.slice(0, 5), d.slice(5, 12), d.slice(12)].filter(Boolean).join('-')
+}
+
+// Accessible tactile microphone button with speech recording pulse
+function MicButton({ onText, numeric, label = 'Speak' }) {
+  const [rec, setRec] = useState(false)
+  const stopRef = useRef(null)
+
+  if (!canListen()) return null
+
+  const toggle = () => {
+    if (rec) {
+      stopRef.current?.()
+      return
+    }
+    stop()
+    setRec(true)
+    stopRef.current = listen({
+      lang: 'ur-PK',
+      onResult: (x) => onText(numeric ? spokenNumber(x) : x),
+      onEnd: () => setRec(false),
+      onError: () => setRec(false)
+    })
+  }
+
+  return (
+    <div className="mic-container" style={{ margin: '8px 0' }}>
+      <button
+        type="button"
+        className={'mic ' + (rec ? 'rec' : '')}
+        aria-label="Speak in Urdu"
+        onClick={toggle}
+        title={rec ? 'Tap to finish speaking' : 'Tap to speak in Urdu'}
+        style={{ width: 68, height: 68 }}
+      >
+        {rec ? <Square size={24} /> : <MicIcon size={28} />}
+      </button>
+      <span className="small muted">
+        {rec ? 'Listening in Urdu… tap to stop' : label}
+      </span>
+    </div>
+  )
+}
+
+// Tactile Touch Keypad for CNIC and Currency
+function TouchPad({ value, onChange, max = 13 }) {
+  const press = (k) => {
+    if (k === '⌫') onChange(value.slice(0, -1))
+    else if (value.length < max) onChange(value + k)
+  }
+
+  return (
+    <div className="numpad">
+      {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((k, i) =>
+        k === '' ? (
+          <span key={i} />
+        ) : (
+          <button type="button" key={k} onClick={() => press(k)}>
+            {k}
+          </button>
+        )
+      )}
+    </div>
+  )
 }
 
 export default function ClaimFlow({ helper }) {
-  const { t, lang } = useLang()
+  const { t, lang, rtl } = useLang()
   const nav = useNavigate()
   const family = helper ? JSON.parse(sessionStorage.getItem('bh_family') || 'null') : null
-  const [step, setStep] = useState(0)
-  const [d, setD] = useState(() => { const s = loadDraft(); return s && s.forFamily === (family?.id || null) ? s.d : EMPTY })
+
+  // 1-indexed step: 1 to 7
+  const [step, setStep] = useState(1)
+  const [d, setD] = useState(() => {
+    const s = loadDraft()
+    return s && s.forFamily === (family?.id || null) ? s.d : EMPTY_FORM
+  })
   const [photo, setPhoto] = useState(() => loadDraft()?.photo || null)
+  const [compressing, setCompressing] = useState(false)
   const [consent, setConsent] = useState({ identity: false, documents: false, payment: false })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
   const [result, setResult] = useState(null)
   const [queued, setQueued] = useState(false)
   const [demos, setDemos] = useState(null)
-  const fileRef = useRef()
-  const key = STEPS[step]
-  const set = (k, v) => setD((p) => ({ ...p, [k]: v }))
+  const cameraRef = useRef()
+  const galleryRef = useRef()
+
+  const setField = (k, v) => setD((p) => ({ ...p, [k]: v }))
   const L = lang === 'ur' ? 'ur' : 'en'
 
-  useEffect(() => { saveDraft({ d, photo, forFamily: family?.id || null }) }, [d, photo])   // progress is saved at every step
-  useEffect(() => { if (!result && PROMPT[key]) playPrompt(PROMPT[key], t(key === 'cnic' ? 'cnic' : key), L) ; return stop }, [step]) // eslint-disable-line
+  // Persist draft on every modification
+  useEffect(() => {
+    saveDraft({ d, photo, forFamily: family?.id || null })
+  }, [d, photo])
 
-  const canNext = { name: d.name.trim().length > 1, cnic: d.cnic.replace(/\D/g, '').length === 13, father: true, status: !!d.marital_status, income: d.monthly_income !== '', household: true, district: true, photo: true, consent: helper || consent.identity }[key]
+  // Play audio prompt on step change
+  useEffect(() => {
+    if (!result && PROMPTS[step]) {
+      playPrompt(PROMPTS[step], 'Step ' + step, L)
+    }
+    return stop
+  }, [step]) // eslint-disable-line
 
-  const loadDemo = async () => {
-    if (!demos) { try { setDemos((await api('/demo/scenarios', { auth: false })).scenarios) } catch (e) { setErr(e) } }
+  // Step validation rules
+  const isStepValid = () => {
+    if (step === 1) return d.name.trim().length > 1 && !!d.marital_status
+    if (step === 2) return d.cnic.replace(/\D/g, '').length === 13
+    if (step === 3) return d.monthly_income !== '' && Number(d.household_size) >= 1 && !!d.district
+    if (step === 4) return true // Photo is encouraged but not strictly blocking if claimant has no camera
+    if (step === 5) return true // Review screen
+    if (step === 6) return helper || consent.identity // Consent to identity check is mandatory
+    return true
   }
+
+  // Pre-configured hackathon judge scenarios
+  const loadDemo = async () => {
+    if (!demos) {
+      try {
+        setDemos((await api('/demo/scenarios', { auth: false })).scenarios)
+      } catch (e) {
+        setErr(e)
+      }
+    }
+  }
+
   const applyDemo = async (s) => {
     const f = s.form
-    setD({ ...EMPTY, ...f, cnic: String(f.cnic || ''), monthly_income: String(f.monthly_income ?? ''), household_size: Number(f.household_size) || 4 })
+    setD({
+      ...EMPTY_FORM,
+      ...f,
+      cnic: String(f.cnic || ''),
+      monthly_income: String(f.monthly_income ?? ''),
+      household_size: Number(f.household_size) || 4
+    })
     setPhoto(null)
     if (s.sample_card_url) {
-      try { const b = await (await fetch(BASE + s.sample_card_url)).blob(); const r = new FileReader(); r.onload = () => setPhoto(r.result); r.readAsDataURL(b) } catch {}
+      try {
+        const b = await (await fetch(BASE + s.sample_card_url)).blob()
+        const r = new FileReader()
+        r.onload = () => setPhoto(r.result)
+        r.readAsDataURL(b)
+      } catch {}
     }
-    setStep(STEPS.length - 1)
+    // Jump directly to Step 5 (Review Application)
+    setStep(5)
   }
 
-  const onPhoto = async (e) => { const f = e.target.files?.[0]; if (f) setPhoto(await shrinkImage(f)) }
+  // Process and compress image locally for 2G/3G low-bandwidth connections
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setCompressing(true)
+    try {
+      const shrunk = await shrinkImage(file)
+      setPhoto(shrunk)
+    } catch {
+      // Fallback: direct base64
+      const reader = new FileReader()
+      reader.onload = () => setPhoto(reader.result)
+      reader.readAsDataURL(file)
+    } finally {
+      setCompressing(false)
+    }
+  }
 
-  const payload = () => ({ ...d, monthly_income: d.monthly_income === '' ? null : Number(d.monthly_income), cnic: d.cnic, household_size: Number(d.household_size), gender: undefined })
+  const payload = () => ({
+    ...d,
+    monthly_income: d.monthly_income === '' ? null : Number(d.monthly_income),
+    cnic: d.cnic,
+    household_size: Number(d.household_size),
+    gender: undefined
+  })
 
-  const submit = async () => {
-    setBusy(true); setErr(null)
+  // Final submission workflow
+  const submitClaim = async () => {
+    setBusy(true)
+    setErr(null)
     const body = payload()
     // A helper never sends consent flags: only the family's own one-time code can grant consent (the server ignores flags from helpers anyway)
-    const flags = helper ? {} : { identity: consent.identity, documents: consent.documents, case_history: consent.documents, payment: consent.payment }
+    const flags = helper
+      ? {}
+      : {
+          identity: consent.identity,
+          documents: consent.documents,
+          case_history: consent.documents,
+          payment: consent.payment
+        }
+
     try {
       if (!navigator.onLine) throw Object.assign(new Error('offline'), { offline: true })
-      const created = await apiPost('/cases', { data: body, citizen_id: family?.id }, { headers: { 'Idempotency-Key': 'c-' + Date.now() } })
+
+      // Step 1: Create Case with idempotency key
+      const created = await apiPost('/cases', { data: body, citizen_id: family?.id }, {
+        headers: { 'Idempotency-Key': 'c-' + Date.now() }
+      })
+
+      // Step 2: Upload document if attached
       if (photo) {
-        const blob = await (await fetch(photo)).blob(); const fd = new FormData(); fd.append('file', blob, 'id.jpg')
+        const blob = await (await fetch(photo)).blob()
+        const fd = new FormData()
+        fd.append('file', blob, 'id.jpg')
         await api(`/cases/${created.id}/documents`, { method: 'POST', formData: fd, timeout: 40000 })
       }
+
+      // Step 3: Submit for automated decisioning
       const r = await apiPost(`/cases/${created.id}/submit`, { consent: flags }, { timeout: 40000 })
-      setResult({ ...r, caseId: created.id }); clearDraft()
-      const ui = ROUTE_UI[r.route] || ROUTE_UI.HUMAN_REVIEW
+      setResult({ ...r, caseId: created.id })
+      clearDraft()
+
+      const ui = RESULT_UI[r.route] || RESULT_UI.HUMAN_REVIEW
       playPrompt(ui[2], r.reason_user?.[L], L)
     } catch (e) {
-      if (e.offline) { queueClaim({ data: body, consent: flags, photo, citizen_id: family?.id }); clearDraft(); setQueued(true); playPrompt('offline_saved', t('saved_offline'), L) }
-      else setErr(e)
-    } finally { setBusy(false) }
+      if (e.offline) {
+        queueClaim({ data: body, consent: flags, photo, citizen_id: family?.id })
+        clearDraft()
+        setQueued(true)
+        playPrompt('offline_saved', t('saved_offline'), L)
+      } else {
+        setErr(e)
+      }
+    } finally {
+      setBusy(false)
+    }
   }
 
-  const retake = async (e) => {
-    const f = e.target.files?.[0]; if (!f) return
+  // Retake photo action on proof request
+  const retakePhoto = async (e) => {
+    const f = e.target.files?.[0]
+    if (!f) return
     setBusy(true)
     try {
-      const small = await shrinkImage(f); const blob = await (await fetch(small)).blob(); const fd = new FormData(); fd.append('file', blob, 'id.jpg')
-      const up = await api(`/cases/${result.caseId}/documents`, { method: 'POST', formData: fd, timeout: 40000 })
+      const small = await shrinkImage(f)
+      const blob = await (await fetch(small)).blob()
+      const fd = new FormData()
+      fd.append('file', blob, 'id.jpg')
+      const up = await api(`/cases/${result.caseId}/documents`, {
+        method: 'POST',
+        formData: fd,
+        timeout: 40000
+      })
       const r = await apiPost(`/cases/${result.caseId}/submit`, {}, { timeout: 40000 })
-      setResult({ ...r, caseId: result.caseId, note: up.message?.[L] }); const ui = ROUTE_UI[r.route] || ROUTE_UI.HUMAN_REVIEW; playPrompt(ui[2], r.reason_user?.[L], L)
-    } catch (x) { setErr(x) } finally { setBusy(false) }
+      setResult({ ...r, caseId: result.caseId, note: up.message?.[L] })
+      const ui = RESULT_UI[r.route] || RESULT_UI.HUMAN_REVIEW
+      playPrompt(ui[2], r.reason_user?.[L], L)
+    } catch (x) {
+      setErr(x)
+    } finally {
+      setBusy(false)
+    }
   }
 
-  if (queued) return (
-    <div className="col"><div className="result wait"><div className="ico">📴</div><h2>{t('saved_offline')}</h2><button onClick={() => { flush(); nav(helper ? '/h' : '/c') }}>OK</button></div></div>
-  )
-
-  if (result) {
-    const ui = ROUTE_UI[result.route] || ROUTE_UI.HUMAN_REVIEW
-    const reason = result.reason_user?.[lang === 'roman' ? 'roman' : lang === 'ur' ? 'ur' : 'en']
+  // Offline Saved Confirmation View
+  if (queued) {
     return (
-      <div className="col narrow">
-        <div className={'result ' + ui[0]} dir={lang === 'ur' ? 'rtl' : 'ltr'}>
-          <div className="ico">{ui[1]}</div>
-          <h2 style={{ fontSize: '1.4rem' }}>{reason}</h2>
-          {result.payment && <p>💸 PKR {result.payment.amount.toLocaleString()} · <b>{result.payment.reference}</b> <span className="mock-tag">MOCK PAYMENT</span></p>}
-          <button className="ghost" onClick={() => speak(reason, L)}>🔊</button>
+      <div className="col narrow" style={{ gap: 20 }}>
+        <div className="result wait">
+          <div className="result-icon-wrapper">
+            <WifiOff size={40} />
+          </div>
+          <h2>{t('saved_offline')}</h2>
+          <p className="subtle" style={{ margin: 0 }}>
+            {lang === 'ur'
+              ? 'انٹرنیٹ کنکشن نہیں ہے، لیکن آپ کا کام محفوظ ہے۔ جیسے ہی نیٹ بحال ہوگا یہ خودبخود محکمہ کو بھیج دیا جائے گا۔'
+              : 'No internet connection. Your relief application is securely saved on this device and will automatically sync once connectivity returns.'}
+          </p>
+          <button
+            onClick={() => {
+              flush()
+              nav(helper ? '/h' : '/c')
+            }}
+          >
+            OK (مکمل کریں)
+          </button>
         </div>
-        {result.route === 'ASK_PROOF' && <label className="btn" style={{ textAlign: 'center' }}>📷 {t('takephoto')}<input type="file" accept="image/*" capture="environment" hidden onChange={retake} /></label>}
-        {result.route === 'DECLINE_WITH_APPEAL' && <button className="warn" onClick={async () => { await apiPost(`/cases/${result.caseId}/appeal?note=please re-check`); nav(helper ? '/h' : '/c/cases') }}>🙋 {t('appeal')}</button>}
-        <Recourse items={result.reason_user?.recourse} />
-        {result.decision_id && <Receipt caseId={result.caseId} />}
-        {helper && result.route === 'NEEDS_CONSENT' && <div className="banner offline">Ask the family for their one-time code on the family page, then submit again.</div>}
-        <ErrorBox e={err} />
-        <details className="card"><summary>🔎 {t('why')} · what the system did, step by step</summary>
-          <ul className="step-list" dir="ltr">{result.steps?.map((s, i) => <li key={i} className={s.outcome === 'denied' ? 'denied' : ''}><b>{s.tool}</b><br />{s.summary}</li>)}</ul></details>
-        <div className="row"><Link className="btn" to={helper ? '/h' : '/c/cases/' + result.caseId}>{helper ? 'Back to families' : t('mycases')}</Link><Link className="btn ghost" to={helper ? '/h' : '/c'}>🏠</Link></div>
       </div>
     )
   }
 
+  // Result & Decision Notice View (Step 7 Complete)
+  if (result) {
+    const isApprove = result.route === 'AUTO_APPROVE'
+    const isHumanReview = result.route === 'HUMAN_REVIEW'
+    const isAskProof = result.route === 'ASK_PROOF'
+    const isDecline = result.route === 'DECLINE_WITH_APPEAL'
+    const reason = result.reason_user?.[lang === 'roman' ? 'roman' : lang === 'ur' ? 'ur' : 'en']
+
+    return (
+      <div className="col narrow" style={{ gap: 20 }}>
+        {/* Approved State */}
+        {isApprove && (
+          <div className="decision-card approved" dir={rtl ? 'rtl' : 'ltr'}>
+            <div className="decision-header">
+              <div className="decision-icon-pill">
+                <CheckCircle2 size={30} strokeWidth={2.4} />
+              </div>
+              <div className="col" style={{ gap: 4, flex: 1 }}>
+                <div className="row spread">
+                  <span className="badge" style={{ background: 'var(--forest)', color: '#FFFEFA' }}>
+                    {rtl ? 'درخواست منظور' : 'Application Approved'}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn ghost icon-btn small"
+                    onClick={() => speak(reason, L)}
+                    title="Read aloud in Urdu"
+                  >
+                    <Volume2 size={18} />
+                  </button>
+                </div>
+                <h3 className="decision-title">
+                  {rtl ? 'امداد کی درخواست خودکار طور پر منظور' : 'Relief Claim Approved'}
+                </h3>
+                <p className="decision-reason">{reason}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Under Human Review State — Never make uncertain look like approval */}
+        {isHumanReview && (
+          <div className="decision-card under-review" dir={rtl ? 'rtl' : 'ltr'}>
+            <div className="decision-header">
+              <div className="decision-icon-pill">
+                <Clock size={30} strokeWidth={2.4} />
+              </div>
+              <div className="col" style={{ gap: 4, flex: 1 }}>
+                <div className="row spread">
+                  <span className="badge amber">
+                    {rtl ? 'انسانی افسر کا جائزہ' : 'Under Human Welfare Review'}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn ghost icon-btn small"
+                    onClick={() => speak(reason, L)}
+                    title="Read aloud in Urdu"
+                  >
+                    <Volume2 size={18} />
+                  </button>
+                </div>
+                <h3 className="decision-title">
+                  {rtl ? 'سرکاری افسر کی تصدیق درکار ہے' : 'Assigned for Officer Review'}
+                </h3>
+                <p className="decision-reason">{reason}</p>
+              </div>
+            </div>
+
+            <div className="human-review-callout row" style={{ gap: 10, alignItems: 'flex-start' }}>
+              <UserCheck size={20} style={{ flex: 'none', marginTop: 2, color: 'var(--gold-dark)' }} />
+              <div className="col" style={{ gap: 4 }}>
+                <b style={{ color: 'var(--forest-dark)' }}>
+                  {rtl ? 'اہم: یہ ابھی حتمی فیصلہ نہیں ہے۔' : 'Important: This is not an approval yet.'}
+                </b>
+                <span>
+                  {rtl
+                    ? 'آپ کی درخواست ایک سرکاری ویلفیئر افسر کے پاس جانچ کے لیے قطار میں ہے۔ افسر آپ کے کاغذات اور معاشی حالات کا دستی جائزہ لے کر حتمی فیصلہ کرے گا۔'
+                    : 'A human welfare officer needs to review this application before a final decision can be made. No payment has been scheduled yet.'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Needs Proof State */}
+        {isAskProof && (
+          <div className="decision-card needs-proof" dir={rtl ? 'rtl' : 'ltr'}>
+            <div className="decision-header">
+              <div className="decision-icon-pill">
+                <Camera size={30} strokeWidth={2.4} />
+              </div>
+              <div className="col" style={{ gap: 4, flex: 1 }}>
+                <div className="row spread">
+                  <span className="badge amber">
+                    {rtl ? 'مزید معلومات درکار' : 'More Information Required'}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn ghost icon-btn small"
+                    onClick={() => speak(reason, L)}
+                    title="Read aloud in Urdu"
+                  >
+                    <Volume2 size={18} />
+                  </button>
+                </div>
+                <h3 className="decision-title">
+                  {rtl ? 'شناختی کارڈ کی واضح تصویر درکار ہے' : 'Clearer Photo Required'}
+                </h3>
+                <p className="decision-reason">{reason}</p>
+              </div>
+            </div>
+
+            <label
+              className="btn"
+              style={{
+                background: 'var(--terracotta)',
+                textAlign: 'center',
+                cursor: 'pointer',
+                justifyContent: 'center',
+                marginTop: 6
+              }}
+            >
+              <Camera size={18} />
+              <span>{t('takephoto')} (شناختی کارڈ کی تصویر لیں)</span>
+              <input type="file" accept="image/*" capture="environment" hidden onChange={retakePhoto} />
+            </label>
+          </div>
+        )}
+
+        {/* Decline State */}
+        {isDecline && (
+          <div className="decision-card rejected" dir={rtl ? 'rtl' : 'ltr'}>
+            <div className="decision-header">
+              <div className="decision-icon-pill">
+                <XCircle size={30} strokeWidth={2.4} />
+              </div>
+              <div className="col" style={{ gap: 4, flex: 1 }}>
+                <div className="row spread">
+                  <span className="badge red">
+                    {rtl ? 'درخواست مسترد' : 'Relief Not Approved'}
+                  </span>
+                  <button
+                    type="button"
+                    className="btn ghost icon-btn small"
+                    onClick={() => speak(reason, L)}
+                    title="Read aloud in Urdu"
+                  >
+                    <Volume2 size={18} />
+                  </button>
+                </div>
+                <h3 className="decision-title">
+                  {rtl ? 'امداد کی درخواست منظور نہیں ہوئی' : 'Application Not Approved'}
+                </h3>
+                <p className="decision-reason">{reason}</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="btn warn"
+              style={{ justifyContent: 'center', marginTop: 6 }}
+              onClick={async () => {
+                await apiPost(`/cases/${result.caseId}/appeal?note=please re-check`)
+                nav(helper ? '/h' : '/c/cases/' + result.caseId)
+              }}
+            >
+              <RotateCcw size={16} />
+              <span>{t('appeal')} (انسان سے دوبارہ چیک کروائیں)</span>
+            </button>
+          </div>
+        )}
+
+        {/* Payment Confirmation (When payment is returned by backend) */}
+        {result.payment && (
+          <div className="payment-card">
+            <div className="row spread">
+              <div className="simulated-payment-banner">
+                <Shield size={14} />
+                <span>SIMULATED PAYMENT — NO REAL MONEY TRANSFERRED</span>
+              </div>
+              <span className="badge" style={{ background: 'var(--sage-soft)', color: 'var(--forest-dark)' }}>
+                Disbursed (Simulated)
+              </span>
+            </div>
+
+            <div className="col" style={{ gap: 4 }}>
+              <span className="payment-metric-label">Simulated Grant Payout</span>
+              <div className="payment-amount-large">
+                PKR {result.payment.amount?.toLocaleString()}
+              </div>
+            </div>
+
+            <div className="payment-metric-grid">
+              <div className="payment-metric-item">
+                <span className="payment-metric-label">Transaction Reference</span>
+                <span className="payment-metric-value mono" style={{ fontSize: '1rem' }}>
+                  {result.payment.reference}
+                </span>
+              </div>
+              <div className="payment-metric-item">
+                <span className="payment-metric-label">Payment Rail</span>
+                <span className="payment-metric-value">
+                  {result.payment.rail || 'MOCK-RAAST'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* What would change this decision, and the signed, publicly verifiable receipt */}
+        <Recourse items={result.reason_user?.recourse} />
+        {result.decision_id && <DecisionReceipt caseId={result.caseId} />}
+        {helper && result.route === 'NEEDS_CONSENT' && (
+          <div className="banner offline">Ask the family for their one-time code on the family page, then submit again.</div>
+        )}
+
+        <ErrorBox e={err} />
+
+        {/* Navigation to Full Case View & Receipt */}
+        <div className="col" style={{ gap: 10 }}>
+          <Link
+            className="btn"
+            style={{ width: '100%', justifyContent: 'center', padding: '14px 20px', fontSize: '1.05rem' }}
+            to={helper ? '/h' : '/c/cases/' + result.caseId}
+          >
+            <Receipt size={18} />
+            <span>Track 7-Stage Status & View Receipt (مکمل ریکارڈ دیکھیں)</span>
+            <ArrowRight size={18} />
+          </Link>
+
+          <Link
+            className="btn ghost"
+            style={{ width: '100%', justifyContent: 'center' }}
+            to={helper ? '/h' : '/c'}
+          >
+            Return to Home (مرکزی صفحہ پر جائیں)
+          </Link>
+        </div>
+
+        {/* Audit trail accordion */}
+        {result.steps?.length > 0 && (
+          <details className="card" style={{ padding: 18 }}>
+            <summary style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--forest-dark)' }}>
+              {t('why')} · Algorithmic Triage Audit Trail ({result.steps.length} steps)
+            </summary>
+            <ul className="step-list" dir="ltr" style={{ marginTop: 12 }}>
+              {result.steps.map((s, i) => (
+                <li key={i} className={s.outcome === 'denied' ? 'denied' : ''}>
+                  <b style={{ color: 'var(--forest-dark)' }}>{s.tool}</b>
+                  <div style={{ marginTop: 2 }}>{s.summary}</div>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+      </div>
+    )
+  }
+
+  const currentStepDef = WIZARD_STEPS[step - 1]
+  const CurrentStepIcon = currentStepDef.icon
+
   return (
-    <div className="col narrow">
-      {family && <div className="banner info">👨‍👩‍👧 Helping: <b>{family.name}</b></div>}
-      <div className="row spread"><h2 style={{ margin: 0 }}>📝 {t('claim')}</h2>
-        <button className="ghost small" onClick={loadDemo} title="For judges: loads a scenario">🎬 demo</button></div>
-      {demos && <div className="card col">{Object.entries(demos).length ? demos.map((s) => <button key={s.key} className="ghost small" style={{ textAlign: 'left', fontWeight: 400 }} onClick={() => applyDemo(s)}>▶ {s.title}</button>) : null}</div>}
-      <div className="stepper">{STEPS.map((_, i) => <i key={i} className={i <= step ? 'on' : ''} />)}</div>
+    <div className="col narrow" style={{ gap: 18 }}>
+      {/* Helper Context Banner */}
+      {family && (
+        <div className="banner info">
+          <UsersIcon size={18} />
+          <span>
+            Helping Community Family: <b>{family.name}</b>
+          </span>
+        </div>
+      )}
 
-      <div className="card col" dir={lang === 'ur' ? 'rtl' : 'ltr'} style={{ minHeight: 280 }}>
-        <div className="row spread"><h2 style={{ margin: 0 }}>{key === 'status' ? t('status') : key === 'consent' ? t('consent_title') : t(key === 'photo' ? 'photo' : key)}</h2>
-          <button type="button" className="ghost small" onClick={() => playPrompt(PROMPT[key] || 'welcome', t(key), L)}>🔊</button></div>
+      {/* Stepper Header */}
+      <div className="wizard-stepper-container">
+        <div className="row spread">
+          <div>
+            <div className="row" style={{ gap: 8 }}>
+              <span className="badge">
+                Step {step} of 7
+              </span>
+              <span className="small subtle" style={{ fontWeight: 600 }}>
+                {rtl ? currentStepDef.urdu : currentStepDef.title}
+              </span>
+            </div>
+          </div>
 
-        {key === 'name' && <><input value={d.name} onChange={(e) => set('name', e.target.value)} dir="auto" placeholder="Fatima Bibi / فاطمہ بی بی" autoFocus /><div className="row" style={{ justifyContent: 'center' }}><Mic onText={(x) => set('name', x)} /></div></>}
-        {key === 'cnic' && <><div className="kpi mono" style={{ textAlign: 'center', letterSpacing: 2 }} dir="ltr">{fmtCnic(d.cnic) || '_____-_______-_'}</div><NumPad value={d.cnic.replace(/\D/g, '')} onChange={(v) => set('cnic', v)} max={13} /><div className="row" style={{ justifyContent: 'center' }}><Mic numeric onText={(x) => set('cnic', x.slice(0, 13))} /></div></>}
-        {key === 'father' && <><input value={d.father_name} onChange={(e) => set('father_name', e.target.value)} dir="auto" /><div className="row" style={{ justifyContent: 'center' }}><Mic onText={(x) => set('father_name', x)} /></div><p className="hint">{t('skip')} OK · helps us be sure it is you</p></>}
-        {key === 'status' && <div className="bigbtns">{[['widowed', '🖤', t('widow')], ['married', '💍', t('married')], ['single', '🙂', t('other')]].map(([v, i, l]) => <button type="button" key={v} className={'bigbtn ' + (d.marital_status === v ? 'sel' : '')} onClick={() => set('marital_status', v)}><span className="ico">{i}</span>{l}</button>)}</div>}
-        {key === 'income' && <><div className="kpi" style={{ textAlign: 'center' }} dir="ltr">PKR {Number(d.monthly_income || 0).toLocaleString()}</div><NumPad value={String(d.monthly_income)} onChange={(v) => set('monthly_income', v)} max={7} /><div className="row" style={{ justifyContent: 'center' }}><Mic numeric onText={(x) => set('monthly_income', x.slice(0, 7))} /></div></>}
-        {key === 'household' && <div className="row" style={{ justifyContent: 'center', gap: 22 }}><button type="button" className="mic" onClick={() => set('household_size', Math.max(1, d.household_size - 1))}>➖</button><div className="kpi" style={{ fontSize: '3.4rem' }}>{d.household_size}</div><button type="button" className="mic" onClick={() => set('household_size', Math.min(20, d.household_size + 1))}>➕</button><div className="small muted">👨‍👩‍👧‍👦</div></div>}
-        {key === 'district' && <select value={d.district} onChange={(e) => set('district', e.target.value)}>{DISTRICTS.map((x) => <option key={x}>{x}</option>)}</select>}
-        {key === 'photo' && <>
-          <div className="result" style={{ background: 'var(--sand)' }}>{photo ? <img src={photo} alt="ID" style={{ maxWidth: '100%', borderRadius: 12, maxHeight: 220 }} /> : <div className="ico">🪪</div>}</div>
-          <label className="btn" style={{ textAlign: 'center' }}>📷 {t('takephoto')}<input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={onPhoto} /></label>
-          <p className="hint">Flat, all four corners, QR code visible. Photos are shrunk to load on weak signal.</p></>}
-        {key === 'consent' && helper && <div className="banner info">🔒 Consent for this family was given by the family itself with a one-time code (see the family page). Nothing is read without it.</div>}
-        {key === 'consent' && !helper && <>
-          <p className="muted small">You decide. You can take this back any time under "{t('mydata')}".</p>
-          {[['identity', '🪪', t('c_identity'), true], ['documents', '📄', t('c_documents')], ['payment', '💸', t('c_payment')]].map(([k, ic, label, must]) => (
-            <div className="toggle" key={k}><span className="ico">{ic}</span><span style={{ flex: 1 }}>{label}{must ? ' *' : ''}</span>
-              <button type="button" className={'switch ' + (consent[k] ? 'on' : '')} aria-pressed={consent[k]} aria-label={label} onClick={() => setConsent((c) => ({ ...c, [k]: !c[k] }))} /></div>))}
-          {!consent.identity && <p className="hint">* Without this we cannot check who you are, and we will not read anything.</p>}</>}
+          <div className="row" style={{ gap: 8 }}>
+            <span className="small subtle">💾 Auto-saved</span>
+            <button
+              type="button"
+              className="btn ghost small"
+              onClick={loadDemo}
+              title="Loads test scenarios for evaluation"
+            >
+              <Sparkles size={14} />
+              <span>Demo</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Horizontal Visual Step Indicators */}
+        <div className="wizard-steps-nav">
+          {WIZARD_STEPS.map((s) => {
+            const IconComp = s.icon
+            const isCompleted = step > s.id
+            const isActive = step === s.id
+            return (
+              <div
+                key={s.id}
+                className={`wizard-step-pill ${isActive ? 'active' : ''} ${
+                  isCompleted ? 'completed' : ''
+                }`}
+                onClick={() => {
+                  // Allow jumping back to earlier steps
+                  if (s.id < step) setStep(s.id)
+                }}
+                style={{ cursor: s.id < step ? 'pointer' : 'default' }}
+                title={s.title}
+              >
+                <span className="wizard-step-number">
+                  {isCompleted ? <Check size={12} strokeWidth={3} /> : s.id}
+                </span>
+                <span className="small" style={{ display: isActive ? 'inline' : 'none' }}>
+                  {rtl ? s.urdu : s.title}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Stepper Progress Bar Line */}
+        <div className="bar" style={{ height: 4 }}>
+          <i
+            style={{
+              width: `${(step / 7) * 100}%`,
+              background: 'var(--forest)'
+            }}
+          />
+        </div>
       </div>
 
-      <ErrorBox e={err} />
-      <div className="row spread">
-        <button className="ghost" disabled={step === 0} onClick={() => setStep(step - 1)}>⬅ {t('back')}</button>
-        {step < STEPS.length - 1
-          ? <button disabled={!canNext} onClick={() => setStep(step + 1)}>{key === 'photo' && !photo ? t('skip') : t('next')} ➡</button>
-          : <button disabled={!canNext || busy} onClick={submit}>{busy ? '⏳' : '✅'} {t('send')}</button>}
+      {/* Quick Judge Demo Scenarios Selector */}
+      {demos && (
+        <div className="card col" style={{ gap: 8, background: 'var(--ivory-alt)' }}>
+          <div className="small muted" style={{ fontWeight: 600 }}>
+            Select Judge Evaluation Scenario:
+          </div>
+          {demos.map((s) => (
+            <button
+              key={s.key}
+              className="btn ghost small"
+              style={{ textAlign: 'left', justifyContent: 'flex-start' }}
+              onClick={() => applyDemo(s)}
+            >
+              ▶ {s.title}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Main Single-Task Wizard Card */}
+      <div className="wizard-task-card" dir={rtl ? 'rtl' : 'ltr'}>
+        {/* Step Header */}
+        <div className="wizard-task-header">
+          <div>
+            <h2>
+              {step === 1 && (rtl ? 'آپ کی ذاتی معلومات' : 'Personal Information')}
+              {step === 2 && (rtl ? 'شناختی کارڈ نمبر (CNIC)' : 'Identity Verification')}
+              {step === 3 && (rtl ? 'گھرانہ اور ماہانہ آمدنی' : 'Household & Socio-Economic Information')}
+              {step === 4 && (rtl ? 'شناختی کارڈ کی تصویر' : 'Document Upload (CNIC Front)')}
+              {step === 5 && (rtl ? 'درخواست کا جائزہ' : 'Review Application')}
+              {step === 6 && (rtl ? 'آپ کی صریح اجازت (Consent)' : 'Consent & Data Authorization')}
+              {step === 7 && (rtl ? 'حتمی تصدیق اور جمع' : 'Submit Claim')}
+            </h2>
+            <div className="urdu-title">
+              {step === 1 && 'نام اور ازدواجی حیثیت درج کریں'}
+              {step === 2 && '13 ہندسوں کا قومی شناختی کارڈ نمبر درج کریں'}
+              {step === 3 && 'آمدنی، افراد کی تعداد اور ضلع منتخب کریں'}
+              {step === 4 && 'صاف اور چاروں کونے دکھائی دینے والی تصویر'}
+              {step === 5 && 'جمع کرانے سے پہلے تمام معلومات چیک کریں'}
+              {step === 6 && 'صرف وہی ڈیٹا شیئر کریں جس کی آپ اجازت دیں'}
+              {step === 7 && 'تصدیق کریں اور امدادی رقم کا فیصلہ دیکھیں'}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="btn ghost icon-btn small"
+            onClick={() => {
+              if (PROMPTS[step]) {
+                playPrompt(PROMPTS[step], 'Step ' + step, L)
+              } else {
+                speak(
+                  rtl
+                    ? 'براہ کرم تمام معلومات کا جائزہ لیں اور آگے بڑھیں۔'
+                    : 'Please review your details and proceed to authorize consent.',
+                  L
+                )
+              }
+            }}
+            title="Read instructions aloud"
+          >
+            <Volume2 size={18} />
+          </button>
+        </div>
+
+        {/* STEP 1: Personal Information */}
+        {step === 1 && (
+          <div className="col" style={{ gap: 20 }}>
+            {/* Full Name */}
+            <div>
+              <div className="row spread" style={{ marginBottom: 6 }}>
+                <label style={{ margin: 0 }}>
+                  {t('name')} <span style={{ color: 'var(--terracotta)' }}>*</span>
+                </label>
+                <span className="small subtle">Required</span>
+              </div>
+              <input
+                value={d.name}
+                onChange={(e) => setField('name', e.target.value)}
+                dir="auto"
+                placeholder="e.g. Fatima Bibi / فاطمہ بی بی"
+                autoFocus
+                style={{ fontSize: '1.1rem', padding: '12px 14px' }}
+              />
+              <p className="wizard-explanation-text" style={{ marginTop: 6 }}>
+                {rtl
+                  ? 'شناختی کارڈ کے مطابق اپنا نام درج کریں یا بول کر بتائیں۔'
+                  : 'Enter your full legal name as it appears on official records.'}
+              </p>
+              <MicButton onText={(x) => setField('name', x)} label="Tap to speak name" />
+            </div>
+
+            {/* Father / Husband Name */}
+            <div>
+              <div className="row spread" style={{ marginBottom: 6 }}>
+                <label style={{ margin: 0 }}>
+                  {t('father')} <span className="small subtle">(مددگار / Optional)</span>
+                </label>
+                <span className="small subtle">Optional</span>
+              </div>
+              <input
+                value={d.father_name}
+                onChange={(e) => setField('father_name', e.target.value)}
+                dir="auto"
+                placeholder="Father's or husband's name"
+                style={{ fontSize: '1.05rem' }}
+              />
+              <p className="wizard-explanation-text" style={{ marginTop: 6 }}>
+                {rtl
+                  ? 'والد یا شوہر کا نام شناختی تصدیق کو آسان بناتا ہے۔'
+                  : 'Optional. Helps distinguish common names during identity matching.'}
+              </p>
+              <MicButton onText={(x) => setField('father_name', x)} label="Tap to speak father's name" />
+            </div>
+
+            {/* Marital Status */}
+            <div>
+              <div className="row spread" style={{ marginBottom: 8 }}>
+                <label style={{ margin: 0 }}>
+                  {t('status')} <span style={{ color: 'var(--terracotta)' }}>*</span>
+                </label>
+                <span className="small subtle">Select one</span>
+              </div>
+
+              <div className="status-option-grid">
+                {[
+                  ['widowed', '🖤', 'Widowed', t('widow')],
+                  ['married', '💍', 'Married', t('married')],
+                  ['single', '🙂', 'Other / Single', t('other')]
+                ].map(([v, ic, enLabel, urLabel]) => (
+                  <button
+                    type="button"
+                    key={v}
+                    className={`status-option-btn ${d.marital_status === v ? 'selected' : ''}`}
+                    onClick={() => setField('marital_status', v)}
+                  >
+                    <span style={{ fontSize: '2rem' }}>{ic}</span>
+                    <span className="option-title">{enLabel}</span>
+                    <span className="option-urdu">{urLabel}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: Identity Verification (CNIC) */}
+        {step === 2 && (
+          <div className="col" style={{ gap: 16 }}>
+            <div className="row spread">
+              <label style={{ margin: 0 }}>
+                {t('cnic')} <span style={{ color: 'var(--terracotta)' }}>*</span>
+              </label>
+              <span className="small subtle">
+                {d.cnic.replace(/\D/g, '').length} / 13 digits
+              </span>
+            </div>
+
+            {/* Large Formatted CNIC Card Display */}
+            <div
+              className="card flat"
+              style={{
+                background: 'var(--ivory-alt)',
+                border: '2px solid var(--border)',
+                textAlign: 'center',
+                padding: '16px'
+              }}
+            >
+              <div
+                className="kpi mono"
+                style={{
+                  letterSpacing: 3,
+                  fontSize: '2.1rem',
+                  color: d.cnic.replace(/\D/g, '').length === 13 ? 'var(--forest)' : 'var(--forest-dark)',
+                  margin: 0
+                }}
+                dir="ltr"
+              >
+                {fmtCnic(d.cnic) || '_____-_______-_'}
+              </div>
+              <div className="small subtle" style={{ marginTop: 6 }}>
+                {d.cnic.replace(/\D/g, '').length === 13 ? (
+                  <span style={{ color: 'var(--forest)', fontWeight: 600 }}>
+                    <Check size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> 13 digits complete
+                  </span>
+                ) : (
+                  'Format: 5 digits - 7 digits - 1 digit'
+                )}
+              </div>
+            </div>
+
+            {/* Tactile Touch Keypad */}
+            <TouchPad
+              value={d.cnic.replace(/\D/g, '')}
+              onChange={(v) => setField('cnic', v)}
+              max={13}
+            />
+
+            <MicButton
+              numeric
+              onText={(x) => setField('cnic', x.slice(0, 13))}
+              label="Speak digits in Urdu (نمبر بولیں)"
+            />
+          </div>
+        )}
+
+        {/* STEP 3: Household & Socio-Economic Information */}
+        {step === 3 && (
+          <div className="col" style={{ gap: 20 }}>
+            {/* Monthly Income */}
+            <div>
+              <div className="row spread" style={{ marginBottom: 6 }}>
+                <label style={{ margin: 0 }}>
+                  {t('income')} (PKR) <span style={{ color: 'var(--terracotta)' }}>*</span>
+                </label>
+                <span className="small subtle">Monthly</span>
+              </div>
+
+              <div
+                className="card flat"
+                style={{
+                  background: 'var(--ivory-alt)',
+                  border: '1.5px solid var(--border)',
+                  textAlign: 'center',
+                  padding: '12px'
+                }}
+              >
+                <div
+                  className="kpi mono"
+                  style={{ fontSize: '2.2rem', color: 'var(--forest)', margin: 0 }}
+                  dir="ltr"
+                >
+                  PKR {Number(d.monthly_income || 0).toLocaleString()}
+                </div>
+              </div>
+
+              <TouchPad
+                value={String(d.monthly_income)}
+                onChange={(v) => setField('monthly_income', v)}
+                max={7}
+              />
+              <MicButton
+                numeric
+                onText={(x) => setField('monthly_income', x.slice(0, 7))}
+                label="Speak income amount in Urdu"
+              />
+            </div>
+
+            {/* Household Size */}
+            <div>
+              <div className="row spread" style={{ marginBottom: 8 }}>
+                <label style={{ margin: 0 }}>
+                  {t('household')} <span style={{ color: 'var(--terracotta)' }}>*</span>
+                </label>
+                <span className="small subtle">Members</span>
+              </div>
+
+              <div
+                className="card flat row spread"
+                style={{
+                  background: 'var(--paper)',
+                  border: '1.5px solid var(--border)',
+                  padding: '16px 24px',
+                  justifyContent: 'space-around'
+                }}
+              >
+                <button
+                  type="button"
+                  className="btn ghost icon-btn"
+                  style={{ width: 54, height: 54, borderRadius: '50%' }}
+                  onClick={() => setField('household_size', Math.max(1, Number(d.household_size) - 1))}
+                  title="Decrease"
+                >
+                  <Minus size={24} />
+                </button>
+
+                <div style={{ textAlign: 'center' }}>
+                  <div className="kpi" style={{ fontSize: '3.4rem', color: 'var(--forest-dark)', margin: 0 }}>
+                    {d.household_size}
+                  </div>
+                  <div className="small subtle">خاندان کے افراد (People)</div>
+                </div>
+
+                <button
+                  type="button"
+                  className="btn ghost icon-btn"
+                  style={{ width: 54, height: 54, borderRadius: '50%' }}
+                  onClick={() => setField('household_size', Math.min(20, Number(d.household_size) + 1))}
+                  title="Increase"
+                >
+                  <Plus size={24} />
+                </button>
+              </div>
+            </div>
+
+            {/* District */}
+            <div>
+              <label style={{ marginBottom: 6 }}>
+                {t('district')} <span style={{ color: 'var(--terracotta)' }}>*</span>
+              </label>
+              <select
+                value={d.district}
+                onChange={(e) => setField('district', e.target.value)}
+                style={{ fontSize: '1.05rem', padding: '12px 14px' }}
+              >
+                {DISTRICTS.map((x) => (
+                  <option key={x}>{x}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 4: Document Upload (CNIC Front Photo) */}
+        {step === 4 && (
+          <div className="col" style={{ gap: 18 }}>
+            {/* Visual Document Guidelines (Acceptable vs Unacceptable) */}
+            <div>
+              <div className="small subtle" style={{ fontWeight: 600, marginBottom: 8 }}>
+                Acceptable Document Examples (تصویر کا معیار):
+              </div>
+              <div className="doc-guide-grid">
+                <div className="doc-guide-item valid">
+                  <div className="row" style={{ gap: 6, fontWeight: 700 }}>
+                    <CheckCircle2 size={16} />
+                    <span>Good / صحیح معیار</span>
+                  </div>
+                  <span>• Clear lighting, not blurry</span>
+                  <span>• All 4 corners visible</span>
+                  <span>• QR code and CNIC readable</span>
+                </div>
+                <div className="doc-guide-item invalid">
+                  <div className="row" style={{ gap: 6, fontWeight: 700 }}>
+                    <XCircle size={16} />
+                    <span>Avoid / غلط معیار</span>
+                  </div>
+                  <span>• Cut or cropped corners</span>
+                  <span>• Camera flash glare</span>
+                  <span>• Blurry, dark or tilted</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Document Upload / Capture Box */}
+            <div className="doc-upload-box">
+              {photo ? (
+                <div className="col" style={{ alignItems: 'center', gap: 12, width: '100%' }}>
+                  <img
+                    src={photo}
+                    alt="Uploaded CNIC Front"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: 220,
+                      borderRadius: 'var(--radius-md)',
+                      boxShadow: 'var(--shadow-md)',
+                      border: '1px solid var(--border)'
+                    }}
+                  />
+                  <div className="row" style={{ gap: 10 }}>
+                    <button
+                      type="button"
+                      className="btn ghost small"
+                      onClick={() => cameraRef.current?.click()}
+                    >
+                      <Camera size={14} />
+                      <span>Retake with Camera</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost small danger-ghost"
+                      onClick={() => setPhoto(null)}
+                    >
+                      <span>Remove</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: '50%',
+                      background: 'var(--sage-soft)',
+                      color: 'var(--forest)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Camera size={28} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, color: 'var(--forest-dark)' }}>
+                      Take or Upload Photo of ID Card
+                    </h4>
+                    <span className="small subtle">
+                      Supports phone camera or gallery image
+                    </span>
+                  </div>
+
+                  <div className="row" style={{ gap: 10, justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => cameraRef.current?.click()}
+                      style={{ padding: '10px 18px' }}
+                    >
+                      <Camera size={16} />
+                      <span>Use Camera (کیمرہ)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      onClick={() => galleryRef.current?.click()}
+                      style={{ padding: '10px 18px' }}
+                    >
+                      <Upload size={16} />
+                      <span>From Gallery (فائل)</span>
+                    </button>
+                  </div>
+
+                  {compressing && (
+                    <span className="small" style={{ color: 'var(--forest)' }}>
+                      Shrinking photo locally for weak signal…
+                    </span>
+                  )}
+                </>
+              )}
+
+              {/* Hidden file inputs */}
+              <input
+                ref={cameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={handlePhotoUpload}
+              />
+              <input
+                ref={galleryRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={handlePhotoUpload}
+              />
+            </div>
+
+            <p className="wizard-explanation-text" style={{ textAlign: 'center' }}>
+              Note: If you do not have a working camera, you can skip this step. The department will cross-check your record with the registry.
+            </p>
+          </div>
+        )}
+
+        {/* STEP 5: Review Application (Prior to Consent) */}
+        {step === 5 && (
+          <div className="col" style={{ gap: 16 }}>
+            <p className="wizard-explanation-text" style={{ margin: 0 }}>
+              {rtl
+                ? 'براہ کرم تمام درج کی گئی تفصیلات کی جانچ کریں۔ کسی بھی خانے کو تبدیل کرنے کے لیے "Edit" دبائیں۔'
+                : 'Please review all entered details below before authorizing data verification.'}
+            </p>
+
+            {/* Block 1: Personal Info */}
+            <div className="review-summary-block">
+              <div className="review-section-header">
+                <h4>1. Personal Information (ذاتی معلومات)</h4>
+                <button
+                  type="button"
+                  className="btn ghost small"
+                  style={{ padding: '2px 8px', minHeight: 28 }}
+                  onClick={() => setStep(1)}
+                >
+                  <Edit2 size={12} /> Edit
+                </button>
+              </div>
+              <table className="review-summary-table">
+                <tbody>
+                  <tr>
+                    <td className="label-cell">Full Name:</td>
+                    <td className="value-cell">{d.name || '—'}</td>
+                  </tr>
+                  <tr>
+                    <td className="label-cell">Father / Husband:</td>
+                    <td className="value-cell">{d.father_name || 'Optional / None'}</td>
+                  </tr>
+                  <tr>
+                    <td className="label-cell">Situation:</td>
+                    <td className="value-cell" style={{ textTransform: 'capitalize' }}>
+                      {d.marital_status || '—'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Block 2: Identity (CNIC) */}
+            <div className="review-summary-block">
+              <div className="review-section-header">
+                <h4>2. Identity Verification (شناختی کارڈ)</h4>
+                <button
+                  type="button"
+                  className="btn ghost small"
+                  style={{ padding: '2px 8px', minHeight: 28 }}
+                  onClick={() => setStep(2)}
+                >
+                  <Edit2 size={12} /> Edit
+                </button>
+              </div>
+              <table className="review-summary-table">
+                <tbody>
+                  <tr>
+                    <td className="label-cell">National CNIC:</td>
+                    <td className="value-cell mono" style={{ fontSize: '1.05rem', color: 'var(--forest)' }}>
+                      {fmtCnic(d.cnic) || '—'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Block 3: Household & Socio-Economic */}
+            <div className="review-summary-block">
+              <div className="review-section-header">
+                <h4>3. Household & District (گھرانہ و علاقہ)</h4>
+                <button
+                  type="button"
+                  className="btn ghost small"
+                  style={{ padding: '2px 8px', minHeight: 28 }}
+                  onClick={() => setStep(3)}
+                >
+                  <Edit2 size={12} /> Edit
+                </button>
+              </div>
+              <table className="review-summary-table">
+                <tbody>
+                  <tr>
+                    <td className="label-cell">Monthly Income:</td>
+                    <td className="value-cell mono">
+                      PKR {Number(d.monthly_income || 0).toLocaleString()}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="label-cell">Household Members:</td>
+                    <td className="value-cell">{d.household_size} members</td>
+                  </tr>
+                  <tr>
+                    <td className="label-cell">District / Area:</td>
+                    <td className="value-cell">{d.district}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Block 4: Document Photo */}
+            <div className="review-summary-block">
+              <div className="review-section-header">
+                <h4>4. Uploaded ID Card (تصویر)</h4>
+                <button
+                  type="button"
+                  className="btn ghost small"
+                  style={{ padding: '2px 8px', minHeight: 28 }}
+                  onClick={() => setStep(4)}
+                >
+                  <Edit2 size={12} /> Edit
+                </button>
+              </div>
+              <div style={{ padding: '12px 16px' }}>
+                {photo ? (
+                  <div className="row" style={{ gap: 14 }}>
+                    <img
+                      src={photo}
+                      alt="Thumbnail"
+                      style={{
+                        width: 72,
+                        height: 48,
+                        objectFit: 'cover',
+                        borderRadius: 6,
+                        border: '1px solid var(--border)'
+                      }}
+                    />
+                    <span className="small" style={{ color: 'var(--forest)', fontWeight: 600 }}>
+                      <Check size={14} style={{ display: 'inline' }} /> CNIC photo attached
+                    </span>
+                  </div>
+                ) : (
+                  <span className="small subtle">
+                    No photo attached (will cross-check via registry records)
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 6: Consent Confirmation (Explicit Sovereignty) */}
+        {step === 6 && helper && (
+          <div className="banner info">
+            🔒 Consent for this family was given by the family itself with a one-time code (see the family page). Nothing is read without it.
+          </div>
+        )}
+        {step === 6 && !helper && (
+          <div className="col" style={{ gap: 16 }}>
+            <p className="wizard-explanation-text" style={{ margin: 0 }}>
+              {rtl
+                ? 'آپ کا مکمل کنٹرول ہے۔ آپ جب چاہیں "میرا ڈیٹا" کے تحت ان اجازتوں کو واپس لے سکتے ہیں۔'
+                : 'You have full data sovereignty. You choose which checks to permit, and can revoke them anytime.'}
+            </p>
+
+            {[
+              [
+                'identity',
+                CreditCard,
+                rtl ? 'قومی شناختی تصدیق کی اجازت' : 'Check my Identity with National Registry',
+                rtl
+                  ? 'محکمہ کو آپ کے نام اور شناختی کارڈ کی تصدیق کرنے کی اجازت۔'
+                  : 'Allows matching your name and CNIC with official government records.',
+                true
+              ],
+              [
+                'documents',
+                Camera,
+                rtl ? 'میرے کاغذات افسر دیکھ سکے' : 'Officer Document Review',
+                rtl
+                  ? 'اگر خودکار تصدیق میں شک ہو تو کیس ورکر کو تصویر دیکھنے کی اجازت۔'
+                  : 'Allows a caseworker to inspect your uploaded CNIC photo if manual review is needed.',
+                false
+              ],
+              [
+                'payment',
+                ShieldCheck,
+                rtl ? 'رقم براہ راست منتقل کرنے کی اجازت' : 'Direct Relief Payment via Raast',
+                rtl
+                  ? 'منظوری کی صورت میں رقم سیدھی آپ کے اکاؤنٹ میں بھیجنے کی اجازت۔'
+                  : 'Authorizes instant relief disbursement to your verified payment account.',
+                false
+              ]
+            ].map(([k, IconComp, titleText, descText, must]) => (
+              <div className="toggle" key={k}>
+                <div className="row" style={{ gap: 14, flex: 1 }}>
+                  <div
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 'var(--radius-md)',
+                      background: 'var(--sage-soft)',
+                      color: 'var(--forest)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0
+                    }}
+                  >
+                    <IconComp size={22} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, color: 'var(--forest-dark)' }}>
+                      {titleText}
+                      {must ? ' *' : ''}
+                    </div>
+                    <div className="small subtle">{descText}</div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className={'switch ' + (consent[k] ? 'on' : '')}
+                  aria-pressed={consent[k]}
+                  aria-label={titleText}
+                  onClick={() => setConsent((c) => ({ ...c, [k]: !c[k] }))}
+                />
+              </div>
+            ))}
+
+            {!consent.identity && (
+              <div className="banner bad small">
+                <AlertTriangle size={16} />
+                <span>
+                  * Identity verification consent is required to evaluate eligibility for public relief.
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STEP 7: Submit Claim Summary & Action */}
+        {step === 7 && (
+          <div className="col" style={{ gap: 18, textAlign: 'center', padding: '16px 8px' }}>
+            <div
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: '50%',
+                background: 'var(--forest-soft)',
+                color: 'var(--forest)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto'
+              }}
+            >
+              <Send size={32} />
+            </div>
+
+            <div>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.4rem' }}>
+                {rtl ? 'درخواست جمع کرنے کے لیے تیار ہیں؟' : 'Ready to Submit Your Application?'}
+              </h3>
+              <p className="wizard-explanation-text" style={{ maxWidth: 440, margin: '0 auto' }}>
+                {rtl
+                  ? 'بٹن دبانے پر سسٹم فوری طور پر قواعد اور ڈیٹا کی بنیاد پر فیصلہ یا رہنمائی فراہم کرے گا۔'
+                  : 'Your claim will be verified immediately against policy rules. You will receive an instant decision or triage update.'}
+              </p>
+            </div>
+
+            <div
+              className="card flat col"
+              style={{
+                background: 'var(--ivory-alt)',
+                border: '1px solid var(--border)',
+                maxWidth: 440,
+                margin: '0 auto',
+                width: '100%',
+                padding: '14px',
+                textAlign: rtl ? 'right' : 'left'
+              }}
+            >
+              <div className="row spread small">
+                <span>Claimant:</span>
+                <b>{d.name}</b>
+              </div>
+              <div className="row spread small">
+                <span>CNIC:</span>
+                <b className="mono">{fmtCnic(d.cnic)}</b>
+              </div>
+              <div className="row spread small">
+                <span>District:</span>
+                <b>{d.district}</b>
+              </div>
+              <div className="row spread small">
+                <span>Active Permissions:</span>
+                <b>{Object.values(consent).filter(Boolean).length} granted</b>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={busy}
+              onClick={submitClaim}
+              style={{
+                fontSize: '1.15rem',
+                padding: '14px 32px',
+                margin: '0 auto',
+                minWidth: 260
+              }}
+            >
+              {busy ? (
+                <span>Submitting & Verifying…</span>
+              ) : (
+                <>
+                  <Send size={18} />
+                  <span>{t('send')} (درخواست جمع کریں)</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        <ErrorBox e={err} />
+
+        {/* Wizard Navigation Footer (Back / Next / Submit) */}
+        {step < 7 && (
+          <div className="row spread" style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
+            <button
+              type="button"
+              className="btn ghost"
+              disabled={step === 1}
+              onClick={() => setStep(step - 1)}
+            >
+              <ArrowLeft size={16} />
+              <span>{t('back')} (پیچھے)</span>
+            </button>
+
+            {step < 6 ? (
+              <button
+                type="button"
+                disabled={!isStepValid()}
+                onClick={() => setStep(step + 1)}
+              >
+                <span>
+                  {step === 4 && !photo ? t('skip') + ' / ' + t('next') : t('next') + ' (آگے)'}
+                </span>
+                <ArrowRight size={16} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={!isStepValid()}
+                onClick={() => setStep(7)}
+              >
+                <span>Proceed to Submit (جائزہ و تصدیق)</span>
+                <ArrowRight size={16} />
+              </button>
+            )}
+          </div>
+        )}
       </div>
-      <p className="hint" style={{ textAlign: 'center' }}>💾 Saved automatically at every step</p>
     </div>
   )
 }
