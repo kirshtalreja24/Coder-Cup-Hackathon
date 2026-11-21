@@ -5,8 +5,8 @@
 
 | | |
 |---|---|
-| **Live app** | _add the deployed frontend URL here_ |
-| **Live API / Swagger** | _add the deployed API URL here_ (`/docs`) |
+| **Live app** | https://coder-cup-hackathon.vercel.app |
+| **Live API / Swagger** | https://bharosa-api-production.up.railway.app · [`/docs`](https://bharosa-api-production.up.railway.app/docs) · [`/health`](https://bharosa-api-production.up.railway.app/health) |
 | **Demo video** | _add the public Google Drive link here_ |
 | **Repository** | https://github.com/kirshtalreja24/Coder-Cup-Hackathon |
 
@@ -49,7 +49,7 @@ Most AI services try to look smart. Bharosa tries to be *accountable*:
 See [`docs/REAL_VS_SIMULATED.md`](docs/REAL_VS_SIMULATED.md) (also shown in the app under *About*).
 
 ## Run it locally
-> Full step-by-step guide (Windows/macOS/Linux, demo accounts, voice, phone testing, troubleshooting): **[`docs/HOW_TO_RUN.md`](docs/HOW_TO_RUN.md)**. There is no live deployment yet.
+> Full step-by-step guide (Windows/macOS/Linux, demo accounts, voice, phone testing, troubleshooting): **[`docs/HOW_TO_RUN.md`](docs/HOW_TO_RUN.md)**. The deployed app is linked at the top of this README.
 
 ```bash
 # backend (Python 3.11+)
