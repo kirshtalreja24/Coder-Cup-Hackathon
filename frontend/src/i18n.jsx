@@ -58,7 +58,7 @@ export const useLang = () => useContext(Ctx)
 export function LangSwitch() {
   const { lang, setLang } = useLang()
   return (
-    <div className="seg" role="group" aria-label="Language">
+    <div className="lang-switch-group" role="group" aria-label="Language">
       {[['ur', 'اردو'], ['roman', 'Roman'], ['en', 'EN']].map(([k, l]) => (
         <button key={k} className={lang === k ? 'on' : ''} onClick={() => setLang(k)}>{l}</button>
       ))}

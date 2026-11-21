@@ -1,3 +1,5 @@
+import PrototypeBanner from './components/PrototypeBanner'
+import StaffOfflineBanner from './components/StaffOfflineBanner'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { clearSession, getUser } from './api'
@@ -46,17 +48,21 @@ function Shell({ user, children }) {
   }[user?.role] || []
   return (
     <div className={!staff && rtl ? 'rtl' : ''}>
-      <div className="proto-bar">{t('proto')} · MOCK data only</div>
+      <PrototypeBanner />
       <header className={"topbar" + (staff ? "" : " simple")}>
         <div className="container">
           <Link to={HOME[user.role]} className="brand">🛡️ {t('app')}</Link>
           <nav className="tabs">{tabs.map(([to, l]) => <NavLink key={to} to={to} end={to === '/c' || to === '/h'}>{l}</NavLink>)}</nav>
           <span className="badge" style={{ background: online ? '#c9efe0' : '#ffd98a', color: '#13302a' }}>{online ? '● ' + t('online') : '○ ' + t('offline')}{pend ? ` · ${pend} ⏳` : ''}</span>
           <LangSwitch />
-          <button className="small" onClick={() => { clearSession(); nav('/login') }}>{user.name.split(' ')[0]} · {t('logout')}</button>
+          <button className="small" onClick={() => { clearSession(); nav('/login') }}>{user?.name ? user.name.split(' ')[0] : 'User'} · {t('logout')}</button>
         </div>
       </header>
-      {!online && <div className="container"><div className="banner offline">📴 {t('saved_offline')}</div></div>}
+      {staff ? (
+        <StaffOfflineBanner online={online} pend={pend} onOpenSyncCenter={() => {}} />
+      ) : (
+        !online && <div className="container"><div className="banner offline">📴 {t('saved_offline')}</div></div>
+      )}
       <main className="container">{children}</main>
     </div>
   )
