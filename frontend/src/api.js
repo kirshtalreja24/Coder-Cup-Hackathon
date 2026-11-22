@@ -20,6 +20,8 @@ export const clearSession = () => {
 }
 
 export const getUser = () => {
+  const token = getToken()
+  if (!token) return null
   try {
     return JSON.parse(localStorage.getItem('bh_user') || 'null')
   } catch {
@@ -35,9 +37,13 @@ export class ApiError extends Error {
   }
 }
 
-export async function api(path, { method = 'GET', body, form, formData, headers = {}, timeout = 20000, auth = true } = {}) {
+export async function api(path, { method = 'GET', body, form, formData, headers = {}, timeout = 20000, auth = true, signal } = {}) {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), timeout)
+  if (signal) {
+    if (signal.aborted) ctrl.abort()
+    else signal.addEventListener('abort', () => ctrl.abort(), { once: true })
+  }
   const h = { ...headers }
   if (auth && getToken()) h.Authorization = 'Bearer ' + getToken()
   let payload
@@ -62,7 +68,9 @@ export async function api(path, { method = 'GET', body, form, formData, headers 
     if (!res.ok) {
       if (res.status === 401 && auth) {
         clearSession()
-        if (!location.pathname.startsWith('/login')) location.href = '/login'
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('bh_auth_unauthorized'))
+        }
       }
       throw new ApiError(res.status, data?.detail ?? data)
     }
