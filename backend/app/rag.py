@@ -38,7 +38,7 @@ _index = {"bm25": None, "chunks": [], "n": -1}
 _SYN = {"paisay": "payment", "paise": "payment", "raqam": "payment", "rupay": "payment", "shanakhti": "id", "cnic": "id",
         "card": "id", "fees": "fee", "fee": "fee", "jaali": "fake", "jali": "fake", "fraud": "fake", "scam": "fake",
         "beva": "widowed", "bewa": "widowed", "widow": "widowed", "eligible": "apply", "yogya": "apply",
-        "ijazat": "consent", "permission": "consent", "dhundli": "blurry", "dhoka": "fake", "helpline": "helpline"}
+        "ijazat": "consent", "back": "withdraw", "takeback": "withdraw", "delete": "withdraw", "wapis": "withdraw", "permission": "consent", "dhundli": "blurry", "dhoka": "fake", "helpline": "helpline"}
 
 
 _STOP = set("""a an the is are was were be to of for in on at by with from and or but if it its this that these those i me my we our you your he she they them
@@ -52,7 +52,8 @@ def _stem(t: str) -> str:
 
 
 def _content(q: str) -> list[str]:
-    return [_stem(t) for t in _tok(q) if t not in _STOP and len(t) > 1]
+    # numbers (e.g. an example income) are not topics: they must not decide whether the question is covered
+    return [_stem(t) for t in _tok(q) if t not in _STOP and len(t) > 1 and not t.isdigit()]
 
 
 def _tok(s: str) -> list[str]:
@@ -90,7 +91,7 @@ def ask(db: Session, question: str, lang: str = "en", k: int = 3) -> dict:
     content = _content(question)
     vocab = {_stem(t) for _, c in top for t in _tok(c.source + " " + c.section + " " + c.text)}
     coverage = (sum(1 for t in content if t in vocab) / len(content)) if content else 0.0
-    if content and coverage < 0.5:  # a key word of the question appears in NO official document (e.g. 'passport') -> abstain
+    if content and coverage < 0.6:  # a key word of the question appears in NO official document (e.g. 'passport') -> abstain
         return _abstain(f"key terms not found in the official documents ({coverage:.0%} covered)")
     if best < 1.2:  # relevance floor -> abstain instead of guessing
         return _abstain("no official document covers this question", ranked=[(round(s, 2), c) for s, c in ranked[:2]])
@@ -102,7 +103,9 @@ def ask(db: Session, question: str, lang: str = "en", k: int = 3) -> dict:
         sys = ("You answer ONLY from the numbered official excerpts. Use very simple words (reader may have low literacy). "
                "Cite like [1]. If the excerpts do not answer, say exactly: NOT_SURE. Reply in " + ("Urdu" if lang == "ur" else "English") + ".")
         out = llm.chat([{"role": "system", "content": sys}, {"role": "user", "content": f"Excerpts:\n{ctx}\n\nQuestion: {question}"}], max_tokens=700)
-        if out and "NOT_SURE" not in out:
+        if out and "NOT_SURE" in out:  # the model read the excerpts and says they do not answer: that is a real "I am not sure"
+            return _abstain("the retrieved official text does not answer this question", ranked=[(round(s["score"], 2), c) for s, (_, c) in zip(srcs, top)])
+        if out:
             answer, mode = out.strip(), "llm_grounded"
     if not answer:
         pref = [s for s in srcs if s["lang"] == lang] or srcs

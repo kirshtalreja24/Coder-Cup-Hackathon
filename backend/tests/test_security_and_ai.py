@@ -107,3 +107,29 @@ def test_diag_is_admin_only(client, tok):
     assert client.get("/ops/diag", headers=tok("officer1@relief.demo")).status_code == 403
     d = client.get("/ops/diag", headers=tok("admin@relief.demo")).json()
     assert len(d["db_roundtrip_ms"]) == 6 and "typical_ms" in d
+
+
+OUT_OF_SCOPE = ["Can I get a passport through this?", "How do I get a driving licence?", "What is the interest rate on a bank loan?",
+                "Can I renew my passport here?", "Who won the cricket match yesterday?", "How do I register a company?"]
+IN_SCOPE = [("Who can apply for relief?", "Who can apply"), ("What documents do I need?", "Documents required"),
+            ("Can a widow with income 40000 get paid?", "Who can apply"), ("How do I take back my data?", "Your data")]
+
+
+def test_rag_abstains_on_out_of_scope_without_llm(client, monkeypatch):
+    from app import llm
+    monkeypatch.setattr(llm, "enabled", lambda: False)
+    for q in OUT_OF_SCOPE:
+        r = client.post("/public/ask", json={"question": q}).json()
+        assert r["answered"] is False and r["handoff"] is True and r["sources"] == [], q
+    for q, sec in IN_SCOPE:
+        r = client.post("/public/ask", json={"question": q}).json()
+        assert r["answered"] and any(sec in s["section"] for s in r["sources"]), q
+
+
+def test_rag_llm_not_sure_is_respected(client, monkeypatch):
+    """Regression: when the model answers NOT_SURE the system used to fall back to the top retrieved paragraph (a wrong-topic answer)."""
+    from app import llm
+    monkeypatch.setattr(llm, "enabled", lambda: True)
+    monkeypatch.setattr(llm, "chat", lambda *a, **k: "NOT_SURE")
+    r = client.post("/public/ask", json={"question": "Who can apply for relief?"}).json()
+    assert r["answered"] is False and r["handoff"] is True and r["sources"] == []
