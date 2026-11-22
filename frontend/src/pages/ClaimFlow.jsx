@@ -32,7 +32,7 @@ import {
   Receipt,
   Delete
 } from 'lucide-react'
-import { api, apiPost, BASE } from '../api'
+import { api, apiPost, BASE, getUser } from '../api'
 import { useLang } from '../i18n'
 import { EMPTY_FORM, clearDraft, flush, loadDraft, queueClaim, saveDraft, shrinkImage } from '../offline'
 import { canListen, listen, playPrompt, promptText, recognitionLang, speak, spokenNumber, stop } from '../voice'
@@ -161,12 +161,18 @@ export default function ClaimFlow({ helper }) {
   const { t, lang, rtl, localize } = useLang()
   const nav = useNavigate()
   const family = helper ? JSON.parse(sessionStorage.getItem('bh_family') || 'null') : null
+  const me = getUser()
+  const isWidowPage = !helper && (
+    me?.email === 'widow-clean@citizen.demo' ||
+    (me?.email && me.email.toLowerCase().includes('widow') && !me.email.toLowerCase().includes('variant'))
+  )
 
   // 1-indexed step: 1 to 7
   const [step, setStep] = useState(1)
   const [d, setD] = useState(() => {
     const s = loadDraft()
-    return s && s.forFamily === (family?.id || null) ? s.d : EMPTY_FORM
+    const base = s && s.forFamily === (family?.id || null) ? s.d : EMPTY_FORM
+    return isWidowPage ? { ...base, marital_status: 'widowed' } : base
   })
   const [photo, setPhoto] = useState(() => loadDraft()?.photo || null)
   const [compressing, setCompressing] = useState(false)
@@ -180,6 +186,12 @@ export default function ClaimFlow({ helper }) {
 
   const setField = (k, v) => setD((p) => ({ ...p, [k]: v }))
   const L = lang === 'ur' ? 'ur' : lang === 'roman' ? 'roman' : 'en'
+
+  useEffect(() => {
+    if (isWidowPage && d.marital_status !== 'widowed') {
+      setField('marital_status', 'widowed')
+    }
+  }, [isWidowPage, d.marital_status])
 
   // Persist draft on every modification
   useEffect(() => {
@@ -761,7 +773,7 @@ export default function ClaimFlow({ helper }) {
               {step === 7 && localize('حتمی تصدیق اور جمع', 'Hatmi tasdeeq aur jama', 'Submit Claim')}
             </h2>
             <div className="urdu-title">
-              {step === 1 && localize('نام اور ازدواجی حیثیت درج کریں', 'Naam aur marital status darj karein', 'Enter legal name and marital status')}
+              {step === 1 && (isWidowPage ? localize('شناختی کارڈ کے مطابق نام درج کریں', 'Shanakhti card ke mutabiq naam darj karein', 'Enter legal name as per official records') : localize('نام اور ازدواجی حیثیت درج کریں', 'Naam aur marital status darj karein', 'Enter legal name and marital status'))}
               {step === 2 && localize('13 ہندسوں کا قومی شناختی کارڈ نمبر درج کریں', '13 digits ka CNIC number darj karein', 'Enter 13-digit CNIC number')}
               {step === 3 && localize('آمدنی، افراد کی تعداد اور ضلع منتخب کریں', 'Aamdani, afraad ki tadaad aur zila muntakhib karein', 'Select income, family size and district')}
               {step === 4 && localize('صاف اور چاروں کونے دکھائی دینے والی تصویر', 'Saaf aur charon koney dikhai dene wali tasveer', 'Upload clear photo showing all 4 corners')}
@@ -848,33 +860,35 @@ export default function ClaimFlow({ helper }) {
               <MicButton onText={(x) => setField('father_name', x)} label={localize('والد کا نام بولیں', 'Walid ka naam bolein', "Tap to speak father's name")} />
             </div>
 
-            {/* Marital Status */}
-            <div>
-              <div className="row spread" style={{ marginBottom: 8 }}>
-                <label style={{ margin: 0 }}>
-                  {t('status')} <span style={{ color: 'var(--terracotta)' }}>*</span>
-                </label>
-                <span className="small subtle">{localize('ایک منتخب کریں', 'Aik muntakhib karein', 'Select one')}</span>
-              </div>
+            {/* Marital Status (Citizen data entry only) */}
+            {!isWidowPage && (
+              <div>
+                <div className="row spread" style={{ marginBottom: 8 }}>
+                  <label style={{ margin: 0 }}>
+                    {t('status')} <span style={{ color: 'var(--terracotta)' }}>*</span>
+                  </label>
+                  <span className="small subtle">{localize('ایک منتخب کریں', 'Aik muntakhib karein', 'Select one')}</span>
+                </div>
 
-              <div className="status-option-grid">
-                {[
-                  ['married', UsersIcon, t('married')],
-                  ['single', User, t('single')]
-                ].map(([v, IconComponent, label]) => (
-                  <button
-                    type="button"
-                    key={v}
-                    className={`status-option-btn ${d.marital_status === v ? 'selected' : ''}`}
-                    onClick={() => setField('marital_status', v)}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
-                  >
-                    <IconComponent size={26} strokeWidth={1.8} style={{ color: d.marital_status === v ? 'var(--forest)' : 'var(--ink-secondary)', margin: '6px 0' }} />
-                    <span className="option-title">{label}</span>
-                  </button>
-                ))}
+                <div className="status-option-grid">
+                  {[
+                    ['married', UsersIcon, t('married')],
+                    ['single', User, t('single')]
+                  ].map(([v, IconComponent, label]) => (
+                    <button
+                      type="button"
+                      key={v}
+                      className={`status-option-btn ${d.marital_status === v ? 'selected' : ''}`}
+                      onClick={() => setField('marital_status', v)}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
+                    >
+                      <IconComponent size={26} strokeWidth={1.8} style={{ color: d.marital_status === v ? 'var(--forest)' : 'var(--ink-secondary)', margin: '6px 0' }} />
+                      <span className="option-title">{label}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 

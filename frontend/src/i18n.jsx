@@ -29,6 +29,7 @@ const S = {
   dob: { ur: 'تاریخ پیدائش', roman: 'Tareekh-e-paidaish', en: 'Date of birth' },
   status: { ur: 'آپ کی حیثیت', roman: 'Aap ki haisiyat', en: 'Marital status' },
   widow: { ur: 'بیوہ', roman: 'Widowed', en: 'Widowed' },
+  widowed: { ur: 'بیوہ', roman: 'Widowed', en: 'Widowed' },
   married: { ur: 'شادی شدہ', roman: 'Married', en: 'Married' },
   single: { ur: 'غیر شادی شدہ', roman: 'Single', en: 'Single' },
   other: { ur: 'دیگر', roman: 'Other', en: 'Other' },
