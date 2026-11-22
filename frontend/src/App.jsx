@@ -2,6 +2,7 @@ import PrototypeBanner from './components/PrototypeBanner'
 import StaffOfflineBanner from './components/StaffOfflineBanner'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { Shield, WifiOff } from 'lucide-react'
 import { useAuth, ProtectedRoute, HOME, AuthErrorScreen } from './auth'
 import { LangSwitch, useLang } from './i18n'
 import { loadBox, onBox } from './offline'
@@ -42,7 +43,7 @@ function useOnline() {
 function Shell({ children }) {
   const { user, logout } = useAuth()
   const nav = useNavigate()
-  const { t, rtl } = useLang()
+  const { t, rtl, localize } = useLang()
   const online = useOnline()
   const [box, setBox] = useState(loadBox())
   useEffect(() => onBox(setBox), [])
@@ -50,28 +51,42 @@ function Shell({ children }) {
   const staff = ['officer', 'admin', 'auditor'].includes(user?.role)
   const tabs = {
     citizen: [['/c', t('hello')], ['/c/claim', t('claim')], ['/c/cases', t('mycases')], ['/c/data', t('mydata')], ['/c/scam', t('scam')], ['/c/ask', t('ask')]],
-    helper: [['/h', 'Families'], ['/h/scam', t('scam')], ['/h/ask', t('ask')]],
-    officer: [['/s/queue', 'Review queue'], ['/s/scam-map', 'Scam map'], ['/s/risk', 'Risk dial'], ['/s/rules', 'Rules & Twin'], ['/s/analytics', 'Analytics'], ['/s/about', 'About']],
-    admin: [['/s/rules', 'Rules & Twin'], ['/s/risk', 'Risk dial'], ['/s/queue', 'Queue'], ['/s/analytics', 'Analytics'], ['/s/scam-map', 'Scam map'], ['/s/audit', 'Audit'], ['/s/admin', 'Admin'], ['/s/redteam', 'Red-Team'], ['/s/about', 'About']],
-    auditor: [['/s/audit', 'Audit'], ['/s/analytics', 'Evaluation'], ['/s/risk', 'Risk dial'], ['/s/scam-map', 'Scam map'], ['/s/redteam', 'Red-Team'], ['/s/about', 'About']],
+    helper: [['/h', t('tab_families')], ['/h/scam', t('scam')], ['/h/ask', t('ask')]],
+    officer: [['/s/queue', t('tab_queue')], ['/s/scam-map', t('tab_scam_map')], ['/s/risk', t('tab_risk')], ['/s/rules', t('tab_rules')], ['/s/analytics', t('tab_analytics')], ['/s/about', t('tab_about')]],
+    admin: [['/s/rules', t('tab_rules')], ['/s/risk', t('tab_risk')], ['/s/queue', t('tab_queue')], ['/s/analytics', t('tab_analytics')], ['/s/scam-map', t('tab_scam_map')], ['/s/audit', t('tab_audit')], ['/s/admin', t('tab_admin')], ['/s/redteam', t('tab_redteam')], ['/s/about', t('tab_about')]],
+    auditor: [['/s/audit', t('tab_audit')], ['/s/analytics', t('tab_evaluation')], ['/s/risk', t('tab_risk')], ['/s/scam-map', t('tab_scam_map')], ['/s/redteam', t('tab_redteam')], ['/s/about', t('tab_about')]],
   }[user?.role] || []
 
   return (
-    <div className={!staff && rtl ? 'rtl' : ''}>
+    <div className={rtl ? 'rtl' : ''}>
       <PrototypeBanner />
       <header className={"topbar" + (staff ? "" : " simple")}>
         <div className="container">
-          <Link to={HOME[user?.role] || '/login'} className="brand">🛡️ {t('app')}</Link>
+          <Link to={HOME[user?.role] || '/login'} className="brand" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <Shield size={18} strokeWidth={2.2} style={{ color: 'var(--champagne)' }} />
+            <span>{t('app')}</span>
+          </Link>
           <nav className="tabs">{tabs.map(([to, l]) => <NavLink key={to} to={to} end={to === '/c' || to === '/h'}>{l}</NavLink>)}</nav>
-          <span className="badge" style={{ background: online ? '#c9efe0' : '#ffd98a', color: '#13302a' }}>{online ? '● ' + t('online') : '○ ' + t('offline')}{pend ? ` · ${pend} ⏳` : ''}</span>
+          <span className="badge" style={{ background: online ? 'var(--forest-soft)' : '#FDF0D9', color: online ? 'var(--forest-dark)' : '#874635', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: online ? 'var(--evergreen)' : '#A65D49', display: 'inline-block' }} />
+            <span>{online ? t('online') : t('offline')}</span>
+            {pend > 0 ? <span style={{ opacity: 0.85 }}>({pend} {localize('باقی', 'baqi', 'pending')})</span> : null}
+          </span>
           <LangSwitch />
-          <button className="small" onClick={() => { logout(); nav('/login', { replace: true }) }}>{user?.name ? user.name.split(' ')[0] : 'User'} · {t('logout')}</button>
+          <button className="small" onClick={() => { logout(); nav('/login', { replace: true }) }}>{user?.name ? user.name.split(' ')[0] : t('user')} · {t('logout')}</button>
         </div>
       </header>
       {staff ? (
         <StaffOfflineBanner online={online} pend={pend} onOpenSyncCenter={() => {}} />
       ) : (
-        !online && <div className="container"><div className="banner offline">📴 {t('saved_offline')}</div></div>
+        !online && (
+          <div className="container">
+            <div className="banner offline" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <WifiOff size={16} />
+              <span>{t('saved_offline')}</span>
+            </div>
+          </div>
+        )
       )}
       <main className="container">{children}</main>
     </div>

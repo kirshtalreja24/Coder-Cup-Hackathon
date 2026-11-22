@@ -36,6 +36,7 @@ import {
   PRE_RENDERED_PROMPTS
 } from '../voice'
 import { apiPost } from '../api'
+import { useLang } from '../i18n'
 
 // Audio Waveform Visualizer Component
 function Waveform({ active, level = 0.5, color = 'var(--gold, #C49A56)' }) {
@@ -76,7 +77,12 @@ function Waveform({ active, level = 0.5, color = 'var(--gold, #C49A56)' }) {
 }
 
 export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) {
-  const [lang, setLang] = useState('ur') // 'ur' | 'roman' | 'en'
+  const { lang: globalLang, localize } = useLang()
+  const [lang, setLang] = useState(globalLang || 'ur') // 'ur' | 'roman' | 'en'
+
+  useEffect(() => {
+    if (globalLang) setLang(globalLang)
+  }, [globalLang])
   const [state, setState] = useState('idle') // 'idle' | 'listening' | 'processing' | 'speaking' | 'error'
   const [audioLevel, setAudioLevel] = useState(0.4)
   const [transcript, setTranscript] = useState('')
@@ -271,7 +277,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                     border: `1px solid ${voiceInfo.upliftOnline ? 'rgba(74, 222, 128, 0.4)' : 'rgba(252, 211, 77, 0.4)'}`
                   }}
                 >
-                  {voiceInfo.upliftOnline ? '● UPLIFT AI ONLINE' : '◯ OFFLINE READY'}
+                  {voiceInfo.upliftOnline ? 'UPLIFT AI ONLINE' : 'OFFLINE READY'}
                 </span>
               </div>
               <div style={{ fontSize: '0.72rem', color: 'rgba(253, 251, 247, 0.7)' }}>
@@ -430,19 +436,19 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
             <div style={{ marginTop: 12, textAlign: 'center' }}>
               <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--forest-dark, #0D2318)' }}>
                 {state === 'listening'
-                  ? (lang === 'ur' ? 'آواز سنی جا رہی ہے… بولیں' : 'Listening… speak now')
+                  ? (lang === 'ur' ? 'آواز سنی جا رہی ہے… بولیں' : lang === 'roman' ? 'Awaz suni ja rahi hai… bolein' : 'Listening… speak now')
                   : state === 'processing'
-                    ? (lang === 'ur' ? 'آواز کا متن تیار کیا جا رہا ہے…' : 'Transcribing speech…')
+                    ? (lang === 'ur' ? 'آواز کا متن تیار کیا جا رہا ہے…' : lang === 'roman' ? 'Awaz process ho rahi hai…' : 'Transcribing speech…')
                     : state === 'speaking'
-                      ? (lang === 'ur' ? 'آواز میں رہنمائی سنائی جا رہی ہے' : 'Speaking guidance…')
+                      ? (lang === 'ur' ? 'آواز میں رہنمائی سنائی جا رہی ہے' : lang === 'roman' ? 'Rehnumai sunayi ja rahi hai' : 'Speaking guidance…')
                       : state === 'error'
-                        ? (lang === 'ur' ? 'آواز واضح نہیں تھی۔ دوبارہ بولیں' : 'Could not hear clearly')
-                        : (lang === 'ur' ? 'بولنے کے لیے مائیک دبائیں' : 'Tap microphone to speak')}
+                        ? (lang === 'ur' ? 'آواز واضح نہیں تھی۔ دوبارہ بولیں' : lang === 'roman' ? 'Awaz wazeh nahi thi. Dobara bolein' : 'Could not hear clearly')
+                        : (lang === 'ur' ? 'بولنے کے لیے مائیک دبائیں' : lang === 'roman' ? 'Bolne ke liye mic dabayein' : 'Tap microphone to speak')}
               </div>
               <div className="small subtle" style={{ marginTop: 2 }}>
                 {state === 'listening'
-                  ? 'بولنا ختم کرنے کے لیے بٹن دوبارہ دبائیں (Tap to finish)'
-                  : 'اردو بولیں یا نیچے دی گئی رہنمائی منتخب کریں'}
+                  ? (lang === 'ur' ? 'بولنا ختم کرنے کے لیے بٹن دوبارہ دبائیں' : lang === 'roman' ? 'Bolna khatam karne ke liye button dabayein' : 'Tap to finish speaking')
+                  : (lang === 'ur' ? 'اردو بولیں یا نیچے دی گئی رہنمائی منتخب کریں' : lang === 'roman' ? 'Bolein ya neeche di gayi rehnumai muntakhib karein' : 'Speak or select guidance below')}
               </div>
             </div>
 
@@ -493,7 +499,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
             >
               <div className="row spread" style={{ alignItems: 'center' }}>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--forest-dark, #0D2318)' }}>
-                  {lang === 'ur' ? 'آپ کی کہی گئی بات (Spoken Transcript):' : 'Spoken Transcript:'}
+                  {localize('آپ کی کہی گئی بات (Spoken Transcript):', 'Aap ki boli gayi baat (Transcript):', 'Spoken Transcript:')}
                 </span>
 
                 <div className="row" style={{ gap: 6 }}>
@@ -576,7 +582,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                   }}
                 >
                   <Send size={14} />
-                  <span>{lang === 'ur' ? 'رہنمائی حاصل کریں' : 'Ask Question'}</span>
+                  <span>{localize('رہنمائی حاصل کریں', 'Rehnumai hasil karein', 'Ask Question')}</span>
                 </button>
               </div>
             </div>
@@ -674,7 +680,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
           ══════════════════════════════════════════════ */}
           <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--forest-dark, #0D2318)' }}>
-              {lang === 'ur' ? 'عام صوتی رہنمائی (Spoken Guidance):' : 'Spoken Guidance Clips:'}
+              {localize('عام صوتی رہنمائی (Spoken Guidance):', 'Aam sooti rehnumai (Voice Clips):', 'Spoken Guidance Clips:')}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -843,18 +849,29 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                     >
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--forest-dark, #0D2318)' }}>
-                          {p.en}
+                          {lang === 'ur' ? p.ur : lang === 'roman' ? (p.roman || p.en) : p.en}
                         </div>
-                        <div
-                          style={{
-                            fontSize: '0.74rem',
-                            color: 'var(--gold-dark, #92400E)',
-                            direction: 'rtl',
-                            fontFamily: 'Noto Nastaliq Urdu, serif, Tahoma'
-                          }}
-                        >
-                          {p.ur}
-                        </div>
+                        {lang === 'ur' ? (
+                          <div
+                            style={{
+                              fontSize: '0.74rem',
+                              color: 'var(--gold-dark, #92400E)',
+                              direction: 'ltr'
+                            }}
+                          >
+                            {p.en}
+                          </div>
+                        ) : lang === 'roman' ? (
+                          <div
+                            style={{
+                              fontSize: '0.74rem',
+                              color: 'var(--gold-dark, #92400E)',
+                              direction: 'ltr'
+                            }}
+                          >
+                            {p.en}
+                          </div>
+                        ) : null}
                       </div>
 
                       <button

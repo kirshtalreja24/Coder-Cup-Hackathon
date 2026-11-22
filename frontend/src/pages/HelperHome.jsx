@@ -22,7 +22,8 @@ import {
   Sparkles,
   ArrowRight,
   ShieldAlert,
-  HardDrive
+  HardDrive,
+  X
 } from 'lucide-react'
 import { apiGet, apiPost, when } from '../api'
 import { playPrompt } from '../voice'
@@ -30,6 +31,7 @@ import { ErrorBox, Spinner, StatusBadge, Tabs, useAsync, MockTag } from '../ui'
 import { loadBox, isEffectiveOnline, flush, onBox } from '../offline'
 import MyData from './MyData'
 import OfflineSyncCenter from '../components/OfflineSyncCenter'
+import { useLang } from '../i18n'
 
 const LOCK_S = 60
 
@@ -58,6 +60,7 @@ function getInitials(name = '') {
 
 export default function HelperHome() {
   const nav = useNavigate()
+  const { t, rtl, localize } = useLang()
   const fam = useAsync(() => apiGet('/helper/families'), [])
   const [active, setActive] = useState(() => JSON.parse(sessionStorage.getItem('bh_family') || 'null'))
   const [q, setQ] = useState('')
@@ -169,7 +172,7 @@ export default function HelperHome() {
       const a = { ...active, consent: true }
       sessionStorage.setItem('bh_family', JSON.stringify(a))
       setActive(a)
-      setInfo(`✔ Verified OTP consent successfully recorded for ${active.name}. Helper authorized.`)
+      setInfo(`Verified OTP consent successfully recorded for ${active.name}. Helper authorized.`)
       setMock(null)
       setCode('')
       fam.reload()
@@ -192,7 +195,7 @@ export default function HelperHome() {
   const activeFamilyOfflineClaims = box.filter((x) => x.citizen_id === active?.id && x.state !== 'done')
 
   return (
-    <div className="col narrow" style={{ gap: 20 }}>
+    <div className={`col narrow ${rtl ? 'rtl' : ''}`} dir={rtl ? 'rtl' : 'ltr'} style={{ gap: 20 }}>
       {/* Offline Sync Center Modal */}
       <OfflineSyncCenter isOpen={showSyncCenter} onClose={() => setShowSyncCenter(false)} />
 
@@ -226,10 +229,14 @@ export default function HelperHome() {
               <Lock size={36} />
             </div>
             <h2 style={{ margin: '0 0 8px', color: 'var(--forest-dark, #0D2318)', fontSize: '1.4rem' }}>
-              Locked for Family Privacy
+              {localize('خاندان کی رازداری کے لیے اسکرین لاک ہے', 'Khandan ki privacy ke liye screen locked hai', 'Locked for Family Privacy')}
             </h2>
             <p className="muted small" style={{ margin: '0 0 24px', lineHeight: 1.5 }}>
-              No screen activity was detected for 60 seconds on this shared community device. The previous family's personal records were automatically sealed to safeguard their confidentiality.
+              {localize(
+                'اس مشترکہ کمیونٹی فون پر 60 سیکنڈ تک کوئی سرگرمی نہ ہونے کی وجہ سے سابقہ خاندان کے ریکارڈز خودکار طور پر سیل کر دیے گئے ہیں۔',
+                'Screen par 60 second tak koi activity na hone par pichle khandan ka data lock kar diya gaya hai.',
+                "No screen activity was detected for 60 seconds on this shared community device. The previous family's personal records were automatically sealed to safeguard their confidentiality."
+              )}
             </p>
             <button
               className="btn"
@@ -244,7 +251,7 @@ export default function HelperHome() {
               }}
             >
               <Users size={16} style={{ marginRight: 8 }} />
-              Select a Family to Resume
+              {localize('دوبارہ کام شروع کرنے کے لیے خاندان منتخب کریں', 'Khandan muntakhib karein', 'Select a Family to Resume')}
             </button>
           </div>
         </div>
@@ -278,14 +285,18 @@ export default function HelperHome() {
                   border: '1px solid rgba(196, 154, 86, 0.3)'
                 }}
               >
-                TRUSTED HELPER PORTAL · ایک فون، متعدد خاندان
+                {localize('قابل اعتماد کمیونٹی مددگار پورٹل · ایک فون، متعدد خاندان', 'Trusted Helper Portal · Aik phone, mukhtalif khandan', 'TRUSTED HELPER PORTAL · ONE PHONE, MULTIPLE FAMILIES')}
               </span>
             </div>
             <h1 style={{ margin: 0, fontSize: '1.8rem', color: '#FDFBF7', fontWeight: 800 }}>
-              Community Helper Mode
+              {localize('کمیونٹی مددگار موڈ', 'Community Helper Mode', 'Community Helper Mode')}
             </h1>
             <p style={{ margin: '6px 0 0', fontSize: '0.88rem', color: 'rgba(253, 251, 247, 0.72)', maxWidth: '520px', lineHeight: 1.5 }}>
-              Assisting multiple community families from one trusted phone. Each family holds its own isolated consent, and sessions lock automatically for privacy.
+              {localize(
+                'ایک بااعتماد فون سے کمیونٹی کے متعدد خاندانوں کی امداد۔ ہر خاندان کا الگ ڈیٹا سیکیورٹی لاک اور آزادانہ اجازت کے ساتھ محفوظ ہے۔',
+                'Aik phone se mukhtalif khandano ki madad. Har khandan ka data alag aur mehfooz hai.',
+                'Assisting multiple community families from one trusted phone. Each family holds its own isolated consent, and sessions lock automatically for privacy.'
+              )}
             </p>
           </div>
 
@@ -309,10 +320,10 @@ export default function HelperHome() {
                   fontSize: '0.74rem',
                   fontWeight: 600
                 }}
-                title="View local device storage and offline synchronization status"
+                title={localize('مقامی ڈیوائس اسٹوریج اور سنک اسٹیٹس دیکھیں', 'Local storage aur sync status dekhein', 'View local device storage and offline synchronization status')}
               >
                 {online ? <Wifi size={13} /> : <WifiOff size={13} />}
-                <span>{online ? 'Online' : 'Offline Staged'}</span>
+                <span>{online ? t('online') : t('offline')}</span>
                 {box.length > 0 && <span className="mono bold">({box.length})</span>}
               </button>
             </div>
@@ -335,7 +346,7 @@ export default function HelperHome() {
                 }}
               >
                 <Clock size={13} style={{ animation: left <= 15 ? 'spin 1.5s linear infinite' : 'none' }} />
-                <span>Auto-lock in {left}s</span>
+                <span>{localize(`خودکار لاک: ${left} سیکنڈ`, `Auto-lock: ${left}s`, `Auto-lock in ${left}s`)}</span>
               </div>
             )}
           </div>
@@ -413,19 +424,23 @@ export default function HelperHome() {
                       color: 'var(--gold, #C49A56)'
                     }}
                   >
-                    CURRENTLY ASSISTING
+                    {localize('زیرِ معاونت خاندان', 'Zair-e-Madad Khandan', 'CURRENTLY ASSISTING')}
                   </span>
                   <span
                     style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
                       fontSize: '0.65rem',
                       fontFamily: 'monospace',
-                      padding: '1px 6px',
+                      padding: '2px 8px',
                       borderRadius: 999,
                       background: active.consent ? 'rgba(74, 222, 128, 0.2)' : 'rgba(239, 68, 68, 0.2)',
                       color: active.consent ? '#86EFAC' : '#FCA5A5'
                     }}
                   >
-                    {active.consent ? '✓ CONSENT ACTIVE' : '🔒 CONSENT REQUIRED'}
+                    {active.consent ? <CheckCircle2 size={10} /> : <Lock size={10} />}
+                    <span>{active.consent ? localize('اجازت فعال ہے', 'Consent Active', 'CONSENT ACTIVE') : localize('اجازت درکار ہے', 'Consent Required', 'CONSENT REQUIRED')}</span>
                   </span>
                 </div>
                 <h3 style={{ margin: '2px 0 0', fontSize: '1.25rem', color: '#FDFBF7', fontWeight: 800 }}>
@@ -434,7 +449,7 @@ export default function HelperHome() {
                 <div className="row" style={{ gap: 8, fontSize: '0.72rem', color: 'rgba(255,255,255,0.6)', marginTop: 2 }}>
                   <span className="mono">ID: {active.id}</span>
                   <span>•</span>
-                  <span>Auto-locking in {left}s</span>
+                  <span>{localize(`خودکار لاک: ${left} سیکنڈ`, `Auto-lock: ${left}s`, `Auto-locking in ${left}s`)}</span>
                 </div>
               </div>
             </div>
@@ -471,7 +486,7 @@ export default function HelperHome() {
                 }}
               >
                 <Lock size={14} />
-                <span>Lock & Switch Family</span>
+                <span>{localize('لاک کریں اور خاندان بدلیں', 'Lock aur switch karein', 'Lock & Switch Family')}</span>
               </button>
             </div>
           </div>
@@ -821,12 +836,14 @@ export default function HelperHome() {
               }}
             >
               <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: 'var(--muted, #6B7280)', fontFamily: 'monospace' }}>
-                Families Assigned
+                {localize('مفوض خاندان', 'Families Assigned', 'Families Assigned')}
               </div>
               <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--forest-dark, #0D2318)', marginTop: 2 }}>
                 {familiesList.length}
               </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--muted, #6B7280)' }}>In helper territory</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--muted, #6B7280)' }}>
+                {localize('علاقائی حدود میں', 'In helper territory', 'In helper territory')}
+              </div>
             </div>
 
             <div
@@ -838,12 +855,14 @@ export default function HelperHome() {
               }}
             >
               <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: 'var(--muted, #6B7280)', fontFamily: 'monospace' }}>
-                Consent Active
+                {localize('فعال اجازتیں', 'Consent Active', 'Consent Active')}
               </div>
               <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#16A34A', marginTop: 2 }}>
                 {consentedCount}
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#16A34A' }}>Verified via OTP</div>
+              <div style={{ fontSize: '0.7rem', color: '#16A34A' }}>
+                {localize('او ٹی پی تصدیق شدہ', 'Verified via OTP', 'Verified via OTP')}
+              </div>
             </div>
 
             <div
@@ -855,12 +874,14 @@ export default function HelperHome() {
               }}
             >
               <div style={{ fontSize: '0.68rem', textTransform: 'uppercase', color: 'var(--muted, #6B7280)', fontFamily: 'monospace' }}>
-                Consent Needed
+                {localize('اجازت درکار', 'Consent Needed', 'Consent Needed')}
               </div>
               <div style={{ fontSize: '1.6rem', fontWeight: 800, color: pendingCount > 0 ? '#B45309' : 'var(--muted, #9CA3AF)', marginTop: 2 }}>
                 {pendingCount}
               </div>
-              <div style={{ fontSize: '0.7rem', color: 'var(--muted, #6B7280)' }}>Requires SMS OTP</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--muted, #6B7280)' }}>
+                {localize('ایس ایم ایس او ٹی پی درکار', 'Requires SMS OTP', 'Requires SMS OTP')}
+              </div>
             </div>
           </div>
 
@@ -870,22 +891,23 @@ export default function HelperHome() {
               <Search
                 size={18}
                 className="subtle"
-                style={{ position: 'absolute', left: 14, top: 14 }}
+                style={{ position: 'absolute', [rtl ? 'right' : 'left']: 14, top: 14 }}
               />
               <input
-                placeholder="Search community family by name or relief programme…"
+                placeholder={localize('نام یا شناختی نمبر سے خاندان تلاش کریں…', 'Khandan talash karein…', 'Search community family by name or relief programme…')}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                style={{ paddingLeft: 42, background: '#FFFFFF' }}
+                style={{ [rtl ? 'paddingRight' : 'paddingLeft']: 42, background: '#FFFFFF' }}
               />
               {q && (
                 <button
                   type="button"
                   className="ghost small icon-btn"
                   onClick={() => setQ('')}
-                  style={{ position: 'absolute', right: 10, top: 10 }}
+                  style={{ position: 'absolute', [rtl ? 'left' : 'right']: 10, top: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                  aria-label="Clear search"
                 >
-                  ✕
+                  <X size={14} />
                 </button>
               )}
             </div>
@@ -893,9 +915,9 @@ export default function HelperHome() {
             {/* Filter Chips */}
             <div className="row" style={{ gap: 8 }}>
               {[
-                { id: 'all', label: `All Families (${familiesList.length})` },
-                { id: 'consented', label: `Consent Active (${consentedCount})` },
-                { id: 'pending', label: `Consent Required (${pendingCount})` }
+                { id: 'all', label: localize(`تمام خاندان (${familiesList.length})`, `All Families (${familiesList.length})`, `All Families (${familiesList.length})`) },
+                { id: 'consented', label: localize(`فعال اجازت (${consentedCount})`, `Consent Active (${consentedCount})`, `Consent Active (${consentedCount})`) },
+                { id: 'pending', label: localize(`اجازت درکار (${pendingCount})`, `Consent Required (${pendingCount})`, `Consent Required (${pendingCount})`) }
               ].map((chip) => (
                 <button
                   key={chip.id}

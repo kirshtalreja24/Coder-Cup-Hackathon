@@ -733,9 +733,9 @@ export default function AdminOverview() {
           </div>
 
           <div className="row spread small subtle" style={{ fontSize: '0.74rem' }}>
-            <span style={{ color: 'var(--terracotta)' }}>◄ Fraud / Decline (&lt;40%)</span>
+            <span style={{ color: 'var(--terracotta)' }}>Fraud / Decline (&lt;40%)</span>
             <span style={{ color: 'var(--gold-dark)' }}>Human Review</span>
-            <span style={{ color: 'var(--forest)' }}>Auto-Approve (&gt;80%) ►</span>
+            <span style={{ color: 'var(--forest)' }}>Auto-Approve (&gt;80%)</span>
           </div>
         </div>
 

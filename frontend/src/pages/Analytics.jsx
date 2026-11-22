@@ -57,11 +57,15 @@ function MetricSourceTag({ type = 'live' }) {
           borderRadius: 4,
           background: 'rgba(22, 163, 74, 0.1)',
           color: '#16A34A',
-          border: '1px solid rgba(22, 163, 74, 0.25)'
+          border: '1px solid rgba(22, 163, 74, 0.25)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: 4
         }}
         title="Computed from real active database records"
       >
-        ● LIVE
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a' }} />
+        <span>LIVE</span>
       </span>
     )
   }
@@ -79,7 +83,7 @@ function MetricSourceTag({ type = 'live' }) {
         }}
         title="Evaluated on held-out synthetic test benchmark"
       >
-        ◯ BENCHMARK
+        BENCHMARK
       </span>
     )
   }

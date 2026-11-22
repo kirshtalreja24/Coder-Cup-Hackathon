@@ -13,10 +13,12 @@ import {
   Eye,
   Clock,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  HelpCircle
 } from 'lucide-react'
 import { api, apiGet, apiPost, getUser, money, pct, when, BASE, getToken } from '../api'
 import { ErrorBox, Json, MockTag, RouteBadge, Spinner, StatusBadge, Tabs, useAsync } from '../ui'
+import { useLang } from '../i18n'
 
 function DocImage({ id }) {
   const [src, setSrc] = useState(null)
@@ -54,6 +56,7 @@ function DocImage({ id }) {
 
 export default function StaffCase() {
   const { id } = useParams()
+  const { t, rtl, localize } = useLang()
   const me = getUser()
   const c = useAsync(() => apiGet('/cases/' + id), [id])
   const dec = useAsync(() => apiGet(`/cases/${id}/decision`).catch(() => null), [id])
@@ -92,7 +95,7 @@ export default function StaffCase() {
   const canAct = me.role === 'officer' && !['paid', 'closed', 'rejected'].includes(x.status)
 
   return (
-    <div className="col" style={{ gap: 20 }}>
+    <div className={`col ${rtl ? 'rtl' : ''}`} dir={rtl ? 'rtl' : 'ltr'} style={{ gap: 20 }}>
       {/* Dossier Header */}
       <div className="row spread" style={{ alignItems: 'flex-start' }}>
         <div>
@@ -102,7 +105,7 @@ export default function StaffCase() {
             style={{ textDecoration: 'none', gap: 6, marginBottom: 8 }}
           >
             <ArrowLeft size={14} />
-            <span>Back to Queue</span>
+            <span>{localize('قطار پر واپس جائیں', 'Queue par wapis', 'Back to Queue')}</span>
           </Link>
           <div className="row" style={{ gap: 12 }}>
             <h2 style={{ margin: 0 }}>Case #{x.id.slice(0, 8)}</h2>
@@ -427,8 +430,15 @@ export default function StaffCase() {
                       borderRadius: 'var(--radius-sm)'
                     }}
                   >
-                    <span>
-                      {r.passed === true ? '✅' : r.passed === false ? '❌' : '❓'} {r.label}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {r.passed === true ? (
+                        <CheckCircle2 size={15} style={{ color: 'var(--evergreen)', flexShrink: 0 }} />
+                      ) : r.passed === false ? (
+                        <XCircle size={15} style={{ color: 'var(--terracotta)', flexShrink: 0 }} />
+                      ) : (
+                        <HelpCircle size={15} style={{ color: 'var(--champagne)', flexShrink: 0 }} />
+                      )}
+                      <span>{r.label}</span>
                     </span>
                     <span className="mono subtle">
                       actual: {JSON.stringify(r.actual)}

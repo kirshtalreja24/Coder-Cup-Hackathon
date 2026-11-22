@@ -21,10 +21,12 @@ import {
   ArrowUpRight,
   TrendingDown,
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  MessageSquare
 } from 'lucide-react'
 import { apiGet, money, pct, when } from '../api'
 import { ErrorBox, Json, RouteBadge, Spinner, useAsync } from '../ui'
+import { useLang } from '../i18n'
 
 // Real mathematical cost modeling mirroring backend decision.py
 function calculateCosts(p, c) {
@@ -57,6 +59,7 @@ function calculateCosts(p, c) {
 }
 
 export default function StaffDecisions() {
+  const { t, rtl, localize } = useLang()
   const [selectedCaseId, setSelectedCaseId] = useState(null)
   const [routeFilter, setRouteFilter] = useState('all')
 
@@ -141,24 +144,24 @@ export default function StaffDecisions() {
       {/* ==================================================================
           MAIN HEADER: TITLE & CASE SELECTOR
           ================================================================== */}
-      <div className="dashboard-top-section">
+      <div className={`dashboard-top-section ${rtl ? 'rtl' : ''}`} dir={rtl ? 'rtl' : 'ltr'}>
         <div>
           <div className="row" style={{ gap: 8, marginBottom: 4 }}>
             <span className="badge" style={{ background: 'var(--forest)', color: '#FFFEFA' }}>
-              Explainable AI
+              {localize('وضاحتی اے آئی', 'Explainable AI', 'Explainable AI')}
             </span>
-            <span className="small subtle">Deterministic Cost Minimization Engine</span>
+            <span className="small subtle">{localize('لاگت کو کم ترین سطح پر لانے کا انجن', 'Cost Minimization Engine', 'Deterministic Cost Minimization Engine')}</span>
           </div>
-          <h1 className="dashboard-greeting-title">Decision Intelligence</h1>
+          <h1 className="dashboard-greeting-title">{localize('فیصلہ جاتی نظام و شواہد', 'Faisla Jaati Nizam', 'Decision Intelligence')}</h1>
           <p className="dashboard-greeting-sub">
-            Every decision has a reason. Every uncertainty has a path.
+            {localize('ہر فیصلے کی ایک واضح وجہ ہے۔ ہر غیر یقینی کا ایک محفوظ راستہ۔', 'Har faislay ki wajah, har ghair yaqeeni ka rasta.', 'Every decision has a reason. Every uncertainty has a path.')}
           </p>
         </div>
 
         {/* Case Selector Dropdown */}
         <div className="dashboard-controls-row">
           <div className="row" style={{ gap: 8, background: '#FFFEFA', padding: '6px 14px', borderRadius: 'var(--radius-md)', border: '1.5px solid var(--border)' }}>
-            <span className="small subtle" style={{ fontWeight: 600 }}>Active Case:</span>
+            <span className="small subtle" style={{ fontWeight: 600 }}>{localize('موجودہ کیس:', 'Active Case:', 'Active Case:')}</span>
             <select
               value={selectedCaseId || ''}
               onChange={(e) => setSelectedCaseId(e.target.value)}
@@ -173,7 +176,7 @@ export default function StaffDecisions() {
           </div>
 
           <Link to={`/s/case/${selectedCaseId}`} className="btn small" style={{ textDecoration: 'none' }}>
-            <span>Adjudicate Case</span>
+            <span>{localize('کیس کا جائزہ لیں', 'Case Adjudicate Karein', 'Adjudicate Case')}</span>
             <ArrowUpRight size={14} />
           </Link>
         </div>
@@ -441,9 +444,9 @@ export default function StaffDecisions() {
           </div>
 
           <div className="row spread small subtle" style={{ fontSize: '0.76rem' }}>
-            <span style={{ color: 'var(--terracotta)' }}>◄ Declines & High-Suspicion Zone</span>
+            <span style={{ color: 'var(--terracotta)' }}>Declines & High-Suspicion Zone</span>
             <span style={{ color: 'var(--gold-dark)' }}>Proof Request & Caseworker Verification Zone</span>
-            <span style={{ color: 'var(--forest)' }}>Autonomous Clearance Zone ►</span>
+            <span style={{ color: 'var(--forest)' }}>Autonomous Clearance Zone</span>
           </div>
         </div>
 
@@ -710,8 +713,9 @@ export default function StaffDecisions() {
             {/* Left: What system knows vs doubts */}
             <div className="col" style={{ gap: 12 }}>
               <div className="card col" style={{ background: '#FFFEFA', padding: '14px 16px', gap: 6, border: '1px solid rgba(196, 154, 86, 0.3)' }}>
-                <b className="small" style={{ color: 'var(--forest)' }}>
-                  ✓ What the System Knows (Verified Facts)
+                <b className="small" style={{ color: 'var(--forest)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <CheckCircle2 size={15} />
+                  <span>What the System Knows (Verified Facts)</span>
                 </b>
                 <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.84rem', color: 'var(--ink)' }}>
                   {handoffBrief.what_we_know?.map((item, i) => (
@@ -721,8 +725,9 @@ export default function StaffDecisions() {
               </div>
 
               <div className="card col" style={{ background: '#FFFEFA', padding: '14px 16px', gap: 6, border: '1px solid rgba(166, 93, 73, 0.3)' }}>
-                <b className="small" style={{ color: 'var(--terracotta-dark)' }}>
-                  ⚠ What Remains Uncertain (Specific Doubts)
+                <b className="small" style={{ color: 'var(--terracotta-dark)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <AlertTriangle size={15} />
+                  <span>What Remains Uncertain (Specific Doubts)</span>
                 </b>
                 <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.84rem', color: 'var(--ink)' }}>
                   {handoffBrief.what_we_doubt?.map((item, i) => (
@@ -735,8 +740,9 @@ export default function StaffDecisions() {
             {/* Right: Why cannot decide & Suggested Questions */}
             <div className="col" style={{ gap: 12 }}>
               <div className="card col" style={{ background: '#FFFEFA', padding: '14px 16px', gap: 6, border: '1px solid rgba(196, 154, 86, 0.3)' }}>
-                <b className="small" style={{ color: '#5D4314' }}>
-                  ⚖ Why It Cannot Decide Automatically
+                <b className="small" style={{ color: '#5D4314', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Scale size={15} />
+                  <span>Why It Cannot Decide Automatically</span>
                 </b>
                 <p className="small muted" style={{ margin: 0, lineHeight: 1.5 }}>
                   {handoffBrief.why_unsure}
@@ -744,8 +750,9 @@ export default function StaffDecisions() {
               </div>
 
               <div className="card col" style={{ background: '#FFFEFA', padding: '14px 16px', gap: 6, border: '1px solid rgba(196, 154, 86, 0.3)' }}>
-                <b className="small" style={{ color: 'var(--forest-dark)' }}>
-                  💬 Suggested Interview Questions for the Officer
+                <b className="small" style={{ color: 'var(--forest-dark)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <MessageSquare size={15} />
+                  <span>Suggested Interview Questions for the Officer</span>
                 </b>
                 <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.84rem', color: 'var(--ink)' }}>
                   {handoffBrief.suggested_questions?.map((item, i) => (

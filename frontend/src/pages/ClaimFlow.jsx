@@ -29,7 +29,9 @@ import {
   HelpCircle,
   UserCheck,
   Shield,
-  Receipt
+  Receipt,
+  HeartHandshake,
+  Delete
 } from 'lucide-react'
 import { api, apiPost, BASE } from '../api'
 import { useLang } from '../i18n'
@@ -57,13 +59,13 @@ const DISTRICTS = [
 
 // 7 Wizard steps with clear icons and bilingual labels
 const WIZARD_STEPS = [
-  { id: 1, key: 'personal', title: 'Personal Info', urdu: 'ذاتی معلومات', icon: User },
-  { id: 2, key: 'identity', title: 'CNIC Identity', urdu: 'شناختی کارڈ', icon: CreditCard },
-  { id: 3, key: 'household', title: 'Household', urdu: 'گھرانہ و آمدنی', icon: UsersIcon },
-  { id: 4, key: 'document', title: 'ID Photo', urdu: 'کارڈ کی تصویر', icon: Camera },
-  { id: 5, key: 'review', title: 'Review', urdu: 'درخواست کا جائزہ', icon: FileCheck },
-  { id: 6, key: 'consent', title: 'Consent', urdu: 'آپ کی اجازت', icon: ShieldCheck },
-  { id: 7, key: 'submit', title: 'Confirmation', urdu: 'حتمی تصدیق', icon: Send }
+  { id: 1, key: 'personal', title: 'Personal Info', urdu: 'ذاتی معلومات', roman: 'Zaati Maloomat', icon: User },
+  { id: 2, key: 'identity', title: 'CNIC Identity', urdu: 'شناختی کارڈ', roman: 'Shanakhti Card (CNIC)', icon: CreditCard },
+  { id: 3, key: 'household', title: 'Household', urdu: 'گھرانہ و آمدنی', roman: 'Gharana aur Aamdani', icon: UsersIcon },
+  { id: 4, key: 'document', title: 'ID Photo', urdu: 'کارڈ کی تصویر', roman: 'Card ki Tasveer', icon: Camera },
+  { id: 5, key: 'review', title: 'Review', urdu: 'درخواست کا جائزہ', roman: 'Darkhast ka Jaiza', icon: FileCheck },
+  { id: 6, key: 'consent', title: 'Consent', urdu: 'آپ کی اجازت', roman: 'Aap ki Ijazat', icon: ShieldCheck },
+  { id: 7, key: 'submit', title: 'Confirmation', urdu: 'حتمی تصدیق', roman: 'Hatmi Tasdeeq', icon: Send }
 ]
 
 const PROMPTS = {
@@ -144,18 +146,18 @@ function MicButton({ onText, numeric, label = 'Speak' }) {
 // Tactile Touch Keypad for CNIC and Currency
 function TouchPad({ value, onChange, max = 13 }) {
   const press = (k) => {
-    if (k === '⌫') onChange(value.slice(0, -1))
+    if (k === 'DEL') onChange(value.slice(0, -1))
     else if (value.length < max) onChange(value + k)
   }
 
   return (
     <div className="numpad">
-      {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', '⌫'].map((k, i) =>
+      {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'DEL'].map((k, i) =>
         k === '' ? (
           <span key={i} />
         ) : (
-          <button type="button" key={k} onClick={() => press(k)}>
-            {k}
+          <button type="button" key={k} onClick={() => press(k)} aria-label={k === 'DEL' ? 'Delete digit' : `Digit ${k}`}>
+            {k === 'DEL' ? <Delete size={18} style={{ verticalAlign: 'middle' }} /> : k}
           </button>
         )
       )}
@@ -164,7 +166,7 @@ function TouchPad({ value, onChange, max = 13 }) {
 }
 
 export default function ClaimFlow({ helper }) {
-  const { t, lang, rtl } = useLang()
+  const { t, lang, rtl, localize } = useLang()
   const nav = useNavigate()
   const family = helper ? JSON.parse(sessionStorage.getItem('bh_family') || 'null') : null
 
@@ -186,7 +188,7 @@ export default function ClaimFlow({ helper }) {
   const galleryRef = useRef()
 
   const setField = (k, v) => setD((p) => ({ ...p, [k]: v }))
-  const L = lang === 'ur' ? 'ur' : 'en'
+  const L = lang === 'ur' ? 'ur' : lang === 'roman' ? 'roman' : 'en'
 
   // Persist draft on every modification
   useEffect(() => {
@@ -356,9 +358,11 @@ export default function ClaimFlow({ helper }) {
           </div>
           <h2>{t('saved_offline')}</h2>
           <p className="subtle" style={{ margin: 0 }}>
-            {lang === 'ur'
-              ? 'انٹرنیٹ کنکشن نہیں ہے، لیکن آپ کا کام محفوظ ہے۔ جیسے ہی نیٹ بحال ہوگا یہ خودبخود محکمہ کو بھیج دیا جائے گا۔'
-              : 'No internet connection. Your relief application is securely saved on this device and will automatically sync once connectivity returns.'}
+            {localize(
+              'انٹرنیٹ کنکشن نہیں ہے، لیکن آپ کا کام محفوظ ہے۔ جیسے ہی نیٹ بحال ہوگا یہ خودبخود محکمہ کو بھیج دیا جائے گا۔',
+              'Internet connection nahi hai, lekin aap ka kaam mehfooz hai. Net aane par yeh khud-ba-khud bhej diya jayega.',
+              'No internet connection. Your relief application is securely saved on this device and will automatically sync once connectivity returns.'
+            )}
           </p>
           <button
             onClick={() => {
@@ -366,7 +370,7 @@ export default function ClaimFlow({ helper }) {
               nav(helper ? '/h' : '/c')
             }}
           >
-            OK (مکمل کریں)
+            {localize('ٹھیک ہے (مکمل کریں)', 'Theek hai (Mukammal karein)', 'OK (Done)')}
           </button>
         </div>
       </div>
@@ -379,7 +383,7 @@ export default function ClaimFlow({ helper }) {
     const isHumanReview = result.route === 'HUMAN_REVIEW'
     const isAskProof = result.route === 'ASK_PROOF'
     const isDecline = result.route === 'DECLINE_WITH_APPEAL'
-    const reason = result.reason_user?.[lang === 'roman' ? 'roman' : lang === 'ur' ? 'ur' : 'en']
+    const reason = result.reason_user?.[lang === 'roman' ? 'roman' : lang === 'ur' ? 'ur' : 'en'] || result.reason_user?.en || ''
 
     return (
       <div className="col narrow" style={{ gap: 20 }}>
@@ -393,19 +397,19 @@ export default function ClaimFlow({ helper }) {
               <div className="col" style={{ gap: 4, flex: 1 }}>
                 <div className="row spread">
                   <span className="badge" style={{ background: 'var(--forest)', color: '#FFFEFA' }}>
-                    {rtl ? 'درخواست منظور' : 'Application Approved'}
+                    {localize('درخواست منظور', 'Darkhast Manzoor', 'Application Approved')}
                   </span>
                   <button
                     type="button"
                     className="btn ghost icon-btn small"
                     onClick={() => speak(reason, L)}
-                    title="Read aloud in Urdu"
+                    title={localize('آواز میں سنیں', 'Awaz mein sunein', 'Read aloud')}
                   >
                     <Volume2 size={18} />
                   </button>
                 </div>
                 <h3 className="decision-title">
-                  {rtl ? 'امداد کی درخواست خودکار طور پر منظور' : 'Relief Claim Approved'}
+                  {localize('امداد کی درخواست خودکار طور پر منظور', 'Imdad ki darkhast khudkar tor par manzoor', 'Relief Claim Approved')}
                 </h3>
                 <p className="decision-reason">{reason}</p>
               </div>
@@ -423,19 +427,19 @@ export default function ClaimFlow({ helper }) {
               <div className="col" style={{ gap: 4, flex: 1 }}>
                 <div className="row spread">
                   <span className="badge amber">
-                    {rtl ? 'انسانی افسر کا جائزہ' : 'Under Human Welfare Review'}
+                    {localize('انسانی افسر کا جائزہ', 'Insani officer ka jaiza', 'Under Human Welfare Review')}
                   </span>
                   <button
                     type="button"
                     className="btn ghost icon-btn small"
                     onClick={() => speak(reason, L)}
-                    title="Read aloud in Urdu"
+                    title={localize('آواز میں سنیں', 'Awaz mein sunein', 'Read aloud')}
                   >
                     <Volume2 size={18} />
                   </button>
                 </div>
                 <h3 className="decision-title">
-                  {rtl ? 'سرکاری افسر کی تصدیق درکار ہے' : 'Assigned for Officer Review'}
+                  {localize('سرکاری افسر کی تصدیق درکار ہے', 'Sarkari officer ki tasdeeq darkaar hai', 'Assigned for Officer Review')}
                 </h3>
                 <p className="decision-reason">{reason}</p>
               </div>
@@ -445,12 +449,14 @@ export default function ClaimFlow({ helper }) {
               <UserCheck size={20} style={{ flex: 'none', marginTop: 2, color: 'var(--gold-dark)' }} />
               <div className="col" style={{ gap: 4 }}>
                 <b style={{ color: 'var(--forest-dark)' }}>
-                  {rtl ? 'اہم: یہ ابھی حتمی فیصلہ نہیں ہے۔' : 'Important: This is not an approval yet.'}
+                  {localize('اہم: یہ ابھی حتمی فیصلہ نہیں ہے۔', 'Ahem: Yeh abhi hatmi faisla nahi hai.', 'Important: This is not an approval yet.')}
                 </b>
                 <span>
-                  {rtl
-                    ? 'آپ کی درخواست ایک سرکاری ویلفیئر افسر کے پاس جانچ کے لیے قطار میں ہے۔ افسر آپ کے کاغذات اور معاشی حالات کا دستی جائزہ لے کر حتمی فیصلہ کرے گا۔'
-                    : 'A human welfare officer needs to review this application before a final decision can be made. No payment has been scheduled yet.'}
+                  {localize(
+                    'آپ کی درخواست ایک سرکاری ویلفیئر افسر کے پاس جانچ کے لیے قطار میں ہے۔ افسر آپ کے کاغذات اور معاشی حالات کا دستی جائزہ لے کر حتمی فیصلہ کرے گا۔',
+                    'Aap ki darkhast ek sarkari welfare officer ke paas jaanch ke liye qataar mein hai. Officer dastavez ka jaiza le kar hatmi faisla karega.',
+                    'A human welfare officer needs to review this application before a final decision can be made. No payment has been scheduled yet.'
+                  )}
                 </span>
               </div>
             </div>
@@ -467,19 +473,19 @@ export default function ClaimFlow({ helper }) {
               <div className="col" style={{ gap: 4, flex: 1 }}>
                 <div className="row spread">
                   <span className="badge amber">
-                    {rtl ? 'مزید معلومات درکار' : 'More Information Required'}
+                    {localize('مزید معلومات درکار', 'Mazeed maloomat darkaar', 'More Information Required')}
                   </span>
                   <button
                     type="button"
                     className="btn ghost icon-btn small"
                     onClick={() => speak(reason, L)}
-                    title="Read aloud in Urdu"
+                    title={localize('آواز میں سنیں', 'Awaz mein sunein', 'Read aloud')}
                   >
                     <Volume2 size={18} />
                   </button>
                 </div>
                 <h3 className="decision-title">
-                  {rtl ? 'شناختی کارڈ کی واضح تصویر درکار ہے' : 'Clearer Photo Required'}
+                  {localize('شناختی کارڈ کی واضح تصویر درکار ہے', 'Shanakhti card ki wazeh tasveer darkaar hai', 'Clearer Photo Required')}
                 </h3>
                 <p className="decision-reason">{reason}</p>
               </div>
@@ -496,7 +502,7 @@ export default function ClaimFlow({ helper }) {
               }}
             >
               <Camera size={18} />
-              <span>{t('takephoto')} (شناختی کارڈ کی تصویر لیں)</span>
+              <span>{t('takephoto')}</span>
               <input type="file" accept="image/*" capture="environment" hidden onChange={retakePhoto} />
             </label>
           </div>
@@ -512,19 +518,19 @@ export default function ClaimFlow({ helper }) {
               <div className="col" style={{ gap: 4, flex: 1 }}>
                 <div className="row spread">
                   <span className="badge red">
-                    {rtl ? 'درخواست مسترد' : 'Relief Not Approved'}
+                    {localize('درخواست مسترد', 'Darkhast mustared', 'Relief Not Approved')}
                   </span>
                   <button
                     type="button"
                     className="btn ghost icon-btn small"
                     onClick={() => speak(reason, L)}
-                    title="Read aloud in Urdu"
+                    title={localize('آواز میں سنیں', 'Awaz mein sunein', 'Read aloud')}
                   >
                     <Volume2 size={18} />
                   </button>
                 </div>
                 <h3 className="decision-title">
-                  {rtl ? 'امداد کی درخواست منظور نہیں ہوئی' : 'Application Not Approved'}
+                  {localize('امداد کی درخواست منظور نہیں ہوئی', 'Imdad ki darkhast manzoor nahi hui', 'Application Not Approved')}
                 </h3>
                 <p className="decision-reason">{reason}</p>
               </div>
@@ -540,7 +546,7 @@ export default function ClaimFlow({ helper }) {
               }}
             >
               <RotateCcw size={16} />
-              <span>{t('appeal')} (انسان سے دوبارہ چیک کروائیں)</span>
+              <span>{t('appeal')}</span>
             </button>
           </div>
         )}
@@ -646,16 +652,19 @@ export default function ClaimFlow({ helper }) {
           <div>
             <div className="row" style={{ gap: 8 }}>
               <span className="badge">
-                Step {step} of 7
+                {localize(`مرحلہ ${step} از 7`, `Step ${step} of 7`, `Step ${step} of 7`)}
               </span>
               <span className="small subtle" style={{ fontWeight: 600 }}>
-                {rtl ? currentStepDef.urdu : currentStepDef.title}
+                {localize(currentStepDef.urdu, currentStepDef.roman, currentStepDef.title)}
               </span>
             </div>
           </div>
 
           <div className="row" style={{ gap: 8 }}>
-            <span className="small subtle">💾 Auto-saved</span>
+            <span className="small subtle" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Check size={12} style={{ color: 'var(--evergreen)' }} />
+              <span>{localize('خودکار محفوظ', 'Auto-saved', 'Auto-saved')}</span>
+            </span>
             <button
               type="button"
               className="btn ghost small"
@@ -663,7 +672,7 @@ export default function ClaimFlow({ helper }) {
               title="Loads test scenarios for evaluation"
             >
               <Sparkles size={14} />
-              <span>Demo</span>
+              <span>{localize('ڈیمو', 'Demo', 'Demo')}</span>
             </button>
           </div>
         </div>
@@ -691,7 +700,7 @@ export default function ClaimFlow({ helper }) {
                   {isCompleted ? <Check size={12} strokeWidth={3} /> : s.id}
                 </span>
                 <span className="small" style={{ display: isActive ? 'inline' : 'none' }}>
-                  {rtl ? s.urdu : s.title}
+                  {localize(s.urdu, s.roman, s.title)}
                 </span>
               </div>
             )
@@ -719,10 +728,11 @@ export default function ClaimFlow({ helper }) {
             <button
               key={s.key}
               className="btn ghost small"
-              style={{ textAlign: 'left', justifyContent: 'flex-start' }}
+              style={{ textAlign: 'left', justifyContent: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 6 }}
               onClick={() => applyDemo(s)}
             >
-              ▶ {s.title}
+              <ArrowRight size={13} style={{ color: 'var(--champagne)' }} />
+              <span>{s.title}</span>
             </button>
           ))}
         </div>
@@ -734,22 +744,22 @@ export default function ClaimFlow({ helper }) {
         <div className="wizard-task-header">
           <div>
             <h2>
-              {step === 1 && (rtl ? 'آپ کی ذاتی معلومات' : 'Personal Information')}
-              {step === 2 && (rtl ? 'شناختی کارڈ نمبر (CNIC)' : 'Identity Verification')}
-              {step === 3 && (rtl ? 'گھرانہ اور ماہانہ آمدنی' : 'Household & Socio-Economic Information')}
-              {step === 4 && (rtl ? 'شناختی کارڈ کی تصویر' : 'Document Upload (CNIC Front)')}
-              {step === 5 && (rtl ? 'درخواست کا جائزہ' : 'Review Application')}
-              {step === 6 && (rtl ? 'آپ کی صریح اجازت (Consent)' : 'Consent & Data Authorization')}
-              {step === 7 && (rtl ? 'حتمی تصدیق اور جمع' : 'Submit Claim')}
+              {step === 1 && localize('آپ کی ذاتی معلومات', 'Apni maloomat darj karein', 'Personal Information')}
+              {step === 2 && localize('شناختی کارڈ نمبر (CNIC)', 'Shanakhti card number (CNIC)', 'Identity Verification')}
+              {step === 3 && localize('گھرانہ اور ماہانہ آمدنی', 'Gharana aur mahana aamdani', 'Household & Socio-Economic Information')}
+              {step === 4 && localize('شناختی کارڈ کی تصویر', 'Shanakhti card ki tasveer', 'Document Upload (CNIC Front)')}
+              {step === 5 && localize('درخواست کا جائزہ', 'Darkhast ka jaiza', 'Review Application')}
+              {step === 6 && localize('آپ کی صریح اجازت (Consent)', 'Aap ki sarih ijazat (Consent)', 'Consent & Data Authorization')}
+              {step === 7 && localize('حتمی تصدیق اور جمع', 'Hatmi tasdeeq aur jama', 'Submit Claim')}
             </h2>
             <div className="urdu-title">
-              {step === 1 && 'نام اور ازدواجی حیثیت درج کریں'}
-              {step === 2 && '13 ہندسوں کا قومی شناختی کارڈ نمبر درج کریں'}
-              {step === 3 && 'آمدنی، افراد کی تعداد اور ضلع منتخب کریں'}
-              {step === 4 && 'صاف اور چاروں کونے دکھائی دینے والی تصویر'}
-              {step === 5 && 'جمع کرانے سے پہلے تمام معلومات چیک کریں'}
-              {step === 6 && 'صرف وہی ڈیٹا شیئر کریں جس کی آپ اجازت دیں'}
-              {step === 7 && 'تصدیق کریں اور امدادی رقم کا فیصلہ دیکھیں'}
+              {step === 1 && localize('نام اور ازدواجی حیثیت درج کریں', 'Naam aur marital status darj karein', 'Enter legal name and marital status')}
+              {step === 2 && localize('13 ہندسوں کا قومی شناختی کارڈ نمبر درج کریں', '13 digits ka CNIC number darj karein', 'Enter 13-digit CNIC number')}
+              {step === 3 && localize('آمدنی، افراد کی تعداد اور ضلع منتخب کریں', 'Aamdani, afraad ki tadaad aur zila muntakhib karein', 'Select income, family size and district')}
+              {step === 4 && localize('صاف اور چاروں کونے دکھائی دینے والی تصویر', 'Saaf aur charon koney dikhai dene wali tasveer', 'Upload clear photo showing all 4 corners')}
+              {step === 5 && localize('جمع کرانے سے پہلے تمام معلومات چیک کریں', 'Jama karwane se pehle tamaam maloomat check karein', 'Review all details before submission')}
+              {step === 6 && localize('صرف وہی ڈیٹا شیئر کریں جس کی آپ اجازت دیں', 'Sirf wahi data share karein jis ki aap ijazat dein', 'Share only what you explicitly authorize')}
+              {step === 7 && localize('تصدیق کریں اور امدادی رقم کا فیصلہ دیکھیں', 'Tasdeeq karein aur imdadi raqam ka faisla dekhein', 'Confirm and view instant relief decision')}
             </div>
           </div>
 
@@ -761,14 +771,16 @@ export default function ClaimFlow({ helper }) {
                 playPrompt(PROMPTS[step], 'Step ' + step, L)
               } else {
                 speak(
-                  rtl
-                    ? 'براہ کرم تمام معلومات کا جائزہ لیں اور آگے بڑھیں۔'
-                    : 'Please review your details and proceed to authorize consent.',
+                  localize(
+                    'براہ کرم تمام معلومات کا جائزہ لیں اور آگے بڑھیں۔',
+                    'Barahe karam tamaam maloomat ka jaiza lein aur aage barhein.',
+                    'Please review your details and proceed to authorize consent.'
+                  ),
                   L
                 )
               }
             }}
-            title="Read instructions aloud"
+            title={localize('ہدایات سنیں', 'Hidayat sunein', 'Listen to step instructions')}
           >
             <Volume2 size={18} />
           </button>
@@ -783,7 +795,7 @@ export default function ClaimFlow({ helper }) {
                 <label style={{ margin: 0 }}>
                   {t('name')} <span style={{ color: 'var(--terracotta)' }}>*</span>
                 </label>
-                <span className="small subtle">Required</span>
+                <span className="small subtle">{localize('لازمی فیلڈ', 'Lazmi field', 'Required')}</span>
               </div>
               <input
                 value={d.name}
@@ -794,20 +806,22 @@ export default function ClaimFlow({ helper }) {
                 style={{ fontSize: '1.1rem', padding: '12px 14px' }}
               />
               <p className="wizard-explanation-text" style={{ marginTop: 6 }}>
-                {rtl
-                  ? 'شناختی کارڈ کے مطابق اپنا نام درج کریں یا بول کر بتائیں۔'
-                  : 'Enter your full legal name as it appears on official records.'}
+                {localize(
+                  'شناختی کارڈ کے مطابق اپنا نام درج کریں یا بول کر بتائیں۔',
+                  'Shanakhti card ke mutabiq apna naam darj karein ya bol kar batayein.',
+                  'Enter your full legal name as it appears on official records.'
+                )}
               </p>
-              <MicButton onText={(x) => setField('name', x)} label="Tap to speak name" />
+              <MicButton onText={(x) => setField('name', x)} label={localize('نام بولیں', 'Naam bolein', 'Tap to speak name')} />
             </div>
 
             {/* Father / Husband Name */}
             <div>
               <div className="row spread" style={{ marginBottom: 6 }}>
                 <label style={{ margin: 0 }}>
-                  {t('father')} <span className="small subtle">(مددگار / Optional)</span>
+                  {t('father')} <span className="small subtle">({localize('اختیاری', 'Ikhtiyari', 'Optional')})</span>
                 </label>
-                <span className="small subtle">Optional</span>
+                <span className="small subtle">{localize('اختیاری', 'Ikhtiyari', 'Optional')}</span>
               </div>
               <input
                 value={d.father_name}
@@ -817,11 +831,13 @@ export default function ClaimFlow({ helper }) {
                 style={{ fontSize: '1.05rem' }}
               />
               <p className="wizard-explanation-text" style={{ marginTop: 6 }}>
-                {rtl
-                  ? 'والد یا شوہر کا نام شناختی تصدیق کو آسان بناتا ہے۔'
-                  : 'Optional. Helps distinguish common names during identity matching.'}
+                {localize(
+                  'والد یا شوہر کا نام شناختی تصدیق کو آسان بناتا ہے۔',
+                  'Walid ya shohar ka naam shanakhti tasdeeq ko aasan banata hai.',
+                  'Optional. Helps distinguish common names during identity matching.'
+                )}
               </p>
-              <MicButton onText={(x) => setField('father_name', x)} label="Tap to speak father's name" />
+              <MicButton onText={(x) => setField('father_name', x)} label={localize('والد کا نام بولیں', 'Walid ka naam bolein', "Tap to speak father's name")} />
             </div>
 
             {/* Marital Status */}
@@ -830,24 +846,24 @@ export default function ClaimFlow({ helper }) {
                 <label style={{ margin: 0 }}>
                   {t('status')} <span style={{ color: 'var(--terracotta)' }}>*</span>
                 </label>
-                <span className="small subtle">Select one</span>
+                <span className="small subtle">{localize('ایک منتخب کریں', 'Aik muntakhib karein', 'Select one')}</span>
               </div>
 
               <div className="status-option-grid">
                 {[
-                  ['widowed', '🖤', 'Widowed', t('widow')],
-                  ['married', '💍', 'Married', t('married')],
-                  ['single', '🙂', 'Other / Single', t('other')]
-                ].map(([v, ic, enLabel, urLabel]) => (
+                  ['widowed', HeartHandshake, t('widow')],
+                  ['married', UsersIcon, t('married')],
+                  ['single', User, t('single')]
+                ].map(([v, IconComponent, label]) => (
                   <button
                     type="button"
                     key={v}
                     className={`status-option-btn ${d.marital_status === v ? 'selected' : ''}`}
                     onClick={() => setField('marital_status', v)}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}
                   >
-                    <span style={{ fontSize: '2rem' }}>{ic}</span>
-                    <span className="option-title">{enLabel}</span>
-                    <span className="option-urdu">{urLabel}</span>
+                    <IconComponent size={26} strokeWidth={1.8} style={{ color: d.marital_status === v ? 'var(--forest)' : 'var(--ink-secondary)', margin: '6px 0' }} />
+                    <span className="option-title">{label}</span>
                   </button>
                 ))}
               </div>
@@ -892,10 +908,10 @@ export default function ClaimFlow({ helper }) {
               <div className="small subtle" style={{ marginTop: 6 }}>
                 {d.cnic.replace(/\D/g, '').length === 13 ? (
                   <span style={{ color: 'var(--forest)', fontWeight: 600 }}>
-                    <Check size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> 13 digits complete
+                    <Check size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> {localize('13 ہندسے مکمل ہیں', '13 digits complete', '13 digits complete')}
                   </span>
                 ) : (
-                  'Format: 5 digits - 7 digits - 1 digit'
+                  localize('طریقہ کار: 5 ہندسے - 7 ہندسے - 1 ہندسہ', 'Format: 5 digits - 7 digits - 1 digit', 'Format: 5 digits - 7 digits - 1 digit')
                 )}
               </div>
             </div>
@@ -910,7 +926,7 @@ export default function ClaimFlow({ helper }) {
             <MicButton
               numeric
               onText={(x) => setField('cnic', x.slice(0, 13))}
-              label="Speak digits in Urdu (نمبر بولیں)"
+              label={localize('شناختی کارڈ کے ہندسے بولیں', 'Shanakhti card ke number bolein', 'Speak CNIC digits')}
             />
           </div>
         )}
@@ -924,7 +940,7 @@ export default function ClaimFlow({ helper }) {
                 <label style={{ margin: 0 }}>
                   {t('income')} (PKR) <span style={{ color: 'var(--terracotta)' }}>*</span>
                 </label>
-                <span className="small subtle">Monthly</span>
+                <span className="small subtle">{localize('ماہانہ', 'Mahana', 'Monthly')}</span>
               </div>
 
               <div
@@ -953,7 +969,7 @@ export default function ClaimFlow({ helper }) {
               <MicButton
                 numeric
                 onText={(x) => setField('monthly_income', x.slice(0, 7))}
-                label="Speak income amount in Urdu"
+                label={localize('ماہانہ آمدنی بول کر بتائیں', 'Mahana aamdani bol kar batayein', 'Speak monthly income amount')}
               />
             </div>
 
@@ -989,7 +1005,7 @@ export default function ClaimFlow({ helper }) {
                   <div className="kpi" style={{ fontSize: '3.4rem', color: 'var(--forest-dark)', margin: 0 }}>
                     {d.household_size}
                   </div>
-                  <div className="small subtle">خاندان کے افراد (People)</div>
+                  <div className="small subtle">{localize('خاندان کے افراد', 'Khandan ke afraad', 'Household members')}</div>
                 </div>
 
                 <button
@@ -1028,26 +1044,26 @@ export default function ClaimFlow({ helper }) {
             {/* Visual Document Guidelines (Acceptable vs Unacceptable) */}
             <div>
               <div className="small subtle" style={{ fontWeight: 600, marginBottom: 8 }}>
-                Acceptable Document Examples (تصویر کا معیار):
+                {localize('شناختی کارڈ کی تصویر کا معیار:', 'Tasveer ka mayaar:', 'Acceptable Document Guidelines:')}
               </div>
               <div className="doc-guide-grid">
                 <div className="doc-guide-item valid">
                   <div className="row" style={{ gap: 6, fontWeight: 700 }}>
                     <CheckCircle2 size={16} />
-                    <span>Good / صحیح معیار</span>
+                    <span>{localize('صحیح معیار', 'Sahi mayaar', 'Good Quality')}</span>
                   </div>
-                  <span>• Clear lighting, not blurry</span>
-                  <span>• All 4 corners visible</span>
-                  <span>• QR code and CNIC readable</span>
+                  <span>{localize('• واضح روشنی، دھندلا نہ ہو', '• Wazeh roshni, saaf tasveer', '• Clear lighting, not blurry')}</span>
+                  <span>{localize('• کارڈ کے چاروں کونے نظر آئیں', '• Card ke charon koney nazar aayein', '• All 4 corners visible')}</span>
+                  <span>{localize('• شناختی نمبر اور کیو آر کوڈ صاف ہو', '• Shanakhti number saaf parha jaye', '• QR code and CNIC readable')}</span>
                 </div>
                 <div className="doc-guide-item invalid">
                   <div className="row" style={{ gap: 6, fontWeight: 700 }}>
                     <XCircle size={16} />
-                    <span>Avoid / غلط معیار</span>
+                    <span>{localize('غلط معیار (گریز کریں)', 'Ghalat mayaar (Avoid)', 'Avoid / Poor Quality')}</span>
                   </div>
-                  <span>• Cut or cropped corners</span>
-                  <span>• Camera flash glare</span>
-                  <span>• Blurry, dark or tilted</span>
+                  <span>{localize('• کٹے ہوئے کونے یا آدھا کارڈ', '• Katey hue koney', '• Cut or cropped corners')}</span>
+                  <span>{localize('• فلیش لائٹ کی چمک', '• Flash light ki chamak', '• Camera flash glare')}</span>
+                  <span>{localize('• دھندلی، اندھیری یا ٹیڑھی تصویر', '• Dhundli ya terhi tasveer', '• Blurry, dark or tilted')}</span>
                 </div>
               </div>
             </div>
@@ -1074,14 +1090,14 @@ export default function ClaimFlow({ helper }) {
                       onClick={() => cameraRef.current?.click()}
                     >
                       <Camera size={14} />
-                      <span>Retake with Camera</span>
+                      <span>{localize('دوبارہ تصویر لیں', 'Dobara tasveer lein', 'Retake with Camera')}</span>
                     </button>
                     <button
                       type="button"
                       className="btn ghost small danger-ghost"
                       onClick={() => setPhoto(null)}
                     >
-                      <span>Remove</span>
+                      <span>{localize('تصویر ہٹائیں', 'Tasveer hatayein', 'Remove')}</span>
                     </button>
                   </div>
                 </div>
@@ -1103,10 +1119,10 @@ export default function ClaimFlow({ helper }) {
                   </div>
                   <div>
                     <h4 style={{ margin: 0, color: 'var(--forest-dark)' }}>
-                      Take or Upload Photo of ID Card
+                      {localize('شناختی کارڈ کی تصویر لیں یا اپ لوڈ کریں', 'Shanakhti card ki tasveer lein ya upload karein', 'Take or Upload Photo of ID Card')}
                     </h4>
                     <span className="small subtle">
-                      Supports phone camera or gallery image
+                      {localize('کیمرہ یا فون گیلری استعمال کریں', 'Camera ya gallery istemal karein', 'Supports phone camera or gallery image')}
                     </span>
                   </div>
 
@@ -1117,7 +1133,7 @@ export default function ClaimFlow({ helper }) {
                       style={{ padding: '10px 18px' }}
                     >
                       <Camera size={16} />
-                      <span>Use Camera (کیمرہ)</span>
+                      <span>{localize('کیمرہ کھولیں', 'Camera kholein', 'Use Camera')}</span>
                     </button>
 
                     <button
@@ -1127,13 +1143,13 @@ export default function ClaimFlow({ helper }) {
                       style={{ padding: '10px 18px' }}
                     >
                       <Upload size={16} />
-                      <span>From Gallery (فائل)</span>
+                      <span>{localize('گیلری سے منتخب کریں', 'Gallery se muntakhib karein', 'From Gallery')}</span>
                     </button>
                   </div>
 
                   {compressing && (
                     <span className="small" style={{ color: 'var(--forest)' }}>
-                      Shrinking photo locally for weak signal…
+                      {localize('کمزور سگنل کے لیے فائل کا سائز چھوٹا کیا جا رہا ہے…', 'Photo process ho rahi hai…', 'Shrinking photo locally for weak signal…')}
                     </span>
                   )}
                 </>
@@ -1158,7 +1174,11 @@ export default function ClaimFlow({ helper }) {
             </div>
 
             <p className="wizard-explanation-text" style={{ textAlign: 'center' }}>
-              Note: If you do not have a working camera, you can skip this step. The department will cross-check your record with the registry.
+              {localize(
+                'نوٹ: اگر کیمرہ کام نہ کرے تو آپ اس مرحلے کو چھوڑ سکتے ہیں۔ محکمہ نادرا ریکارڈ سے آپ کی جانچ کرے گا۔',
+                'Note: Agar camera na ho to aap aage barh sakte hain. Department NADRA record se verify karega.',
+                'Note: If you do not have a working camera, you can skip this step. The department will cross-check your record with the registry.'
+              )}
             </p>
           </div>
         )}
@@ -1167,38 +1187,40 @@ export default function ClaimFlow({ helper }) {
         {step === 5 && (
           <div className="col" style={{ gap: 16 }}>
             <p className="wizard-explanation-text" style={{ margin: 0 }}>
-              {rtl
-                ? 'براہ کرم تمام درج کی گئی تفصیلات کی جانچ کریں۔ کسی بھی خانے کو تبدیل کرنے کے لیے "Edit" دبائیں۔'
-                : 'Please review all entered details below before authorizing data verification.'}
+              {localize(
+                'براہ کرم تمام درج کی گئی تفصیلات کی جانچ کریں۔ کسی بھی خانے کو تبدیل کرنے کے لیے "تبدیل" دبائیں۔',
+                'Barahe karam tamaam maloomat ka jaiza lein. Kisi bhi khaney ko tabdeel karne ke liye "Edit" dabayein.',
+                'Please review all entered details below before authorizing data verification.'
+              )}
             </p>
 
             {/* Block 1: Personal Info */}
             <div className="review-summary-block">
               <div className="review-section-header">
-                <h4>1. Personal Information (ذاتی معلومات)</h4>
+                <h4>{localize('1. ذاتی معلومات', '1. Zaati Maloomat', '1. Personal Information')}</h4>
                 <button
                   type="button"
                   className="btn ghost small"
                   style={{ padding: '2px 8px', minHeight: 28 }}
                   onClick={() => setStep(1)}
                 >
-                  <Edit2 size={12} /> Edit
+                  <Edit2 size={12} /> {localize('تبدیل', 'Edit', 'Edit')}
                 </button>
               </div>
               <table className="review-summary-table">
                 <tbody>
                   <tr>
-                    <td className="label-cell">Full Name:</td>
+                    <td className="label-cell">{localize('پورا نام:', 'Poora naam:', 'Full Name:')}</td>
                     <td className="value-cell">{d.name || '—'}</td>
                   </tr>
                   <tr>
-                    <td className="label-cell">Father / Husband:</td>
-                    <td className="value-cell">{d.father_name || 'Optional / None'}</td>
+                    <td className="label-cell">{localize('والد یا شوہر کا نام:', 'Walid ya shohar:', 'Father / Husband:')}</td>
+                    <td className="value-cell">{d.father_name || localize('اختیاری / درج نہیں', 'Optional / None', 'Optional / None')}</td>
                   </tr>
                   <tr>
-                    <td className="label-cell">Situation:</td>
+                    <td className="label-cell">{localize('ازدواجی حیثیت:', 'Haisiyat:', 'Situation:')}</td>
                     <td className="value-cell" style={{ textTransform: 'capitalize' }}>
-                      {d.marital_status || '—'}
+                      {d.marital_status ? t(d.marital_status) : '—'}
                     </td>
                   </tr>
                 </tbody>
@@ -1208,20 +1230,20 @@ export default function ClaimFlow({ helper }) {
             {/* Block 2: Identity (CNIC) */}
             <div className="review-summary-block">
               <div className="review-section-header">
-                <h4>2. Identity Verification (شناختی کارڈ)</h4>
+                <h4>{localize('2. شناختی کارڈ (CNIC)', '2. Shanakhti Card (CNIC)', '2. Identity Verification (CNIC)')}</h4>
                 <button
                   type="button"
                   className="btn ghost small"
                   style={{ padding: '2px 8px', minHeight: 28 }}
                   onClick={() => setStep(2)}
                 >
-                  <Edit2 size={12} /> Edit
+                  <Edit2 size={12} /> {localize('تبدیل', 'Edit', 'Edit')}
                 </button>
               </div>
               <table className="review-summary-table">
                 <tbody>
                   <tr>
-                    <td className="label-cell">National CNIC:</td>
+                    <td className="label-cell">{localize('قومی شناختی کارڈ نمبر:', 'Shanakhti Card Number:', 'National CNIC:')}</td>
                     <td className="value-cell mono" style={{ fontSize: '1.05rem', color: 'var(--forest)' }}>
                       {fmtCnic(d.cnic) || '—'}
                     </td>
@@ -1233,30 +1255,30 @@ export default function ClaimFlow({ helper }) {
             {/* Block 3: Household & Socio-Economic */}
             <div className="review-summary-block">
               <div className="review-section-header">
-                <h4>3. Household & District (گھرانہ و علاقہ)</h4>
+                <h4>{localize('3. گھرانہ و علاقہ', '3. Gharana aur Ilaqa', '3. Household & District')}</h4>
                 <button
                   type="button"
                   className="btn ghost small"
                   style={{ padding: '2px 8px', minHeight: 28 }}
                   onClick={() => setStep(3)}
                 >
-                  <Edit2 size={12} /> Edit
+                  <Edit2 size={12} /> {localize('تبدیل', 'Edit', 'Edit')}
                 </button>
               </div>
               <table className="review-summary-table">
                 <tbody>
                   <tr>
-                    <td className="label-cell">Monthly Income:</td>
+                    <td className="label-cell">{localize('ماہانہ آمدنی:', 'Mahana aamdani:', 'Monthly Income:')}</td>
                     <td className="value-cell mono">
                       PKR {Number(d.monthly_income || 0).toLocaleString()}
                     </td>
                   </tr>
                   <tr>
-                    <td className="label-cell">Household Members:</td>
-                    <td className="value-cell">{d.household_size} members</td>
+                    <td className="label-cell">{localize('خاندان کے افراد:', 'Khandan ke afraad:', 'Household Members:')}</td>
+                    <td className="value-cell">{d.household_size} {localize('افراد', 'afraad', 'members')}</td>
                   </tr>
                   <tr>
-                    <td className="label-cell">District / Area:</td>
+                    <td className="label-cell">{localize('ضلع / علاقہ:', 'Zila / Ilaqa:', 'District / Area:')}</td>
                     <td className="value-cell">{d.district}</td>
                   </tr>
                 </tbody>
@@ -1266,14 +1288,14 @@ export default function ClaimFlow({ helper }) {
             {/* Block 4: Document Photo */}
             <div className="review-summary-block">
               <div className="review-section-header">
-                <h4>4. Uploaded ID Card (تصویر)</h4>
+                <h4>{localize('4. شناختی کارڈ کی تصویر', '4. Shanakhti Card ki Tasveer', '4. Uploaded ID Card Photo')}</h4>
                 <button
                   type="button"
                   className="btn ghost small"
                   style={{ padding: '2px 8px', minHeight: 28 }}
                   onClick={() => setStep(4)}
                 >
-                  <Edit2 size={12} /> Edit
+                  <Edit2 size={12} /> {localize('تبدیل', 'Edit', 'Edit')}
                 </button>
               </div>
               <div style={{ padding: '12px 16px' }}>
@@ -1291,12 +1313,12 @@ export default function ClaimFlow({ helper }) {
                       }}
                     />
                     <span className="small" style={{ color: 'var(--forest)', fontWeight: 600 }}>
-                      <Check size={14} style={{ display: 'inline' }} /> CNIC photo attached
+                      <Check size={14} style={{ display: 'inline' }} /> {localize('تصویر منسلک ہے', 'Tasveer munsalik hai', 'CNIC photo attached')}
                     </span>
                   </div>
                 ) : (
                   <span className="small subtle">
-                    No photo attached (will cross-check via registry records)
+                    {localize('کوئی تصویر منسلک نہیں (نادرا ڈیٹا بیس سے تصدیق ہوگی)', 'Tasveer nahi (NADRA se verify hoga)', 'No photo attached (will cross-check via registry records)')}
                   </span>
                 )}
               </div>
@@ -1308,37 +1330,45 @@ export default function ClaimFlow({ helper }) {
         {step === 6 && (
           <div className="col" style={{ gap: 16 }}>
             <p className="wizard-explanation-text" style={{ margin: 0 }}>
-              {rtl
-                ? 'آپ کا مکمل کنٹرول ہے۔ آپ جب چاہیں "میرا ڈیٹا" کے تحت ان اجازتوں کو واپس لے سکتے ہیں۔'
-                : 'You have full data sovereignty. You choose which checks to permit, and can revoke them anytime.'}
+              {localize(
+                'آپ کا مکمل کنٹرول ہے۔ آپ جب چاہیں "میرا ڈیٹا" کے تحت ان اجازتوں کو واپس لے سکتے ہیں۔',
+                'Aap ka mukammal control hai. Aap jab chahein "Mera Data" mein in ijazaton ko wapis le sakte hain.',
+                'You have full data sovereignty. You choose which checks to permit, and can revoke them anytime.'
+              )}
             </p>
 
             {[
               [
                 'identity',
                 CreditCard,
-                rtl ? 'قومی شناختی تصدیق کی اجازت' : 'Check my Identity with National Registry',
-                rtl
-                  ? 'محکمہ کو آپ کے نام اور شناختی کارڈ کی تصدیق کرنے کی اجازت۔'
-                  : 'Allows matching your name and CNIC with official government records.',
+                localize('قومی شناختی تصدیق کی اجازت', 'National registry se shanakht ki tasdeeq ki ijazat', 'Check my Identity with National Registry'),
+                localize(
+                  'محکمہ کو آپ کے نام اور شناختی کارڈ کی تصدیق کرنے کی اجازت۔',
+                  'Department ko aap ke naam aur shanakhti card ki tasdeeq karne ki ijazat.',
+                  'Allows matching your name and CNIC with official government records.'
+                ),
                 true
               ],
               [
                 'documents',
                 Camera,
-                rtl ? 'میرے کاغذات افسر دیکھ سکے' : 'Officer Document Review',
-                rtl
-                  ? 'اگر خودکار تصدیق میں شک ہو تو کیس ورکر کو تصویر دیکھنے کی اجازت۔'
-                  : 'Allows a caseworker to inspect your uploaded CNIC photo if manual review is needed.',
+                localize('میرے کاغذات افسر دیکھ سکے', 'Officer mere kaghazaat dekh sake', 'Officer Document Review'),
+                localize(
+                  'اگر خودکار تصدیق میں شک ہو تو کیس ورکر کو تصویر دیکھنے کی اجازت۔',
+                  'Agar khudkar tasdeeq mein shak ho to caseworker ko tasveer dekhne ki ijazat.',
+                  'Allows a caseworker to inspect your uploaded CNIC photo if manual review is needed.'
+                ),
                 false
               ],
               [
                 'payment',
                 ShieldCheck,
-                rtl ? 'رقم براہ راست منتقل کرنے کی اجازت' : 'Direct Relief Payment via Raast',
-                rtl
-                  ? 'منظوری کی صورت میں رقم سیدھی آپ کے اکاؤنٹ میں بھیجنے کی اجازت۔'
-                  : 'Authorizes instant relief disbursement to your verified payment account.',
+                localize('رقم براہ راست منتقل کرنے کی اجازت', 'Raast ke zariye raqam direct transfer ki ijazat', 'Direct Relief Payment via Raast'),
+                localize(
+                  'منظوری کی صورت میں رقم سیدھی آپ کے اکاؤنٹ میں بھیجنے کی اجازت۔',
+                  'Manzoori ki soorat mein raqam seedhi aap ke account mein bhejne ki ijazat.',
+                  'Authorizes instant relief disbursement to your verified payment account.'
+                ),
                 false
               ]
             ].map(([k, IconComp, titleText, descText, must]) => (
@@ -1382,7 +1412,11 @@ export default function ClaimFlow({ helper }) {
               <div className="banner bad small">
                 <AlertTriangle size={16} />
                 <span>
-                  * Identity verification consent is required to evaluate eligibility for public relief.
+                  {localize(
+                    '* شناخت کی تصدیق کی اجازت امدادی جانچ کے لیے لازمی ہے۔',
+                    '* Shanakht ki tasdeeq ki ijazat imdadi jaanch ke liye lazmi hai.',
+                    '* Identity verification consent is required to evaluate eligibility for public relief.'
+                  )}
                 </span>
               </div>
             )}
@@ -1410,12 +1444,14 @@ export default function ClaimFlow({ helper }) {
 
             <div>
               <h3 style={{ margin: '0 0 6px 0', fontSize: '1.4rem' }}>
-                {rtl ? 'درخواست جمع کرنے کے لیے تیار ہیں؟' : 'Ready to Submit Your Application?'}
+                {localize('درخواست جمع کرنے کے لیے تیار ہیں؟', 'Darkhast jama karne ke liye tayyar hain?', 'Ready to Submit Your Application?')}
               </h3>
               <p className="wizard-explanation-text" style={{ maxWidth: 440, margin: '0 auto' }}>
-                {rtl
-                  ? 'بٹن دبانے پر سسٹم فوری طور پر قواعد اور ڈیٹا کی بنیاد پر فیصلہ یا رہنمائی فراہم کرے گا۔'
-                  : 'Your claim will be verified immediately against policy rules. You will receive an instant decision or triage update.'}
+                {localize(
+                  'بٹن دبانے پر سسٹم فوری طور پر قواعد اور ڈیٹا کی بنیاد پر فیصلہ یا رہنمائی فراہم کرے گا۔',
+                  'Button dabane par system fori tor par qawaid aur data ki bunyad par faisla ya rehnumai faraham karega.',
+                  'Your claim will be verified immediately against policy rules. You will receive an instant decision or triage update.'
+                )}
               </p>
             </div>
 
@@ -1432,20 +1468,20 @@ export default function ClaimFlow({ helper }) {
               }}
             >
               <div className="row spread small">
-                <span>Claimant:</span>
+                <span>{localize('امیدوار', 'Umeedwar', 'Claimant')}:</span>
                 <b>{d.name}</b>
               </div>
               <div className="row spread small">
-                <span>CNIC:</span>
+                <span>{localize('شناختی کارڈ', 'CNIC', 'CNIC')}:</span>
                 <b className="mono">{fmtCnic(d.cnic)}</b>
               </div>
               <div className="row spread small">
-                <span>District:</span>
+                <span>{localize('ضلع', 'Zila', 'District')}:</span>
                 <b>{d.district}</b>
               </div>
               <div className="row spread small">
-                <span>Active Permissions:</span>
-                <b>{Object.values(consent).filter(Boolean).length} granted</b>
+                <span>{localize('فعال اجازتیں', 'Faal ijazatein', 'Active Permissions')}:</span>
+                <b>{Object.values(consent).filter(Boolean).length} {localize('منظور', 'manzoor', 'granted')}</b>
               </div>
             </div>
 
@@ -1461,12 +1497,12 @@ export default function ClaimFlow({ helper }) {
               }}
             >
               {busy ? (
-                <span>Submitting & Verifying…</span>
+                <span>{localize('درخواست بھیجی اور جانچی جا رہی ہے…', 'Darkhast bheji aur jaanchi ja rahi hai…', 'Submitting & Verifying…')}</span>
               ) : (
-                <>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                   <Send size={18} />
-                  <span>{t('send')} (درخواست جمع کریں)</span>
-                </>
+                  <span>{t('send')}</span>
+                </span>
               )}
             </button>
           </div>
@@ -1484,7 +1520,7 @@ export default function ClaimFlow({ helper }) {
               onClick={() => setStep(step - 1)}
             >
               <ArrowLeft size={16} />
-              <span>{t('back')} (پیچھے)</span>
+              <span>{t('back')}</span>
             </button>
 
             {step < 6 ? (
@@ -1494,7 +1530,7 @@ export default function ClaimFlow({ helper }) {
                 onClick={() => setStep(step + 1)}
               >
                 <span>
-                  {step === 4 && !photo ? t('skip') + ' / ' + t('next') : t('next') + ' (آگے)'}
+                  {step === 4 && !photo ? `${t('skip')} / ${t('next')}` : t('next')}
                 </span>
                 <ArrowRight size={16} />
               </button>
@@ -1504,7 +1540,7 @@ export default function ClaimFlow({ helper }) {
                 disabled={!isStepValid()}
                 onClick={() => setStep(7)}
               >
-                <span>Proceed to Submit (جائزہ و تصدیق)</span>
+                <span>{localize('تصدیق اور جمع کی طرف بڑھیں', 'Tasdeeq aur jama ki taraf barhein', 'Proceed to Submit')}</span>
                 <ArrowRight size={16} />
               </button>
             )}

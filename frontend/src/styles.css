@@ -15,27 +15,29 @@
 :root {
   --forest: #173D32;
   --forest-dark: #102B24;
+  --evergreen: #285747;
   --forest-hover: #1f4c3f;
   --forest-soft: #D9E7DC;
-  --forest-tint: rgba(23, 61, 50, 0.06);
+  --forest-tint: rgba(23, 61, 50, 0.05);
 
   --ivory: #F5F0E6;
   --ivory-alt: #EDE5D8;
   --paper: #FFFEFA;
-  --ink: #24312B;
+  --ink: #252B28;
   --ink-secondary: #586961;
-  --ink-muted: #7E9088;
-  --border: #DFD7C7;
-  --border-subtle: #EBE5D9;
-  --border-focus: #C49A56;
+  --ink-muted: #747B75;
+  --border: #E6E0D5;
+  --border-subtle: #ECE7DE;
+  --border-focus: #D5B982;
 
-  --gold: #C49A56;
-  --gold-dark: #9E7738;
+  --champagne: #D5B982;
+  --gold: #D5B982;
+  --gold-dark: #A48348;
   --gold-soft: #FAF4E9;
-  --gold-tint: rgba(196, 154, 86, 0.12);
+  --gold-tint: rgba(213, 185, 130, 0.12);
 
   --sage: #D9E7DC;
-  --sage-dark: #325A4B;
+  --sage-dark: #285747;
   --sage-soft: #EDF4EE;
 
   --terracotta: #A65D49;
@@ -137,15 +139,22 @@ a:hover {
 }
 
 /* RTL / Urdu Support */
-.rtl, [dir="rtl"] {
+.rtl, [dir="rtl"], html[dir="rtl"] body {
   direction: rtl;
   text-align: right;
   font-family: var(--font-urdu), var(--font-sans);
 }
 
-.rtl h1, .rtl h2, .rtl h3, [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3 {
+.rtl h1, .rtl h2, .rtl h3, .rtl h4, .rtl h5, .rtl h6,
+[dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] h5, [dir="rtl"] h6,
+html[dir="rtl"] h1, html[dir="rtl"] h2, html[dir="rtl"] h3 {
   font-family: var(--font-urdu), var(--font-serif);
-  line-height: 1.7;
+  line-height: 1.8;
+}
+
+.rtl input, .rtl button, .rtl select, .rtl textarea,
+[dir="rtl"] input, [dir="rtl"] button, [dir="rtl"] select, [dir="rtl"] textarea {
+  font-family: var(--font-urdu), var(--font-sans);
 }
 
 /* Layout Containers */

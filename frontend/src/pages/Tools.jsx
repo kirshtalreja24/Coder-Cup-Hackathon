@@ -25,7 +25,11 @@ import {
   Play,
   Pause,
   Send,
-  Radio
+  Radio,
+  Shield,
+  Hash,
+  Lock,
+  ClipboardPaste
 } from 'lucide-react'
 import { api, apiPost, getToken } from '../api'
 import { useLang } from '../i18n'
@@ -97,7 +101,7 @@ function Mic({ onText, lang = 'ur-PK' }) {
 }
 
 export function ScamPage({ pub }) {
-  const { t, lang } = useLang()
+  const { t, lang, rtl, localize } = useLang()
   const [text, setText] = useState('')
   const [sender, setSender] = useState('')
   const [area, setArea] = useState('Karachi East')
@@ -106,6 +110,17 @@ export function ScamPage({ pub }) {
   const [busy, setBusy] = useState(false)
   const [samples, setSamples] = useState([])
   const [pasteNotice, setPasteNotice] = useState(false)
+
+  const getAdviceText = () => {
+    if (lang === 'roman') {
+      if (res?.advice?.roman) return res.advice.roman
+      if (res?.verdict === 'SCAM') return 'Yeh dhoka lagta hai. Jawab na dein, link na kholein, paise na bhejein. Asli imdadi paigham sirf 8171 se aata hai.'
+      if (res?.verdict === 'SUSPICIOUS') return 'Yeh paigham mashkook hai. Koi shanakhti card, PIN ya paise na dein. Helpline 0800-26477 se maloom karein.'
+      if (res?.verdict === 'LIKELY_REAL') return 'Yeh paigham sarkari imdadi paigham jaisa hai (8171 se aaya hai). Yeh aap se fees ya password nahi mangta.'
+      return 'Mujhe is paigham ke baare mein yaqeen nahi, is liye mein andaza nahi lagaoon ga. Koi insaan dekh le. Tab tak link na kholein, paise na bhejein.'
+    }
+    return res?.advice?.[lang] || res?.advice?.en || ''
+  }
 
   useEffect(() => {
     api('/demo/scenarios', { auth: false })
@@ -147,13 +162,16 @@ export function ScamPage({ pub }) {
         { auth: !pub }
       )
       setRes(r)
-      const a = r.advice?.[lang === 'ur' ? 'ur' : 'en'] || r.advice?.en
+      const a =
+        lang === 'roman'
+          ? (r.advice?.roman || 'Yeh paigham mashkook lagta hai. Jawab na dein.')
+          : (r.advice?.[lang] || r.advice?.en)
       if (r.verdict === 'SCAM' || r.verdict === 'SUSPICIOUS') {
-        playPrompt('scam_alert', a, lang === 'ur' ? 'ur' : 'en')
+        playPrompt('scam_alert', a, lang)
       } else if (r.verdict === 'LIKELY_REAL') {
-        playPrompt('scam_ok', a, lang === 'ur' ? 'ur' : 'en')
+        playPrompt('scam_ok', a, lang)
       } else {
-        speak(a, lang === 'ur' ? 'ur' : 'en')
+        speak(a, lang)
       }
     } catch (e) {
       setErr(e)
@@ -179,28 +197,29 @@ export function ScamPage({ pub }) {
           <div>
             <div className="row" style={{ gap: 8, marginBottom: 6 }}>
               <span className="badge" style={{ background: 'var(--forest)', color: '#fff', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em' }}>
-                CITIZEN PROTECTION
+                {localize('شہری تحفظ و سیکیورٹی', 'Citizen Protection', 'CITIZEN PROTECTION')}
               </span>
               {pub && (
                 <span className="badge" style={{ background: 'var(--gold-soft)', color: 'var(--gold-dark)', fontSize: '0.75rem' }}>
-                  Public Service · No Login Required
+                  {localize('عوامی سروس · لاگ ان کی ضرورت نہیں', 'Public Service · No Login Required', 'Public Service · No Login Required')}
                 </span>
               )}
             </div>
             <h1 style={{ margin: 0, fontSize: '1.8rem', color: 'var(--forest-dark)', lineHeight: 1.25 }}>
-              Is this relief message real?
+              {localize('کیا یہ امدادی پیغام اصلی ہے؟', 'Kya yeh imdadi paigham asli hai?', 'Is this relief message real?')}
             </h1>
-            <div style={{ fontSize: '1.15rem', color: 'var(--forest)', fontWeight: 600, marginTop: 4, direction: 'rtl', textAlign: 'left' }}>
-              کیا یہ امدادی پیغام اصلی ہے؟
-            </div>
             <p className="small muted" style={{ margin: '8px 0 0', maxWidth: 560, lineHeight: 1.5 }}>
-              Verify suspicious SMS, WhatsApp messages, and phone numbers before sending money or sharing your CNIC. Government relief is always free.
+              {localize(
+                'پیسے بھیجنے یا شناختی کارڈ دینے سے پہلے مشکوک ایس ایم ایس، واٹس ایپ پیغامات اور فون نمبروں کی جانچ کریں۔ سرکاری امداد ہمیشہ مفت ہوتی ہے۔',
+                'Paise bhejne ya CNIC share karne se pehle mashkook SMS check karein. Sarkari imdad hamesha muft hoti hai.',
+                'Verify suspicious SMS, WhatsApp messages, and phone numbers before sending money or sharing your CNIC. Government relief is always free.'
+              )}
             </p>
           </div>
 
           {pub && (
             <Link to="/login" className="btn small ghost" style={{ alignSelf: 'flex-start' }}>
-              Citizen Log In <ArrowRight size={14} />
+              {localize('شہری لاگ ان', 'Citizen Login', 'Citizen Log In')} <ArrowRight size={14} />
             </Link>
           )}
         </div>
@@ -211,38 +230,56 @@ export function ScamPage({ pub }) {
         <div className="row" style={{ gap: 8, marginBottom: 14 }}>
           <Sparkles size={18} style={{ color: 'var(--gold-dark)' }} />
           <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--forest-dark)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            3 Essential Safety Rules
+            {localize('حفاظت کے 3 لازمی اصول', 'Hifazat ke 3 lazmi asool', '3 Essential Safety Rules')}
           </h3>
         </div>
 
         <div className="admin-grid-3" style={{ gap: 12 }}>
           <div style={{ background: 'var(--ivory)', padding: '14px 16px', borderRadius: 'var(--radius)', border: '1px solid var(--border-subtle)' }}>
-            <div className="row" style={{ gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: '1.25rem' }}>🛡️</span>
-              <b style={{ color: 'var(--forest-dark)', fontSize: '0.9rem' }}>Relief is Always Free</b>
+            <div className="row" style={{ gap: 8, marginBottom: 4, alignItems: 'center' }}>
+              <Shield size={18} style={{ color: 'var(--forest)' }} />
+              <b style={{ color: 'var(--forest-dark)', fontSize: '0.9rem' }}>
+                {localize('سرکاری امداد ہمیشہ مفت ہوتی ہے', 'Sarkari imdad hamesha muft hai', 'Relief is Always Free')}
+              </b>
             </div>
             <p className="small muted" style={{ margin: 0, lineHeight: 1.45 }}>
-              The government never charges any registration, processing, or wallet transfer fee.
+              {localize(
+                'حکومت کبھی بھی رجسٹریشن، پروسیسنگ یا رقم کی منتقلی کی کوئی فیس وصول نہیں کرتی۔',
+                'Hukoomat registration ya transfer ki koi fees nahi leti.',
+                'The government never charges any registration, processing, or wallet transfer fee.'
+              )}
             </p>
           </div>
 
           <div style={{ background: 'var(--ivory)', padding: '14px 16px', borderRadius: 'var(--radius)', border: '1px solid var(--border-subtle)' }}>
-            <div className="row" style={{ gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: '1.25rem' }}>🔢</span>
-              <b style={{ color: 'var(--forest-dark)', fontSize: '0.9rem' }}>8171 is Sole Sender</b>
+            <div className="row" style={{ gap: 8, marginBottom: 4, alignItems: 'center' }}>
+              <Hash size={18} style={{ color: 'var(--forest)' }} />
+              <b style={{ color: 'var(--forest-dark)', fontSize: '0.9rem' }}>
+                {localize('صرف 8171 ہی اصل نمبر ہے', 'Sirf 8171 asli number hai', '8171 is Sole Sender')}
+              </b>
             </div>
             <p className="small muted" style={{ margin: 0, lineHeight: 1.45 }}>
-              Official BISP/Ehsaas notifications come only from 4-digit shortcode <b>8171</b>, never an 11-digit mobile number.
+              {localize(
+                'سرکاری امدادی پیغامات صرف 4 ہندسوں کے کوڈ 8171 سے آتے ہیں، کبھی بھی 11 ہندسوں کے موبائل نمبر سے نہیں۔',
+                'Sarkari paighamaat sirf 8171 se aate hain, kisi mobile number se nahi.',
+                'Official notifications come only from 4-digit shortcode 8171, never an 11-digit mobile number.'
+              )}
             </p>
           </div>
 
           <div style={{ background: 'var(--ivory)', padding: '14px 16px', borderRadius: 'var(--radius)', border: '1px solid var(--border-subtle)' }}>
-            <div className="row" style={{ gap: 8, marginBottom: 4 }}>
-              <span style={{ fontSize: '1.25rem' }}>🔒</span>
-              <b style={{ color: 'var(--forest-dark)', fontSize: '0.9rem' }}>Never Share Your PIN</b>
+            <div className="row" style={{ gap: 8, marginBottom: 4, alignItems: 'center' }}>
+              <Lock size={18} style={{ color: 'var(--forest)' }} />
+              <b style={{ color: 'var(--forest-dark)', fontSize: '0.9rem' }}>
+                {localize('اپنا خفیہ پن یا کوڈ کبھی نہ بتائیں', 'Apna PIN kabhi na batayein', 'Never Share Your PIN')}
+              </b>
             </div>
             <p className="small muted" style={{ margin: 0, lineHeight: 1.45 }}>
-              No officer, shopkeeper, or agent will ever ask for your ATM PIN or biometric OTP.
+              {localize(
+                'کوئی بھی سرکاری افسر، دکاندار یا ایجنٹ آپ سے کبھی اے ٹی ایم پن یا بایومیٹرک او ٹی پی نہیں مانگتا۔',
+                'Koi bhi afsar aap se ATM PIN ya OTP nahi maang sakta.',
+                'No officer, shopkeeper, or agent will ever ask for your ATM PIN or biometric OTP.'
+              )}
             </p>
           </div>
         </div>
@@ -253,10 +290,10 @@ export function ScamPage({ pub }) {
         <div className="row spread" style={{ alignItems: 'center' }}>
           <div>
             <label style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--forest-dark)', marginBottom: 2 }}>
-              Paste or type the message you received
+              {localize('موصول شدہ پیغام یہاں چسپاں (Paste) کریں یا لکھیں', 'Mousool shuda paigham yahan likhein ya paste karein', 'Paste or type the message you received')}
             </label>
             <div className="small subtle">
-              ہمیں وہ پیغام دکھائیں جو آپ کو ملا ہے (SMS یا WhatsApp)
+              {localize('ہمیں وہ پیغام دکھائیں جو آپ کو ملا ہے (SMS یا WhatsApp)', 'Hamein wo message dikhayein jo aap ko mila hai', 'Paste or type the SMS or WhatsApp message')}
             </div>
           </div>
 
@@ -266,9 +303,10 @@ export function ScamPage({ pub }) {
               className="btn small ghost"
               onClick={handlePaste}
               title="Paste from clipboard"
-              style={{ fontWeight: 600 }}
+              style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}
             >
-              <span>📋 Paste message</span>
+              <ClipboardPaste size={14} />
+              <span>{localize('پیغام ڈالیں', 'Paste karein', 'Paste message')}</span>
             </button>
             <Mic onText={(x) => setText((p) => (p ? p + ' ' + x : x))} />
           </div>
@@ -277,10 +315,10 @@ export function ScamPage({ pub }) {
         {pasteNotice && (
           <div className="small banner" style={{ background: pasteNotice === 'denied' ? 'var(--terracotta-soft)' : 'var(--sage-soft)', margin: 0 }}>
             {pasteNotice === 'denied'
-              ? 'Clipboard access denied by browser. Please paste using Ctrl+V or Cmd+V.'
+              ? localize('کلپ بورڈ تک رسائی کی اجازت نہیں ہے۔ براہ کرم دستی طور پر پیسٹ کریں۔', 'Clipboard access denied', 'Clipboard access denied by browser. Please paste using Ctrl+V or Cmd+V.')
               : pasteNotice === 'empty'
-              ? 'Clipboard was empty. Please copy a message first.'
-              : 'Message pasted successfully from clipboard!'}
+              ? localize('کلپ بورڈ خالی ہے۔ پہلے پیغام کاپی کریں۔', 'Clipboard khali hai', 'Clipboard was empty. Please copy a message first.')
+              : localize('پیغام کامیابی سے چسپاں ہو گیا!', 'Message paste ho gaya!', 'Message pasted successfully from clipboard!')}
           </div>
         )}
 
@@ -288,7 +326,7 @@ export function ScamPage({ pub }) {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="e.g. BISP relief approved for your CNIC. Send Rs 500 fee to JazzCash 0300-1234567 to activate your Rs 25,000 cash grant..."
+            placeholder={localize('مثلاً: آپ کی بے نظیر انکم سپورٹ کی رقم منظور ہو گئی ہے۔ 25 ہزار وصول کرنے کے لیے 500 روپے فیس بھیجیں…', 'BISP imdad manzoor... 500 fees bhejein...', 'e.g. BISP relief approved for your CNIC. Send Rs 500 fee to JazzCash 0300-1234567 to activate your Rs 25,000 cash grant...')}
             dir="auto"
             style={{
               fontSize: '1.05rem',
@@ -302,14 +340,14 @@ export function ScamPage({ pub }) {
           />
           {text && (
             <div className="row spread" style={{ marginTop: 6, fontSize: '0.78rem', color: 'var(--muted)' }}>
-              <span>{text.length} characters</span>
+              <span>{text.length} {localize('حروف', 'characters', 'characters')}</span>
               <button
                 type="button"
                 className="btn ghost small"
                 style={{ padding: '2px 8px', height: 'auto', fontSize: '0.75rem' }}
                 onClick={() => { setText(''); setRes(null); }}
               >
-                Clear text
+                {localize('صاف کریں', 'Clear karein', 'Clear text')}
               </button>
             </div>
           )}
@@ -319,19 +357,20 @@ export function ScamPage({ pub }) {
         <div className="row" style={{ gap: 14, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 180 }}>
             <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-              Sender Shortcode / Phone Number (Optional)
+              {localize('بھیجنے والے کا نمبر یا نام (اختیاری)', 'Bhejne wale ka number (Ikhtiyari)', 'Sender Shortcode / Phone Number (Optional)')}
             </label>
             <input
               value={sender}
               onChange={(e) => setSender(e.target.value)}
               placeholder="e.g. 8171 or 0300-1112223"
               style={{ background: '#fff' }}
+              dir="ltr"
             />
           </div>
 
           <div style={{ flex: 1, minWidth: 180 }}>
             <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>
-              Your District / Area
+              {localize('آپ کا ضلع / علاقہ', 'Aap ka Zila / Ilaqa', 'Your District / Area')}
             </label>
             <select value={area} onChange={(e) => setArea(e.target.value)} style={{ background: '#fff' }}>
               {AREAS.map((a) => (
@@ -358,11 +397,11 @@ export function ScamPage({ pub }) {
             onClick={() => check()}
           >
             <Search size={18} />
-            <span>{busy ? 'Verifying with Scam Engine…' : 'Analyze Message'}</span>
+            <span>{busy ? localize('پیغام کی جانچ ہو رہی ہے…', 'Jaanch ho rahi hai…', 'Verifying with Scam Engine…') : localize('پیغام چیک کریں', 'Paigham check karein', 'Analyze Message')}</span>
           </button>
 
           <span className="small muted" style={{ alignSelf: 'center' }}>
-            Multi-signal AI + rule check
+            {localize('اے آئی و قانونی قواعد کی بنیاد پر جانچ', 'AI aur rules ke mutabiq jaanch', 'Multi-signal AI + rule check')}
           </span>
         </div>
 
@@ -390,7 +429,10 @@ export function ScamPage({ pub }) {
                 check(sampleText, sampleSender)
               }}
             >
-              <span className="badge red small" style={{ marginRight: 6 }}>🚨 FAKE FEE SCAM</span>
+              <span className="badge red small" style={{ marginRight: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <ShieldAlert size={12} />
+                <span>FAKE FEE SCAM</span>
+              </span>
               <span style={{ fontSize: '0.85rem', color: 'var(--terracotta-dark)' }}>
                 [0300-1112223] "BISP Relief Rs 25000 approved... Send fee Rs 500 to JazzCash..."
               </span>
@@ -414,7 +456,10 @@ export function ScamPage({ pub }) {
                 check(sampleText, sampleSender)
               }}
             >
-              <span className="badge green small" style={{ marginRight: 6 }}>🛡️ OFFICIAL 8171</span>
+              <span className="badge green small" style={{ marginRight: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <ShieldCheck size={12} />
+                <span>OFFICIAL 8171</span>
+              </span>
               <span style={{ fontSize: '0.85rem', color: 'var(--forest-dark)' }}>
                 [8171] "Your relief payment of Rs 25000 is ready at your nearest retailer. Take original ID. No charges apply."
               </span>
@@ -438,7 +483,10 @@ export function ScamPage({ pub }) {
                 check(sampleText, sampleSender)
               }}
             >
-              <span className="badge amber small" style={{ marginRight: 6 }}>⚠️ UNCERTAIN CASE</span>
+              <span className="badge amber small" style={{ marginRight: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <HelpCircle size={12} />
+                <span>UNCERTAIN CASE</span>
+              </span>
               <span style={{ fontSize: '0.85rem', color: 'var(--gold-dark)' }}>
                 [0312-9876543] "Government relief status update: Please verify your application record..."
               </span>
@@ -486,10 +534,10 @@ export function ScamPage({ pub }) {
                       STRONG WARNING · HIGH FRAUD RISK
                     </span>
                     <h2 style={{ margin: '4px 0 0', color: 'var(--terracotta-dark)', fontSize: '1.6rem' }}>
-                      Suspicious — Do Not Pay or Reply
+                      {localize('مشکوک — ادائیگی یا جواب نہ دیں', 'Mashkook — Payment ya jawab na dein', 'Suspicious — Do Not Pay or Reply')}
                     </h2>
-                    <div style={{ color: 'var(--terracotta-dark)', fontSize: '1.1rem', direction: 'rtl', textAlign: 'left', fontWeight: 600, marginTop: 2 }}>
-                      خبردار: یہ پیغام دھوکہ دہی لگتا ہے۔ جواب نہ دیں اور پیسے نہ بھیجیں۔
+                    <div style={{ color: 'var(--terracotta-dark)', fontSize: '1.1rem', direction: rtl ? 'rtl' : 'ltr', textAlign: rtl ? 'right' : 'left', fontWeight: 600, marginTop: 2 }}>
+                      {localize('خبردار: یہ پیغام دھوکہ دہی لگتا ہے۔ جواب نہ دیں اور پیسے نہ بھیجیں۔', 'Khabardar: Yeh paigham fraud lagta hai. Jawab na dein aur paise na bhejein.', 'Warning: This message looks fraudulent. Do not reply or send money.')}
                     </div>
                   </div>
                 </div>
@@ -509,7 +557,7 @@ export function ScamPage({ pub }) {
                   <button
                     type="button"
                     className="btn ghost small"
-                    onClick={() => speak(res.advice?.[lang === 'ur' ? 'ur' : 'en'] || res.advice?.en, lang === 'ur' ? 'ur' : 'en')}
+                    onClick={() => speak(getAdviceText(), lang)}
                     title="Listen in speech"
                   >
                     <Volume2 size={14} />
@@ -517,7 +565,7 @@ export function ScamPage({ pub }) {
                   </button>
                 </div>
                 <p style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.5, color: '#1a1a1a' }}>
-                  {res.advice?.[lang === 'ur' ? 'ur' : 'en'] || res.advice?.en}
+                  {getAdviceText()}
                 </p>
               </div>
 
@@ -599,10 +647,10 @@ export function ScamPage({ pub }) {
                       CONSISTENT WITH OFFICIAL NOTIFICATIONS
                     </span>
                     <h2 style={{ margin: '4px 0 0', color: 'var(--forest-dark)', fontSize: '1.6rem' }}>
-                      Probably Safe — Official Channel Match
+                      {localize('غالباً محفوظ — سرکاری چینل', 'Ghaliban Mehfooz — Sarkari Channel', 'Probably Safe — Official Channel Match')}
                     </h2>
-                    <div style={{ color: 'var(--forest-dark)', fontSize: '1.1rem', direction: 'rtl', textAlign: 'left', fontWeight: 600, marginTop: 2 }}>
-                      یہ پیغام بظاہر سرکاری چینل سے مطابقت رکھتا ہے۔
+                    <div style={{ color: 'var(--forest-dark)', fontSize: '1.1rem', direction: rtl ? 'rtl' : 'ltr', textAlign: rtl ? 'right' : 'left', fontWeight: 600, marginTop: 2 }}>
+                      {localize('یہ پیغام بظاہر سرکاری چینل سے مطابقت رکھتا ہے۔', 'Yeh paigham bazahir sarkari channel se mutabiqat rakhta hai.', 'This message matches official relief notifications.')}
                     </div>
                   </div>
                 </div>
@@ -641,7 +689,7 @@ export function ScamPage({ pub }) {
                   <button
                     type="button"
                     className="btn ghost small"
-                    onClick={() => speak(res.advice?.[lang === 'ur' ? 'ur' : 'en'] || res.advice?.en, lang === 'ur' ? 'ur' : 'en')}
+                    onClick={() => speak(getAdviceText(), lang)}
                     title="Listen in speech"
                   >
                     <Volume2 size={14} />
@@ -649,7 +697,7 @@ export function ScamPage({ pub }) {
                   </button>
                 </div>
                 <p style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.5, color: '#1a1a1a' }}>
-                  {res.advice?.[lang === 'ur' ? 'ur' : 'en'] || res.advice?.en}
+                  {getAdviceText()}
                 </p>
               </div>
 
@@ -731,10 +779,10 @@ export function ScamPage({ pub }) {
                       SYSTEM ABSTAINED · HUMAN VERIFICATION REQUIRED
                     </span>
                     <h2 style={{ margin: '4px 0 0', color: 'var(--gold-dark)', fontSize: '1.6rem' }}>
-                      Uncertain — Verification Recommended
+                      {localize('غیر یقینی — تصدیق ضروری ہے', 'Ghair yaqeeni — Tasdeeq zaroori hai', 'Uncertain — Verification Recommended')}
                     </h2>
-                    <div style={{ color: 'var(--gold-dark)', fontSize: '1.1rem', direction: 'rtl', textAlign: 'left', fontWeight: 600, marginTop: 2 }}>
-                      غیر یقینی — تصدیق کے لیے ہیلپ لائن 8171 سے رابطہ کریں۔
+                    <div style={{ color: 'var(--gold-dark)', fontSize: '1.1rem', direction: rtl ? 'rtl' : 'ltr', textAlign: rtl ? 'right' : 'left', fontWeight: 600, marginTop: 2 }}>
+                      {localize('غیر یقینی — تصدیق کے لیے ہیلپ لائن 0800-26477 سے رابطہ کریں۔', 'Ghair yaqeeni — Tasdeeq ke liye helpline 0800-26477 se rabta karein.', 'Uncertain — Contact helpline 0800-26477 for official verification.')}
                     </div>
                   </div>
                 </div>
@@ -754,7 +802,7 @@ export function ScamPage({ pub }) {
                   <button
                     type="button"
                     className="btn ghost small"
-                    onClick={() => speak(res.advice?.[lang === 'ur' ? 'ur' : 'en'] || res.advice?.en, lang === 'ur' ? 'ur' : 'en')}
+                    onClick={() => speak(getAdviceText(), lang)}
                     title="Listen in speech"
                   >
                     <Volume2 size={14} />
@@ -762,7 +810,7 @@ export function ScamPage({ pub }) {
                   </button>
                 </div>
                 <p style={{ margin: 0, fontSize: '1.05rem', lineHeight: 1.5, color: '#1a1a1a' }}>
-                  {res.advice?.[lang === 'ur' ? 'ur' : 'en'] || res.advice?.en}
+                  {getAdviceText()}
                 </p>
                 <p className="small muted" style={{ margin: '8px 0 0', lineHeight: 1.45 }}>
                   The message lacks distinct official signatures or blatant fraud keywords. Rather than guessing, the system abstains and advises human confirmation.
@@ -848,18 +896,20 @@ export function ScamPage({ pub }) {
 }
 
 export function AskPage() {
-  const { t, lang } = useLang()
+  const { t, lang, rtl, localize } = useLang()
 
   return (
     <div className="col" style={{ gap: 20, maxWidth: 840, margin: '0 auto', width: '100%' }}>
       <div style={{ textAlign: 'center', marginBottom: 4 }}>
         <h1 style={{ margin: '0 0 6px', color: 'var(--forest-dark)', fontSize: '1.9rem', fontWeight: 800 }}>
-          {lang === 'ur' ? 'بھروسہ آواز و پالیسی معاون' : 'Bharosa Voice & Policy Assistant'}
+          {localize('بھروسہ آواز و پالیسی معاون', 'Bharosa Awaz aur Policy Assistant', 'Bharosa Voice & Policy Assistant')}
         </h1>
         <p className="subtle" style={{ margin: 0, fontSize: '0.98rem', maxWidth: 620, marginInline: 'auto' }}>
-          {lang === 'ur'
-            ? 'پالیسی کے سوالات، امدادی رہنمائی اور مستند تصدیق کے لیے اپنی زبان میں بولیں یا سنیں۔'
-            : 'Official policy questions answered with verifiable citations. Speak or listen in Urdu, Roman Urdu, or English.'}
+          {localize(
+            'پالیسی کے سوالات، امدادی رہنمائی اور مستند تصدیق کے لیے اپنی زبان میں بولیں یا سنیں۔',
+            'Policy ke sawalaat, imdadi rehnumai aur verified tasdeeq ke liye apni zubaan mein bolein ya sunein.',
+            'Official policy questions answered with verifiable citations. Speak or listen in Urdu, Roman Urdu, or English.'
+          )}
         </p>
       </div>
 

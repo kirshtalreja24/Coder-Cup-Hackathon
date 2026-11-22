@@ -542,12 +542,20 @@ export default function DigitalTwin() {
 
             {/* Sim status pill */}
             <div style={{
+              display: 'flex', alignItems: 'center', gap: 6,
               fontFamily: 'monospace', fontSize: '0.72rem', padding: '6px 14px',
               background: tr ? 'rgba(5,150,105,0.18)' : 'rgba(255,255,255,0.05)',
               border: `1px solid ${tr ? 'rgba(5,150,105,0.4)' : 'rgba(255,255,255,0.1)'}`,
               borderRadius: 999, color: tr ? '#6EE7B7' : 'rgba(255,255,255,0.4)'
             }}>
-              {tr ? `✓ ${tr.cases_replayed} cases simulated` : '◯ Awaiting simulation run'}
+              {tr ? (
+                <>
+                  <CheckCircle2 size={13} />
+                  <span>{tr.cases_replayed} cases simulated</span>
+                </>
+              ) : (
+                <span>Awaiting simulation run</span>
+              )}
             </div>
           </div>
         </div>
@@ -1267,7 +1275,7 @@ export default function DigitalTwin() {
                                     background: s.truth === 'legit' ? '#DCFCE7' : '#FEE2E2',
                                     color: s.truth === 'legit' ? '#15803D' : '#B91C1C'
                                   }}>
-                                    {s.truth === 'legit' ? '✓ GENUINE' : '✕ FRAUD'}
+                                    {s.truth === 'legit' ? 'GENUINE' : 'FRAUD'}
                                   </span>
                                 </td>
                                 <td style={{ padding: '10px 12px' }}>
@@ -1360,7 +1368,7 @@ export default function DigitalTwin() {
                 <div style={{ textAlign: 'center', padding: '8px 18px', background: tr ? '#F0FDF4' : '#F9FAFB', border: `1.5px solid ${tr ? '#BBF7D0' : '#E5E7EB'}`, borderRadius: 10 }}>
                   <div style={{ fontFamily: 'monospace', fontSize: '0.6rem', color: '#9CA3AF', textTransform: 'uppercase' }}>Simulation</div>
                   <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.88rem', color: tr ? '#15803D' : '#9CA3AF' }}>
-                    {tr ? '✓ Done' : '◯ Pending'}
+                    {tr ? 'Completed' : 'Pending'}
                   </div>
                 </div>
               </div>
@@ -1517,7 +1525,7 @@ export default function DigitalTwin() {
                         background: isLive ? '#DCFCE7' : r.status === 'draft' ? '#FEF9C3' : '#F3F4F6',
                         color: isLive ? '#15803D' : r.status === 'draft' ? '#854D0E' : '#6B7280'
                       }}>
-                        {isLive ? '● LIVE' : r.status.toUpperCase()}
+                        {isLive ? 'LIVE' : r.status.toUpperCase()}
                       </span>
                     </td>
                     <td style={{ padding: '10px 14px', fontSize: '0.76rem', color: '#6B7280', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>

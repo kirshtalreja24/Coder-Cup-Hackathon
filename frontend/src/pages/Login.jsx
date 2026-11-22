@@ -13,7 +13,8 @@ import {
   Users,
   Briefcase,
   FileSearch,
-  CheckCircle2
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-react'
 import { BASE } from '../api'
 import { useAuth, HOME, isRouteAllowed } from '../auth'
@@ -21,62 +22,62 @@ import PrototypeBanner from '../components/PrototypeBanner'
 import { LangSwitch, useLang } from '../i18n'
 import { Spinner } from '../ui'
 
-const DEMO = [
-  {
-    key: 'citizen',
-    role: 'Widow (Citizen)',
-    email: 'widow-clean@citizen.demo',
-    desc: 'Clean synthetic registry record — evaluates auto-approve flow',
-    icon: UserCheck,
-    badge: 'Citizen Role'
-  },
-  {
-    key: 'citizen-variant',
-    role: 'Citizen (Name Variant)',
-    email: 'widow-variant@citizen.demo',
-    desc: 'Spelling mismatch / incomplete data — triggers AI doubt handoff',
-    icon: AlertTriangle,
-    badge: 'Citizen Role'
-  },
-  {
-    key: 'helper',
-    role: 'Community Helper',
-    email: 'helper@relief.demo',
-    desc: 'Single community phone managing 40 families with auto-lock',
-    icon: Users,
-    badge: 'Helper Role'
-  },
-  {
-    key: 'officer',
-    role: 'Review Officer',
-    email: 'officer1@relief.demo',
-    desc: 'Triage queue, uncertainty reasons, and human-in-the-loop actions',
-    icon: Briefcase,
-    badge: 'Officer Role'
-  },
-  {
-    key: 'admin',
-    role: 'System Admin',
-    email: 'admin@relief.demo',
-    desc: 'Eligibility rules editor, Digital Twin replay, risk cost dial',
-    icon: Shield,
-    badge: 'Admin Role'
-  },
-  {
-    key: 'auditor',
-    role: 'External Auditor',
-    email: 'auditor@relief.demo',
-    desc: 'Cryptographic hash-chain verifier, tamper detection, decisions',
-    icon: FileSearch,
-    badge: 'Auditor Role'
-  }
-]
-
 export default function Login() {
   const { user, loading, authError, validateSession, loginUser } = useAuth()
   const nav = useNavigate()
   const loc = useLocation()
-  const { t } = useLang()
+  const { t, rtl, localize } = useLang()
+
+  const demoPersonas = [
+    {
+      key: 'citizen',
+      role: localize('بیوہ خاتون (شہری)', 'Bewa Khatoon (Citizen)', 'Widow (Citizen)'),
+      email: 'widow-clean@citizen.demo',
+      desc: localize('صاف ریکارڈ — خودکار منظوری کا جائزہ', 'Saaf record — khudkar manzoori ka jaiza', 'Clean synthetic registry record — evaluates auto-approve flow'),
+      icon: UserCheck,
+      badge: localize('شہری', 'Citizen', 'Citizen Role')
+    },
+    {
+      key: 'citizen-variant',
+      role: localize('شہری (نام میں معمولی فرق)', 'Citizen (Naam mein farq)', 'Citizen (Name Variant)'),
+      email: 'widow-variant@citizen.demo',
+      desc: localize('ہجے کا فرق — اے آئی شک و انسانی جائزہ', 'Spelling mismatch — AI shak aur insani jaiza', 'Spelling mismatch / incomplete data — triggers AI doubt handoff'),
+      icon: AlertTriangle,
+      badge: localize('شہری', 'Citizen', 'Citizen Role')
+    },
+    {
+      key: 'helper',
+      role: localize('کمیونٹی مددگار', 'Community Helper', 'Community Helper'),
+      email: 'helper@relief.demo',
+      desc: localize('ایک فون سے متعدد خاندانوں کی مدد مع خودکار لاک', 'Aik phone se mukhtalif khandano ki madad', 'Single community phone managing 40 families with auto-lock'),
+      icon: Users,
+      badge: localize('مددگار', 'Helper', 'Helper Role')
+    },
+    {
+      key: 'officer',
+      role: localize('ریویو آفیسر', 'Review Officer', 'Review Officer'),
+      email: 'officer1@relief.demo',
+      desc: localize('جائزہ قطار، شکوک کی وجوہات اور انسانی فیصلے', 'Jaiza qataar aur insani faislay', 'Triage queue, uncertainty reasons, and human-in-the-loop actions'),
+      icon: Briefcase,
+      badge: localize('آفیسر', 'Officer', 'Officer Role')
+    },
+    {
+      key: 'admin',
+      role: localize('سسٹم ایڈمن', 'System Admin', 'System Admin'),
+      email: 'admin@relief.demo',
+      desc: localize('اہلیت کے قواعد کا ایڈیٹر، ڈیجیٹل ماڈل اور رسک ڈائل', 'Qawaid editor aur Digital Twin', 'Eligibility rules editor, Digital Twin replay, risk cost dial'),
+      icon: Shield,
+      badge: localize('ایڈمن', 'Admin', 'Admin Role')
+    },
+    {
+      key: 'auditor',
+      role: localize('بیرونی آڈیٹر', 'External Auditor', 'External Auditor'),
+      email: 'auditor@relief.demo',
+      desc: localize('کرپٹوگرافک ہیش چین اور فیصلوں کی آزادانہ جانچ', 'Cryptographic hash-chain aur jaiza', 'Cryptographic hash-chain verifier, tamper detection, decisions'),
+      icon: FileSearch,
+      badge: localize('آڈیٹر', 'Auditor', 'Auditor Role')
+    }
+  ]
   
   const [selectedPersona, setSelectedPersona] = useState(null)
   const [email, setEmail] = useState('')
@@ -151,7 +152,7 @@ export default function Login() {
   }
 
   return (
-    <div className="container narrow col" style={{ paddingTop: 32, gap: 24 }}>
+    <div className={`container narrow col ${rtl ? 'rtl' : ''}`} dir={rtl ? 'rtl' : 'ltr'} style={{ paddingTop: 32, gap: 24 }}>
       {/* Prototype Banner */}
       <PrototypeBanner />
 
@@ -168,7 +169,11 @@ export default function Login() {
             </span>
           </div>
           <p className="muted" style={{ margin: 0 }}>
-            Public-service rails that <b>decide, explain, and protect</b> — designed for widows, low-literacy households, and fraud defense.
+            {localize(
+              'عوامی سروس جو فوری فیصلہ، مکمل وضاحت اور مکمل تحفظ فراہم کرے — بیواؤں، خاندانوں اور دھوکہ دہی کے خلاف دفاع کے لیے تیار کردہ۔',
+              'Sarkari imdadi service jo faisla, mukammal wazahat aur tahaffuz faraham kare — bewaon aur khandano ke liye.',
+              'Public-service rails that decide, explain, and protect — designed for widows, low-literacy households, and fraud defense.'
+            )}
           </p>
         </div>
         <LangSwitch />
@@ -178,16 +183,24 @@ export default function Login() {
       <div className="card col" style={{ gap: 16 }}>
         <div className="row spread">
           <div>
-            <h3 style={{ margin: 0 }}>Step 1: Select Your Role</h3>
+            <h3 style={{ margin: 0 }}>
+              {localize('مرحلہ 1: اپنا کردار منتخب کریں', 'Marhala 1: Apna role muntakhib karein', 'Step 1: Select Your Role')}
+            </h3>
             <div className="small subtle" style={{ marginTop: 2 }}>
-              Choose a role to configure the login form · Manual credential entry required
+              {localize(
+                'لاگ ان فارم کے لیے کردار منتخب کریں · دستی طور پر تفصیلات درج کرنا لازمی ہے',
+                'Login form ke liye role muntakhib karein · Credentials manual darj karein',
+                'Choose a role to configure the login form · Manual credential entry required'
+              )}
             </div>
           </div>
-          <span className="badge amber">Role Selector</span>
+          <span className="badge amber">
+            {localize('کردار کا انتخاب', 'Role Selector', 'Role Selector')}
+          </span>
         </div>
 
         <div className="grid">
-          {DEMO.map((item) => {
+          {demoPersonas.map((item) => {
             const Icon = item.icon
             const isSelected = selectedPersona?.email === item.email
             return (
@@ -198,7 +211,7 @@ export default function Login() {
                 style={{
                   minHeight: 120,
                   alignItems: 'flex-start',
-                  textAlign: 'left',
+                  textAlign: rtl ? 'right' : 'left',
                   padding: 16,
                   gap: 8,
                   borderColor: isSelected ? 'var(--forest, #173D32)' : undefined,
@@ -217,7 +230,7 @@ export default function Login() {
                   </div>
                   {isSelected ? (
                     <span className="badge" style={{ background: 'var(--forest)', color: '#fff', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <CheckCircle2 size={12} /> Selected
+                      <CheckCircle2 size={12} /> {localize('منتخب', 'Selected', 'Selected')}
                     </span>
                   ) : (
                     <span className="mock-tag">{item.badge}</span>
@@ -244,10 +257,16 @@ export default function Login() {
         <div className="row spread">
           <div>
             <h3 style={{ margin: 0 }}>
-              {selectedPersona ? `Step 2: Sign In as ${selectedPersona.role}` : 'Step 2: Account Sign In'}
+              {selectedPersona
+                ? localize(`مرحلہ 2: بطور ${selectedPersona.role} سائن ان کریں`, `Marhala 2: Batour ${selectedPersona.role} sign in karein`, `Step 2: Sign In as ${selectedPersona.role}`)
+                : localize('مرحلہ 2: اکاؤنٹ میں سائن ان کریں', 'Marhala 2: Account mein sign in karein', 'Step 2: Account Sign In')}
             </h3>
             <div className="small subtle" style={{ marginTop: 2 }}>
-              Enter account credentials to authenticate with the backend
+              {localize(
+                'سسٹم میں داخل ہونے کے لیے یوزر نیم اور پاس ورڈ درج کریں',
+                'System mein dakhil hone ke liye username aur password darj karein',
+                'Enter account credentials to authenticate with the backend'
+              )}
             </div>
           </div>
           {selectedPersona && (
@@ -268,18 +287,18 @@ export default function Login() {
             }}
           >
             <div style={{ fontWeight: 600, color: 'var(--forest-dark)', marginBottom: 4 }}>
-              Reference Demo Credentials for {selectedPersona.role}:
+              {localize('تجرباتی لاگ ان کی تفصیلات (Reference):', 'Demo Reference Credentials:', 'Reference Demo Credentials for ' + selectedPersona.role + ':')}
             </div>
             <div className="subtle" style={{ fontSize: '0.82rem', lineHeight: 1.5 }}>
-              Username / Email: <code className="mono">{selectedPersona.email}</code>
+              {localize('یوزر نیم / ای میل:', 'Username / Email:', 'Username / Email:')} <code className="mono">{selectedPersona.email}</code>
               <br />
-              Demo Password: <code className="mono">Demo#12345</code>
+              {localize('عام پاس ورڈ:', 'Demo Password:', 'Demo Password:')} <code className="mono">Demo#12345</code>
             </div>
           </div>
         )}
 
         <div>
-          <label>Email Address</label>
+          <label>{localize('ای میل یا یوزر نیم', 'Email ya username', 'Email Address')}</label>
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -287,18 +306,20 @@ export default function Login() {
             autoComplete="username"
             placeholder="name@relief.demo"
             required
+            dir="ltr"
           />
         </div>
 
         <div>
-          <label>Password</label>
+          <label>{localize('پاس ورڈ', 'Password', 'Password')}</label>
           <input
             value={pw}
             onChange={(e) => setPw(e.target.value)}
             type="password"
             autoComplete="current-password"
-            placeholder="Enter password (e.g. Demo#12345)"
+            placeholder={localize('پاس ورڈ درج کریں (مثلاً Demo#12345)', 'Password darj karein (e.g. Demo#12345)', 'Enter password (e.g. Demo#12345)')}
             required
+            dir="ltr"
           />
         </div>
 
@@ -309,16 +330,21 @@ export default function Login() {
               type="button"
               className="small"
               onClick={() => validateSession()}
-              style={{ background: '#fff', color: 'var(--terracotta)', borderColor: 'var(--terracotta)', flexShrink: 0 }}
+              style={{ background: '#fff', color: 'var(--terracotta)', borderColor: 'var(--terracotta)', flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 4 }}
             >
-              🔄 Retry
+              <RefreshCw size={12} />
+              <span>{localize('دوبارہ کوشش کریں', 'Dobara koshish', 'Retry')}</span>
             </button>
           </div>
         )}
         {err && <div className="banner bad">{err}</div>}
 
         <button disabled={busy} type="submit" style={{ width: '100%' }}>
-          <span>{busy ? 'Authenticating with Backend…' : 'Sign In'}</span>
+          <span>
+            {busy
+              ? localize('تصدیق کی جا رہی ہے…', 'Tasdeeq ki ja rahi hai…', 'Authenticating with Backend…')
+              : localize('سائن ان کریں', 'Sign In karein', 'Sign In')}
+          </span>
           <ArrowRight size={16} />
         </button>
       </form>
@@ -327,7 +353,7 @@ export default function Login() {
       <div className="row spread small" style={{ padding: '0 4px' }}>
         <Link to="/public/scam" className="row" style={{ gap: 6 }}>
           <AlertTriangle size={15} style={{ color: 'var(--terracotta)' }} />
-          <span>Verify a suspicious SMS (public check)</span>
+          <span>{localize('مشکوک ایس ایم ایس کی تصدیق کریں (عوامی سروس)', 'Mashkook SMS ki jaanch (Public check)', 'Verify a suspicious SMS (public check)')}</span>
         </Link>
         <a
           href={BASE + '/docs'}
