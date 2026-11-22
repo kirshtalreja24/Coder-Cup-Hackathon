@@ -36,7 +36,7 @@ import {
 import { api, apiPost, BASE } from '../api'
 import { useLang } from '../i18n'
 import { EMPTY_FORM, clearDraft, flush, loadDraft, queueClaim, saveDraft, shrinkImage } from '../offline'
-import { canListen, listen, playPrompt, recognitionLang, speak, spokenNumber, stop } from '../voice'
+import { canListen, listen, playPrompt, promptText, recognitionLang, speak, spokenNumber, stop } from '../voice'
 import { ErrorBox, MockTag } from '../ui'
 import Recourse from '../components/Recourse'
 import { useCameraCapture } from '../components/CameraCapture'
@@ -190,7 +190,7 @@ export default function ClaimFlow({ helper }) {
   // Play audio prompt on step change
   useEffect(() => {
     if (!result && PROMPTS[step]) {
-      playPrompt(PROMPTS[step], 'Step ' + step, L)
+      playPrompt(PROMPTS[step], promptText(PROMPTS[step], L) || 'Step ' + step, L)
     }
     return stop
   }, [step]) // eslint-disable-line
@@ -777,7 +777,7 @@ export default function ClaimFlow({ helper }) {
             className="btn ghost icon-btn small"
             onClick={() => {
               if (PROMPTS[step]) {
-                playPrompt(PROMPTS[step], 'Step ' + step, L)
+                playPrompt(PROMPTS[step], promptText(PROMPTS[step], L) || 'Step ' + step, L)
               } else {
                 speak(
                   localize(

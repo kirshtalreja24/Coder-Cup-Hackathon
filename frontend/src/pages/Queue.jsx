@@ -13,15 +13,10 @@ import {
 } from 'lucide-react'
 import { apiGet, money, pct, when } from '../api'
 import { ErrorBox, RouteBadge, Spinner, StatusBadge, useAsync, Bar } from '../ui'
-
-const PRI = {
-  1: ['P1 Urgent', 'red'],
-  2: ['P2 High', 'amber'],
-  3: ['P3 Normal', 'blue'],
-  4: ['P4 Low', 'grey']
-}
+import { useLang } from '../i18n'
 
 export default function Queue() {
+  const { t, rtl, lang, localize } = useLang()
   const [sort, setSort] = useState('priority')
   const [waiting, setWaiting] = useState(false)
   const { data, loading, error, reload } = useAsync(
@@ -29,18 +24,29 @@ export default function Queue() {
     [sort, waiting]
   )
 
+  const PRI = {
+    1: [localize('P1 فوری', 'P1 Fori', 'P1 Urgent'), 'red'],
+    2: [localize('P2 اہم', 'P2 Aham', 'P2 High'), 'amber'],
+    3: [localize('P3 عام', 'P3 Aam', 'P3 Normal'), 'blue'],
+    4: [localize('P4 کم ترجیح', 'P4 Kam tarjeeh', 'P4 Low'), 'grey']
+  }
+
   return (
-    <div className="col" style={{ gap: 20 }}>
+    <div className={`col ${rtl ? 'rtl' : ''}`} dir={rtl ? 'rtl' : 'ltr'} style={{ gap: 20 }}>
       {/* Header and Filter Controls */}
-      <div className="row spread" style={{ alignItems: 'flex-start' }}>
+      <div className="row spread" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 14 }}>
         <div>
-          <h2 style={{ margin: 0 }}>Review Queue</h2>
+          <h2 style={{ margin: 0 }}>{localize('جائزہ کی قطار', 'Jaiza ki qataar', 'Review Queue')}</h2>
           <div className="small subtle" style={{ marginTop: 2 }}>
-            Cases where the autonomous decision engine abstained or flagged uncertainty for human-in-the-loop oversight
+            {localize(
+              'وہ درخواستیں جہاں خودکار فیصلے کے انجن نے انسانی افسر کے جائزے کے لیے کیس بھیجا ہے',
+              'Woh darkhastein jahan khudkaar decision engine ne insani jaize ke liye case bheja hai',
+              'Cases where the autonomous decision engine abstained or flagged uncertainty for human-in-the-loop oversight'
+            )}
           </div>
         </div>
 
-        <div className="row" style={{ gap: 10 }}>
+        <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
           <label
             className="row small"
             style={{
@@ -59,23 +65,23 @@ export default function Queue() {
               checked={waiting}
               onChange={(e) => setWaiting(e.target.checked)}
             />
-            <span>Include awaiting proof</span>
+            <span>{localize('دستاویز کی منتظر شامل کریں', 'Dastaweez ki muntazir shamil karein', 'Include awaiting proof')}</span>
           </label>
 
           <select
-            style={{ width: 'auto', minWidth: 160 }}
+            style={{ width: 'auto', minWidth: 170 }}
             value={sort}
             onChange={(e) => setSort(e.target.value)}
           >
-            <option value="priority">Sort: Priority (P1 first)</option>
-            <option value="confidence">Sort: Least confident first</option>
-            <option value="age">Sort: Oldest first</option>
+            <option value="priority">{localize('ترتیب: ترجیح (P1 پہلے)', 'Tarteeb: Tarjeeh (P1 pehle)', 'Sort: Priority (P1 first)')}</option>
+            <option value="confidence">{localize('ترتیب: کم ترین اعتماد پہلے', 'Tarteeb: Kam tareen aitemaad pehle', 'Sort: Least confident first')}</option>
+            <option value="age">{localize('ترتیب: پرانی ترین پہلے', 'Tarteeb: Purani tareen pehle', 'Sort: Oldest first')}</option>
           </select>
 
           <button
             className="btn ghost icon-btn"
             onClick={reload}
-            title="Refresh queue"
+            title={localize('قطار ریفریش کریں', 'Queue refresh karein', 'Refresh queue')}
           >
             <RefreshCw size={16} />
           </button>
@@ -83,21 +89,21 @@ export default function Queue() {
       </div>
 
       <ErrorBox e={error} />
-      {loading && <Spinner label="Refreshing triage queue…" />}
+      {loading && <Spinner label={localize('قطار تازہ ہو رہی ہے…', 'Queue taaza ho rahi hai…', 'Refreshing triage queue…')} />}
 
       {data && (
         <div className="card table-wrap" style={{ padding: 0 }}>
           <table>
             <thead>
               <tr>
-                <th>Priority</th>
-                <th>Case Identifier</th>
-                <th>Status</th>
-                <th>System Route</th>
-                <th>P(Genuine)</th>
-                <th>Uncertainty Driver</th>
-                <th>Disbursement</th>
-                <th>Submitted</th>
+                <th>{localize('ترجیح', 'Tarjeeh', 'Priority')}</th>
+                <th>{localize('درخواست شناخت', 'Case Shanakht', 'Case Identifier')}</th>
+                <th>{localize('حیثیت', 'Status', 'Status')}</th>
+                <th>{localize('سسٹم کا راستہ', 'System Route', 'System Route')}</th>
+                <th>{localize('امکانِ صداقت', 'Imkaan-e-Sadaqat', 'P(Genuine)')}</th>
+                <th>{localize('شک کی وجہ', 'Shak ki wajah', 'Uncertainty Driver')}</th>
+                <th>{localize('امداد کی رقم', 'Imdad ki raqam', 'Disbursement')}</th>
+                <th>{localize('جمع کرنے کا وقت', 'Jama shuda waqt', 'Submitted')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -140,7 +146,7 @@ export default function Queue() {
                     />
                   </td>
                   <td className="small" style={{ maxWidth: 260 }}>
-                    {c.headline || 'General manual review required'}
+                    {c.headline || localize('عام دستی جائزہ درکار ہے', 'Aam jaiza darkaar hai', 'General manual review required')}
                   </td>
                   <td className="mono" style={{ fontWeight: 600 }}>
                     {money(c.amount)}
@@ -151,8 +157,9 @@ export default function Queue() {
                       to={'/s/case/' + c.id}
                       className="btn ghost small"
                       style={{ padding: '4px 8px' }}
+                      title={localize('تفصیلات دیکھیں', 'Tafseelaat dekhein', 'View details')}
                     >
-                      <ChevronRight size={14} />
+                      <ChevronRight size={14} style={{ transform: rtl ? 'rotate(180deg)' : 'none' }} />
                     </Link>
                   </td>
                 </tr>
@@ -162,9 +169,13 @@ export default function Queue() {
                   <td colSpan="9" style={{ textAlign: 'center', padding: '36px 16px' }}>
                     <div className="col" style={{ alignItems: 'center', gap: 6 }}>
                       <CheckSquare size={36} className="subtle" />
-                      <b style={{ color: 'var(--forest-dark)' }}>Queue is clear</b>
+                      <b style={{ color: 'var(--forest-dark)' }}>{localize('قطار بالکل صاف ہے', 'Queue bilkul saaf hai', 'Queue is clear')}</b>
                       <span className="small subtle">
-                        No cases currently pending human adjudication.
+                        {localize(
+                          'اس وقت کوئی کیس انسانی جائزے کے لیے منتظر نہیں ہے۔',
+                          'Is waqt koi case insani jaize ke liye muntazir nahi hai.',
+                          'No cases currently pending human adjudication.'
+                        )}
                       </span>
                     </div>
                   </td>

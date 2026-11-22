@@ -28,9 +28,11 @@ import {
 } from 'lucide-react'
 import { apiGet, BASE, getToken, when } from '../api'
 import { ErrorBox, Json, Spinner, Tabs, useAsync, RouteBadge } from '../ui'
+import { useLang } from '../i18n'
 
 // Drawer Component to display comprehensive event details
 function EventDrawer({ event, onClose }) {
+  const { rtl, localize } = useLang()
   const [copied, setCopied] = useState(false)
   if (!event) return null
 
@@ -57,6 +59,8 @@ function EventDrawer({ event, onClose }) {
       onClick={onClose}
     >
       <div
+        className={rtl ? 'rtl' : ''}
+        dir={rtl ? 'rtl' : 'ltr'}
         style={{
           width: '100%',
           maxWidth: 580,
@@ -66,7 +70,8 @@ function EventDrawer({ event, onClose }) {
           display: 'flex',
           flexDirection: 'column',
           overflowY: 'auto',
-          borderLeft: '2px solid var(--gold)'
+          borderLeft: rtl ? 'none' : '2px solid var(--gold)',
+          borderRight: rtl ? '2px solid var(--gold)' : 'none'
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -85,10 +90,10 @@ function EventDrawer({ event, onClose }) {
           <div>
             <div className="row" style={{ gap: 8, marginBottom: 4 }}>
               <span className="badge" style={{ background: 'var(--gold)', color: '#fff', fontWeight: 700, fontSize: '0.72rem' }}>
-                IMMUTABLE AUDIT BLOCK
+                {localize('ناقابلِ ترمیم آڈٹ بلاک', 'IMMUTABLE AUDIT BLOCK', 'IMMUTABLE AUDIT BLOCK')}
               </span>
               <span className="mono bold" style={{ fontSize: '0.9rem', color: '#fff' }}>
-                Seq #{event.seq}
+                {localize('تسلسل #', 'Seq #', 'Seq #')}{event.seq}
               </span>
             </div>
             <h3 style={{ margin: 0, color: '#fff', fontSize: '1.25rem' }}>{event.action}</h3>
@@ -98,6 +103,7 @@ function EventDrawer({ event, onClose }) {
             className="btn ghost icon-btn small"
             onClick={onClose}
             style={{ color: '#fff' }}
+            title={localize('بند کریں', 'Band karein', 'Close')}
           >
             <X size={18} />
           </button>
@@ -118,22 +124,24 @@ function EventDrawer({ event, onClose }) {
             }}
           >
             <div>
-              <span className="small muted">Timestamp (UTC):</span>
+              <span className="small muted">{localize('وقت (UTC):', 'Timestamp (UTC):', 'Timestamp (UTC):')}</span>
               <div className="small mono bold">{event.ts ? new Date(event.ts).toISOString() : '—'}</div>
               <div className="small subtle">{when(event.ts)}</div>
             </div>
 
             <div>
-              <span className="small muted">Execution Outcome:</span>
+              <span className="small muted">{localize('کارروائی کا نتیجہ:', 'Execution Outcome:', 'Execution Outcome:')}</span>
               <div>
                 <span className={`badge small bold ${event.outcome === 'denied' ? 'red' : 'green'}`}>
-                  {event.outcome === 'denied' ? 'BLOCKED (denied)' : 'SUCCESS (ok)'}
+                  {event.outcome === 'denied'
+                    ? localize('مسترد (روکا گیا)', 'BLOCKED (denied)', 'BLOCKED (denied)')
+                    : localize('کامیاب (OK)', 'SUCCESS (ok)', 'SUCCESS (ok)')}
                 </span>
               </div>
             </div>
 
             <div>
-              <span className="small muted">Actor & Role:</span>
+              <span className="small muted">{localize('کارندہ اور کردار:', 'Actor & Role:', 'Actor & Role:')}</span>
               <div className="small bold" style={{ color: 'var(--forest-dark)' }}>
                 {event.actor_type} {event.actor_role ? `(${event.actor_role})` : ''}
               </div>
@@ -141,7 +149,7 @@ function EventDrawer({ event, onClose }) {
             </div>
 
             <div>
-              <span className="small muted">Target Resource:</span>
+              <span className="small muted">{localize('ہدف وسیلہ:', 'Target Resource:', 'Target Resource:')}</span>
               <div className="small bold" style={{ color: 'var(--forest-dark)' }}>
                 {event.resource_type || 'system'}
               </div>
@@ -149,14 +157,14 @@ function EventDrawer({ event, onClose }) {
             </div>
 
             <div>
-              <span className="small muted">Rule Version:</span>
+              <span className="small muted">{localize('قواعد کا ورژن:', 'Rule Version:', 'Rule Version:')}</span>
               <div className="small mono bold" style={{ color: 'var(--forest-dark)' }}>
                 v{ruleVer}
               </div>
             </div>
 
             <div>
-              <span className="small muted">Model Version:</span>
+              <span className="small muted">{localize('ماڈل کا ورژن:', 'Model Version:', 'Model Version:')}</span>
               <div className="small mono bold" style={{ color: 'var(--forest-dark)' }}>
                 {modelVer}
               </div>
@@ -174,33 +182,33 @@ function EventDrawer({ event, onClose }) {
             }}
           >
             <div className="row spread">
-              <div className="row" style={{ gap: 6 }}>
+              <div className="row" style={{ gap: 6, alignItems: 'center' }}>
                 <Key size={16} style={{ color: 'var(--gold-dark)' }} />
                 <b style={{ color: 'var(--forest-dark)', fontSize: '0.88rem' }}>
-                  Cryptographic Hash Link
+                  {localize('کریپٹوگرافک ہیش لنک', 'Cryptographic Hash Link', 'Cryptographic Hash Link')}
                 </b>
               </div>
-              <span className="badge green small">SHA-256 INTACT</span>
+              <span className="badge green small">{localize('SHA-256 درست', 'SHA-256 INTACT', 'SHA-256 INTACT')}</span>
             </div>
 
             <div className="col" style={{ gap: 6, fontSize: '0.78rem' }}>
               <div>
-                <span className="muted">Previous Block Hash (prev_hash):</span>
-                <div className="mono" style={{ background: '#fff', padding: '6px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)' }}>
+                <span className="muted">{localize('پچھلا بلاک ہیش (prev_hash):', 'Previous Block Hash (prev_hash):', 'Previous Block Hash (prev_hash):')}</span>
+                <div className="mono" style={{ background: '#fff', padding: '6px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)', overflowX: 'auto' }}>
                   {event.prev_hash || '00000000000000000000000000000000'}
                 </div>
               </div>
 
               <div>
-                <span className="muted">Current Block Hash (hash):</span>
-                <div className="mono bold" style={{ background: '#fff', padding: '6px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)', color: 'var(--forest-dark)' }}>
+                <span className="muted">{localize('موجودہ بلاک ہیش (hash):', 'Current Block Hash (hash):', 'Current Block Hash (hash):')}</span>
+                <div className="mono bold" style={{ background: '#fff', padding: '6px 8px', borderRadius: 4, border: '1px solid var(--border-subtle)', color: 'var(--forest-dark)', overflowX: 'auto' }}>
                   {event.hash || 'e3b0c44298fc1c149afbf4c8996fb924'}
                 </div>
               </div>
             </div>
 
             <p className="small muted" style={{ margin: '4px 0 0', fontSize: '0.75rem', lineHeight: 1.4 }}>
-              Commitment: <span className="mono">hash = SHA256(prev_hash, ts, actor, action, resource, details)</span>
+              {localize('کمٹمنٹ فارمولا:', 'Commitment:', 'Commitment:')} <span className="mono">hash = SHA256(prev_hash, ts, actor, action, resource, details)</span>
             </p>
           </div>
 
@@ -208,7 +216,7 @@ function EventDrawer({ event, onClose }) {
           <div>
             <div className="row spread" style={{ marginBottom: 8 }}>
               <span className="small bold" style={{ color: 'var(--forest-dark)', textTransform: 'uppercase' }}>
-                Event Payload & Metadata:
+                {localize('ایونٹ پی لوڈ اور تفصیلات:', 'Event Payload & Metadata:', 'Event Payload & Metadata:')}
               </span>
               <button
                 type="button"
@@ -216,7 +224,9 @@ function EventDrawer({ event, onClose }) {
                 style={{ padding: '2px 8px', height: 'auto', fontSize: '0.75rem' }}
                 onClick={() => handleCopy(JSON.stringify(event.details || {}, null, 2))}
               >
-                {copied ? 'Copied JSON!' : 'Copy JSON'}
+                {copied
+                  ? localize('JSON کاپی ہو گیا!', 'Copied JSON!', 'Copied JSON!')
+                  : localize('JSON کاپی کریں', 'Copy JSON', 'Copy JSON')}
               </button>
             </div>
             <div style={{ background: '#102B24', color: '#FDFBF7', padding: 14, borderRadius: 'var(--radius)', overflowX: 'auto', maxHeight: 220, fontSize: '0.78rem' }}>
@@ -233,13 +243,13 @@ function EventDrawer({ event, onClose }) {
 
 // 1. Hash Chain Visualization Tab
 function HashChainVisualizer({ onSelectEvent }) {
+  const { rtl, localize } = useLang()
   const { data, loading, error, reload } = useAsync(() => apiGet('/audit?limit=25'), [])
   const [verifyState, setVerifyState] = useState(null)
   const [tamperState, setTamperState] = useState(null)
   const [verifying, setVerifying] = useState(false)
 
   const events = data || []
-  // Chronological order for hash chain left-to-right or top-to-bottom
   const sorted = [...events].reverse()
 
   const handleVerify = async () => {
@@ -286,21 +296,25 @@ function HashChainVisualizer({ onSelectEvent }) {
           <div>
             <div className="row" style={{ gap: 8, marginBottom: 4 }}>
               <span className="badge" style={{ background: 'var(--gold)', color: '#fff', fontWeight: 700, fontSize: '0.72rem' }}>
-                CRYPTOGRAPHIC INTEGRITY
+                {localize('کریپٹوگرافک سالمیت', 'CRYPTOGRAPHIC INTEGRITY', 'CRYPTOGRAPHIC INTEGRITY')}
               </span>
               <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.2)', color: '#fff', fontSize: '0.72rem' }}>
-                Merkle-Style Sequence
+                {localize('مرکل طرز کا تسلسل', 'Merkle-Style Sequence', 'Merkle-Style Sequence')}
               </span>
             </div>
             <h3 style={{ margin: 0, color: '#fff', fontSize: '1.35rem' }}>
-              Tamper-Evident Hash Chain Architecture
+              {localize('ناقابلِ دست برد ہیش چین کا ڈھانچہ', 'Tamper-Evident Hash Chain Architecture', 'Tamper-Evident Hash Chain Architecture')}
             </h3>
             <p className="small" style={{ margin: '6px 0 0', opacity: 0.88, maxWidth: 640, lineHeight: 1.45 }}>
-              Each event commits cryptographically to the exact hash of the preceding event. Any post-hoc alteration or record reordering breaks all downstream SHA-256 hashes immediately.
+              {localize(
+                'ہر ایونٹ اپنے سے پچھلے ایونٹ کے عین ہیش سے کریپٹوگرافک طور پر جڑا ہوتا ہے۔ کسی بھی ریکارڈ میں ردو بدل فوری طور پر پتہ چل جاتا ہے۔',
+                'Har event pichle event ke hash se jura hai. Koi raddobadal fori pakra jata hai.',
+                'Each event commits cryptographically to the exact hash of the preceding event. Any post-hoc alteration or record reordering breaks all downstream SHA-256 hashes immediately.'
+              )}
             </p>
           </div>
 
-          <div className="row" style={{ gap: 8 }}>
+          <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
             <button
               className="btn small"
               style={{ background: 'var(--gold)', color: '#fff', border: 'none', fontWeight: 700 }}
@@ -308,7 +322,7 @@ function HashChainVisualizer({ onSelectEvent }) {
               disabled={verifying}
             >
               <ShieldCheck size={15} />
-              <span>{verifying ? 'Recomputing Hashes…' : 'Verify Entire Chain Integrity'}</span>
+              <span>{verifying ? localize('ہیشز کا حساب لگایا جا رہا ہے…', 'Recomputing Hashes…', 'Recomputing Hashes…') : localize('SHA-256 چین کی تصدیق کریں', 'Verify Entire Chain Integrity', 'Verify Entire Chain Integrity')}</span>
             </button>
 
             <button
@@ -316,10 +330,10 @@ function HashChainVisualizer({ onSelectEvent }) {
               style={{ color: '#fff', borderColor: 'rgba(255, 255, 255, 0.3)' }}
               onClick={handleSimulateTamper}
               disabled={verifying}
-              title="Alters a single row in memory to prove the detection engine works"
+              title={localize('میموری میں ایک ریکارڈ بدل کر تصدیقی الرٹ دکھائیں', 'Record Tamper Simulate Karein', 'Alters a single row in memory to prove the detection engine works')}
             >
               <ShieldAlert size={15} />
-              <span>Simulate Tampering (In-Memory)</span>
+              <span>{localize('دست برد کا فرضی تجربہ (In-Memory)', 'Simulate Tampering (In-Memory)', 'Simulate Tampering (In-Memory)')}</span>
             </button>
           </div>
         </div>
@@ -339,10 +353,10 @@ function HashChainVisualizer({ onSelectEvent }) {
             <div className="row" style={{ gap: 10 }}>
               {verifyState.ok ? <CheckCircle2 size={20} style={{ color: 'var(--gold)' }} /> : <XCircle size={20} />}
               <div>
-                <b>{verifyState.ok ? 'Chain Verified:' : 'Verification Alert:'}</b> {verifyState.message}
+                <b>{verifyState.ok ? localize('چین کی تصدیق مکمل:', 'Chain Verified:', 'Chain Verified:') : localize('تصدیقی الرٹ:', 'Verification Alert:', 'Verification Alert:')}</b> {verifyState.message}
                 {verifyState.head_hash && (
                   <div className="mono small" style={{ marginTop: 2, opacity: 0.9 }}>
-                    Current Head Hash: {verifyState.head_hash}
+                    {localize('موجودہ ہیڈ ہیش:', 'Current Head Hash:', 'Current Head Hash:')} {verifyState.head_hash}
                   </div>
                 )}
               </div>
@@ -365,9 +379,13 @@ function HashChainVisualizer({ onSelectEvent }) {
             <div className="row" style={{ gap: 10 }}>
               <ShieldAlert size={22} style={{ color: '#fff' }} />
               <div>
-                <b>Tamper Detection Proof:</b> {tamperState.message}
+                <b>{localize('دست برد کا سراغ:', 'Tamper Detection Proof:', 'Tamper Detection Proof:')}</b> {tamperState.message}
                 <div className="small" style={{ marginTop: 2, opacity: 0.9 }}>
-                  The engine detected the altered block at Seq #{tamperState.broken_at_seq} because its computed digest did not match the downstream commit.
+                  {localize(
+                    `سسٹم نے بلاک #${tamperState.broken_at_seq} میں غیر مجاز تبدیلی فوری پکڑ لی کیونکہ اس کا ہیش بعد کے بلاکس سے میل نہیں کھاتا تھا۔`,
+                    `System ne block #${tamperState.broken_at_seq} mein alteration pakar li.`,
+                    `The engine detected the altered block at Seq #${tamperState.broken_at_seq} because its computed digest did not match the downstream commit.`
+                  )}
                 </div>
               </div>
             </div>
@@ -376,20 +394,22 @@ function HashChainVisualizer({ onSelectEvent }) {
       </div>
 
       <ErrorBox e={error} />
-      {loading && <Spinner label="Loading cryptographic hash chain…" />}
+      {loading && <Spinner label={localize('کریپٹوگرافک ہیش چین لوڈ ہو رہی ہے…', 'Hash chain load ho rahi hai…', 'Loading cryptographic hash chain…')} />}
 
       {/* Visual Hash Chain Display (Connected Nodes) */}
       <div className="admin-card col" style={{ gap: 16, background: 'var(--ivory)' }}>
-        <div className="row spread" style={{ alignItems: 'center' }}>
+        <div className="row spread" style={{ alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h4 style={{ margin: 0, color: 'var(--forest-dark)', fontSize: '1.05rem' }}>
-              Interactive Block Linkage Feed
+              {localize('تعاملی بلاک چین فیڈ', 'Interactive Block Linkage Feed', 'Interactive Block Linkage Feed')}
             </h4>
             <div className="small subtle">
-              Genesis Root (0x0000) &rarr; Chronological Blocks. Click any block to inspect full trace.
+              {localize('جینسس روٹ (0x0000) سے شروع ہو کر تمام بلاکس۔ مکمل تفصیل کے لیے کسی بھی بلاک پر کلک کریں۔', 'Genesis Root se shuru hokar blocks. Details ke liye click karein.', 'Genesis Root (0x0000) → Chronological Blocks. Click any block to inspect full trace.')}
             </div>
           </div>
-          <span className="badge small bold">{sorted.length} Blocks Rendered</span>
+          <span className="badge small bold">
+            {sorted.length} {localize('بلاکس دکھائے گئے', 'Blocks Rendered', 'Blocks Rendered')}
+          </span>
         </div>
 
         {/* Genesis Block */}
@@ -409,16 +429,16 @@ function HashChainVisualizer({ onSelectEvent }) {
           <div className="row" style={{ gap: 8, alignItems: 'center' }}>
             <Landmark size={18} style={{ color: 'var(--gold)' }} />
             <div>
-              <b style={{ fontSize: '0.85rem', color: 'var(--gold)' }}>GENESIS ROOT BLOCK</b>
+              <b style={{ fontSize: '0.85rem', color: 'var(--gold)' }}>{localize('جینسس روٹ بلاک', 'GENESIS ROOT BLOCK', 'GENESIS ROOT BLOCK')}</b>
               <div className="mono small" style={{ opacity: 0.8 }}>0x00000000000000000000000000000000</div>
             </div>
           </div>
-          <span className="badge gold small">INITIALIZED</span>
+          <span className="badge gold small">{localize('ابتدائی', 'INITIALIZED', 'INITIALIZED')}</span>
         </div>
 
         {/* Vertical Chain of Events */}
-        <div className="col" style={{ gap: 0, paddingLeft: 18 }}>
-          {sorted.map((ev, idx) => {
+        <div className="col" style={{ gap: 0, paddingLeft: rtl ? 0 : 18, paddingRight: rtl ? 18 : 0 }}>
+          {sorted.map((ev) => {
             const isBroken = tamperState && tamperState.broken_at_seq === ev.seq
             const isDenied = ev.outcome === 'denied'
 
@@ -431,13 +451,16 @@ function HashChainVisualizer({ onSelectEvent }) {
                     alignItems: 'center',
                     gap: 10,
                     height: 38,
-                    paddingLeft: 18,
-                    borderLeft: `2.5px ${isBroken ? 'dashed var(--terracotta)' : 'solid var(--gold)'}`
+                    paddingLeft: rtl ? 0 : 18,
+                    paddingRight: rtl ? 18 : 0,
+                    borderLeft: rtl ? 'none' : `2.5px ${isBroken ? 'dashed var(--terracotta)' : 'solid var(--gold)'}`,
+                    borderRight: rtl ? `2.5px ${isBroken ? 'dashed var(--terracotta)' : 'solid var(--gold)'}` : 'none'
                   }}
                 >
                   <ArrowDown size={14} style={{ color: isBroken ? 'var(--terracotta)' : 'var(--gold-dark)' }} />
                   <span className="mono subtle" style={{ fontSize: '0.72rem' }}>
-                    links to prev_hash: <b style={{ color: isBroken ? 'var(--terracotta)' : 'var(--forest-dark)' }}>{ev.prev_hash || 'genesis'}</b>
+                    {localize('پچھلا ہیش:', 'links to prev_hash:', 'links to prev_hash:')}{' '}
+                    <b style={{ color: isBroken ? 'var(--terracotta)' : 'var(--forest-dark)' }}>{ev.prev_hash || 'genesis'}</b>
                   </span>
                 </div>
 
@@ -456,31 +479,33 @@ function HashChainVisualizer({ onSelectEvent }) {
                   }}
                   onClick={() => onSelectEvent(ev)}
                 >
-                  <div className="row spread" style={{ alignItems: 'flex-start' }}>
-                    <div className="row" style={{ gap: 10 }}>
+                  <div className="row spread" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 8 }}>
+                    <div className="row" style={{ gap: 10, alignItems: 'center' }}>
                       <span className="badge small bold" style={{ background: 'var(--forest)', color: '#fff' }}>
                         #{ev.seq}
                       </span>
                       <b style={{ fontSize: '1rem', color: 'var(--forest-dark)' }}>{ev.action}</b>
                       <span className={`badge small ${isDenied ? 'red' : 'green'}`}>
-                        {isDenied ? 'BLOCKED' : 'OK'}
+                        {isDenied
+                          ? localize('روکا گیا', 'BLOCKED', 'BLOCKED')
+                          : localize('کامیاب', 'OK', 'OK')}
                       </span>
                     </div>
 
-                    <div className="row" style={{ gap: 8 }}>
+                    <div className="row" style={{ gap: 8, alignItems: 'center' }}>
                       <span className="mono small subtle">{when(ev.ts)}</span>
-                      <ChevronRight size={16} className="subtle" />
+                      <ChevronRight size={16} className="subtle" style={{ transform: rtl ? 'rotate(180deg)' : 'none' }} />
                     </div>
                   </div>
 
-                  <div className="row spread small" style={{ fontSize: '0.8rem' }}>
+                  <div className="row spread small" style={{ fontSize: '0.8rem', flexWrap: 'wrap', gap: 8 }}>
                     <div className="row" style={{ gap: 12 }}>
-                      <span>Actor: <b>{ev.actor_type}</b> ({ev.actor_role || 'system'})</span>
-                      <span>Target: <span className="mono">{ev.resource_type}:{ev.resource_id?.slice(0, 8)}</span></span>
+                      <span>{localize('کارندہ:', 'Actor:', 'Actor:')} <b>{ev.actor_type}</b> ({ev.actor_role || 'system'})</span>
+                      <span>{localize('ہدف:', 'Target:', 'Target:')} <span className="mono">{ev.resource_type}:{ev.resource_id?.slice(0, 8)}</span></span>
                     </div>
 
                     <div className="row" style={{ gap: 8 }}>
-                      <span className="muted">Digest:</span>
+                      <span className="muted">{localize('ڈائجسٹ:', 'Digest:', 'Digest:')}</span>
                       <span className="mono bold" style={{ color: isBroken ? 'var(--terracotta)' : 'var(--forest-dark)' }}>
                         {ev.hash?.slice(0, 16)}…
                       </span>
@@ -498,6 +523,7 @@ function HashChainVisualizer({ onSelectEvent }) {
 
 // 2. Full Ledger Table Tab
 function EventLogTable({ onSelectEvent }) {
+  const { rtl, localize } = useLang()
   const [action, setAction] = useState('') // what is typed in the search box
   const [searchTerm, setSearchTerm] = useState('') // the same text, sent to the server after a short pause
   const [outcome, setOutcome] = useState('')
@@ -526,7 +552,7 @@ function EventLogTable({ onSelectEvent }) {
       a.download = 'audit_chain.csv'
       a.click()
     } catch {
-      alert('CSV export triggered in production mode.')
+      alert(localize('CSV ایکسپورٹ شروع کی گئی۔', 'CSV export triggered.', 'CSV export triggered in production mode.'))
     }
   }
 
@@ -536,50 +562,50 @@ function EventLogTable({ onSelectEvent }) {
       <div className="row spread" style={{ flexWrap: 'wrap', gap: 10 }}>
         <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           <select
-            style={{ width: 'auto', minWidth: 140, background: '#fff' }}
+            style={{ width: 'auto', minWidth: 150, background: '#fff' }}
             value={actor}
             onChange={(e) => setActor(e.target.value)}
           >
-            <option value="">All Actors</option>
-            <option value="user">User / Citizen</option>
-            <option value="officer">Welfare Officer</option>
-            <option value="ai">AI Decision Engine</option>
-            <option value="agent">Autonomous Agent</option>
-            <option value="admin">System Admin</option>
+            <option value="">{localize('تمام کارندے', 'All Actors', 'All Actors')}</option>
+            <option value="user">{localize('صارف / شہری', 'User / Citizen', 'User / Citizen')}</option>
+            <option value="officer">{localize('فلاحی افسر', 'Welfare Officer', 'Welfare Officer')}</option>
+            <option value="ai">{localize('اے آئی ڈیسیژن انجن', 'AI Decision Engine', 'AI Decision Engine')}</option>
+            <option value="agent">{localize('خودکار ایجنٹ', 'Autonomous Agent', 'Autonomous Agent')}</option>
+            <option value="admin">{localize('سسٹم ایڈمن', 'System Admin', 'System Admin')}</option>
           </select>
 
           <select
-            style={{ width: 'auto', minWidth: 140, background: '#fff' }}
+            style={{ width: 'auto', minWidth: 150, background: '#fff' }}
             value={outcome}
             onChange={(e) => setOutcome(e.target.value)}
           >
-            <option value="">All Outcomes</option>
-            <option value="ok">Success (OK)</option>
-            <option value="denied">Denied / Blocked</option>
+            <option value="">{localize('تمام نتائج', 'All Outcomes', 'All Outcomes')}</option>
+            <option value="ok">{localize('کامیاب (OK)', 'Success (OK)', 'Success (OK)')}</option>
+            <option value="denied">{localize('مسترد / روکا گیا', 'Denied / Blocked', 'Denied / Blocked')}</option>
           </select>
 
           <input
-            style={{ maxWidth: 220, background: '#fff' }}
-            placeholder="Search: action, person, case ID, outcome… e.g. consent, denied, case.*"
-            aria-label="Search the audit log"
+            style={{ maxWidth: 240, background: '#fff' }}
+            placeholder={localize('تلاش کریں: کارروائی، شخص، کیس آئی ڈی، نتیجہ… مثلاً consent، denied، case.*', 'Talash karein: action, shakhs, case ID, nateeja… e.g. consent, denied, case.*', 'Search: action, person, case ID, outcome… e.g. consent, denied, case.*')}
+            aria-label={localize('آڈٹ لاگ میں تلاش', 'Audit log mein talash', 'Search the audit log')}
             value={action}
             onChange={(e) => setAction(e.target.value)}
           />
         </div>
 
         <div className="row" style={{ gap: 8 }}>
-          <button className="btn ghost small" onClick={reload} title="Refresh log">
+          <button className="btn ghost small" onClick={reload} title={localize('لاگ ریفریش کریں', 'Log refresh karein', 'Refresh log')}>
             <RefreshCw size={14} />
           </button>
           <button className="btn ghost small" onClick={exp}>
             <Download size={14} />
-            <span>Export CSV</span>
+            <span>{localize('CSV ایکسپورٹ کریں', 'Export CSV', 'Export CSV')}</span>
           </button>
         </div>
       </div>
 
       <ErrorBox e={error} />
-      {loading && <Spinner label="Loading cryptographic audit rows…" />}
+      {loading && <Spinner label={localize('آڈٹ قطاریں لوڈ ہو رہی ہیں…', 'Audit rows load ho rahi hain…', 'Loading cryptographic audit rows…')} />}
 
       {/* Main Audit Table */}
       <div className="admin-card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -587,21 +613,21 @@ function EventLogTable({ onSelectEvent }) {
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Seq #</th>
-                <th>Timestamp</th>
-                <th>Actor & Role</th>
-                <th>Action</th>
-                <th>Target Resource</th>
-                <th>Outcome</th>
-                <th>Rule / Model</th>
-                <th>SHA-256 Digest</th>
+                <th>{localize('تسلسل #', 'Seq #', 'Seq #')}</th>
+                <th>{localize('وقت', 'Timestamp', 'Timestamp')}</th>
+                <th>{localize('کارندہ اور کردار', 'Actor & Role', 'Actor & Role')}</th>
+                <th>{localize('کارروائی', 'Action', 'Action')}</th>
+                <th>{localize('ہدف وسیلہ', 'Target Resource', 'Target Resource')}</th>
+                <th>{localize('نتیجہ', 'Outcome', 'Outcome')}</th>
+                <th>{localize('قاعدہ / ماڈل', 'Rule / Model', 'Rule / Model')}</th>
+                <th>{localize('SHA-256 ڈائجسٹ', 'SHA-256 Digest', 'SHA-256 Digest')}</th>
               </tr>
             </thead>
             <tbody>
               {data?.length === 0 ? (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: '36px 0', color: 'var(--muted)' }}>
-                    No audit events match current criteria.
+                    {localize('موجودہ معیار کے مطابق کوئی ایونٹ نہیں ملا۔', 'Koi audit event nahi mila.', 'No audit events match current criteria.')}
                   </td>
                 </tr>
               ) : (
@@ -615,7 +641,7 @@ function EventLogTable({ onSelectEvent }) {
                       key={e.seq}
                       onClick={() => onSelectEvent(e)}
                       style={{ cursor: 'pointer' }}
-                      title="Click to view full block payload & hash link"
+                      title={localize('مکمل بلاک پی لوڈ دیکھنے کے لیے کلک کریں', 'Block payload dekhne ke liye click karein', 'Click to view full block payload & hash link')}
                     >
                       <td className="mono bold" style={{ color: 'var(--forest-dark)' }}>
                         #{e.seq}
@@ -639,7 +665,7 @@ function EventLogTable({ onSelectEvent }) {
                       </td>
                       <td>
                         <span className={`badge small bold ${isBlocked ? 'red' : 'green'}`}>
-                          {isBlocked ? 'BLOCKED' : 'OK'}
+                          {isBlocked ? localize('روکا گیا', 'BLOCKED', 'BLOCKED') : localize('کامیاب', 'OK', 'OK')}
                         </span>
                       </td>
                       <td className="small mono subtle">
@@ -664,6 +690,7 @@ function EventLogTable({ onSelectEvent }) {
 
 // 3. Citizen Perspective ("Who Accessed My Data?" Lens)
 function CitizenAuditLens() {
+  const { localize } = useLang()
   const { data, loading, error, reload } = useAsync(() => apiGet('/audit?limit=80'), [])
 
   const accessEvents = (data || []).filter(
@@ -686,40 +713,44 @@ function CitizenAuditLens() {
           borderRadius: 'var(--radius)'
         }}
       >
-        <div className="row spread" style={{ alignItems: 'flex-start' }}>
+        <div className="row spread" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h4 style={{ margin: 0, color: 'var(--forest-dark)', fontSize: '1.1rem' }}>
-              Citizen Transparency View: "Who accessed my data?"
+              {localize('شہری شفافیت کا منظر: "میرا ڈیٹا کس نے دیکھا؟"', 'Citizen Transparency View: "Mera data kis ne dekha?"', 'Citizen Transparency View: "Who accessed my data?"')}
             </h4>
             <p className="small muted" style={{ margin: '4px 0 0', lineHeight: 1.45 }}>
-              This audit lens reflects the exact unalterable log surfaced to citizens. It catalogs every institutional query (NADRA civil lookup, Raast payout transfer, Welfare officer document review) alongside blocked unauthorized attempts.
+              {localize(
+                'یہ آڈٹ اس غیر تبدیل شدہ منظر کی عکاسی کرتا ہے جو شہریوں کو دکھایا جاتا ہے۔ یہ نادرا، راست یا فلاحی افسر کی ہر رسائی کو غیر مجاز کوششوں کے ساتھ ریکارڈ کرتا ہے۔',
+                'Yeh audit log citizens ko nazar aane wale log ki akkasi karta hai.',
+                'This audit lens reflects the exact unalterable log surfaced to citizens. It catalogs every institutional query (NADRA civil lookup, Raast payout transfer, Welfare officer document review) alongside blocked unauthorized attempts.'
+              )}
             </p>
           </div>
           <button className="btn small ghost" onClick={reload}>
-            Refresh Stream
+            {localize('اسٹریم ریفریش کریں', 'Stream refresh karein', 'Refresh Stream')}
           </button>
         </div>
       </div>
 
       <ErrorBox e={error} />
-      {loading && <Spinner label="Loading citizen access audit stream…" />}
+      {loading && <Spinner label={localize('شہری رسائی لاگ لوڈ ہو رہا ہے…', 'Access stream load ho rahi hai…', 'Loading citizen access audit stream…')} />}
 
       <div className="admin-card" style={{ padding: 0, overflow: 'hidden' }}>
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Timestamp</th>
-              <th>Requesting Institution / Actor</th>
-              <th>Action & Data Scope</th>
-              <th>Access Verdict</th>
-              <th>Commitment Hash</th>
+              <th>{localize('وقت', 'Timestamp', 'Timestamp')}</th>
+              <th>{localize('درخواست گزار ادارہ / کارندہ', 'Requesting Institution / Actor', 'Requesting Institution / Actor')}</th>
+              <th>{localize('عمل اور ڈیٹا کا دائرہ', 'Action & Data Scope', 'Action & Data Scope')}</th>
+              <th>{localize('رسائی کا فیصلہ', 'Access Verdict', 'Access Verdict')}</th>
+              <th>{localize('کمٹمنٹ ہیش', 'Commitment Hash', 'Commitment Hash')}</th>
             </tr>
           </thead>
           <tbody>
             {accessEvents.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ textAlign: 'center', padding: '32px 0', color: 'var(--muted)' }}>
-                  No citizen-facing data reads recorded in this window.
+                  {localize('اس مدت میں شہری ڈیٹا تک رسائی کا کوئی ایونٹ ریکارڈ نہیں ہوا۔', 'Koi data read record nahi hua.', 'No citizen-facing data reads recorded in this window.')}
                 </td>
               </tr>
             ) : (
@@ -741,7 +772,9 @@ function CitizenAuditLens() {
                     </td>
                     <td>
                       <span className={`badge small bold ${isBlocked ? 'red' : 'green'}`}>
-                        {isBlocked ? 'BLOCKED (access.denied)' : 'AUTHORIZED (ok)'}
+                        {isBlocked
+                          ? localize('روکا گیا (access.denied)', 'BLOCKED (access.denied)', 'BLOCKED (access.denied)')
+                          : localize('مجاز (ok)', 'AUTHORIZED (ok)', 'AUTHORIZED (ok)')}
                       </span>
                     </td>
                     <td className="mono small subtle">{e.hash?.slice(0, 12)}…</td>
@@ -758,6 +791,7 @@ function CitizenAuditLens() {
 
 // 4. AI Decisions Stream Tab
 function DecisionsAuditStream() {
+  const { localize } = useLang()
   const [route, setRoute] = useState('')
   const { data, loading, error, reload } = useAsync(
     () => apiGet('/audit/decisions?limit=40' + (route ? '&route=' + route : '')),
@@ -767,25 +801,30 @@ function DecisionsAuditStream() {
 
   return (
     <div className="col" style={{ gap: 16 }}>
-      <div className="row spread">
+      <div className="row spread" style={{ flexWrap: 'wrap', gap: 10 }}>
         <select
           style={{ width: 'auto', minWidth: 200, background: '#fff' }}
           value={route}
           onChange={(e) => setRoute(e.target.value)}
         >
-          <option value="">All Decision Routes</option>
+          <option value="">{localize('تمام فیصلہ جاتی راستے', 'All Decision Routes', 'All Decision Routes')}</option>
           {['AUTO_APPROVE', 'ASK_PROOF', 'HUMAN_REVIEW', 'DECLINE_WITH_APPEAL'].map((r) => (
-            <option key={r}>{r}</option>
+            <option key={r} value={r}>
+              {r === 'AUTO_APPROVE' ? localize('خودکار منظوری (AUTO_APPROVE)', 'Auto-Approve', 'Auto-Approve') :
+               r === 'ASK_PROOF' ? localize('دستاویز درکار (ASK_PROOF)', 'Ask Proof', 'Ask Proof') :
+               r === 'HUMAN_REVIEW' ? localize('انسانی جائزہ (HUMAN_REVIEW)', 'Human Review', 'Human Review') :
+               localize('مسترد مع اپیل (DECLINE_WITH_APPEAL)', 'Decline with Appeal', 'Decline with Appeal')}
+            </option>
           ))}
         </select>
 
         <button className="btn small ghost" onClick={reload}>
-          Refresh Decisions
+          {localize('فیصلے ریفریش کریں', 'Decisions refresh karein', 'Refresh Decisions')}
         </button>
       </div>
 
       <ErrorBox e={error} />
-      {loading && <Spinner label="Loading algorithmic decision archive…" />}
+      {loading && <Spinner label={localize('الگورتھم کے فیصلوں کا آرکائیو لوڈ ہو رہا ہے…', 'Decisions load ho rahe hain…', 'Loading algorithmic decision archive…')} />}
 
       <div className="col" style={{ gap: 12 }}>
         {data?.map((d) => (
@@ -800,23 +839,25 @@ function DecisionsAuditStream() {
               gap: 12
             }}
           >
-            <div className="row spread">
-              <div className="row" style={{ gap: 10 }}>
+            <div className="row spread" style={{ flexWrap: 'wrap', gap: 10 }}>
+              <div className="row" style={{ gap: 10, alignItems: 'center' }}>
                 <RouteBadge r={d.route} />
                 <span className="small mono">
-                  P(genuine): <b>{Math.round(d.p_legit * 100)}%</b> · Rule: v{d.rule_version} · Model: {d.model_version}
+                  {localize('امکانِ صداقت:', 'P(genuine):', 'P(genuine):')} <b>{Math.round(d.p_legit * 100)}%</b> · {localize('قاعدہ:', 'Rule:', 'Rule:')} v{d.rule_version} · {localize('ماڈل:', 'Model:', 'Model:')} {d.model_version}
                 </span>
               </div>
               <button
                 className="btn ghost small"
                 onClick={() => setOpen(open === d.id ? null : d.id)}
               >
-                {open === d.id ? 'Hide Trace' : 'View Full Trace'}
+                {open === d.id
+                  ? localize('ٹریس چھپائیں', 'Trace Chhupayein', 'Hide Trace')
+                  : localize('مکمل ٹریس دیکھیں', 'Full Trace Dekhein', 'View Full Trace')}
               </button>
             </div>
 
             <div className="small" style={{ lineHeight: 1.45 }}>
-              <b>Citizen Explanation:</b> {d.reason_user?.en || 'Evaluated under civic rules.'}
+              <b>{localize('شہری کے لیے وضاحت:', 'Citizen Explanation:', 'Citizen Explanation:')}</b> {d.reason_user?.en || localize('شہری قواعد کے تحت جائزہ لیا گیا۔', 'Evaluated under civic rules.', 'Evaluated under civic rules.')}
             </div>
 
             {open === d.id && (
@@ -835,27 +876,32 @@ function DecisionsAuditStream() {
 
 // MAIN AUDIT COMPONENT
 export default function Audit() {
+  const { t, rtl, lang, localize } = useLang()
   const [tab, setTab] = useState('chain')
   const [selectedEvent, setSelectedEvent] = useState(null)
 
   return (
-    <div className="col" style={{ gap: 24 }}>
+    <div className={`col ${rtl ? 'rtl' : ''}`} dir={rtl ? 'rtl' : 'ltr'} style={{ gap: 24 }}>
       {/* Title & Header */}
       <div className="row spread" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 14 }}>
         <div>
           <div className="row" style={{ gap: 8, marginBottom: 4 }}>
             <span className="badge" style={{ background: 'var(--forest)', color: '#fff', fontSize: '0.72rem', fontWeight: 700 }}>
-              SECURITY & COMPLIANCE
+              {localize('سیکیورٹی اور تعمیل', 'Security & Compliance', 'SECURITY & COMPLIANCE')}
             </span>
             <span className="badge" style={{ background: 'var(--gold-soft)', color: 'var(--gold-dark)', fontSize: '0.72rem' }}>
-              Cryptographic Hash-Chain
+              {localize('کریپٹوگرافک ہیش چین', 'Cryptographic Hash-Chain', 'Cryptographic Hash-Chain')}
             </span>
           </div>
           <h2 style={{ margin: 0, fontSize: '1.75rem', color: 'var(--forest-dark)' }}>
-            Audit Trail & Sovereign Governance
+            {localize('آڈٹ ٹریل اور خود مختار نگرانی', 'Audit Trail aur Nigrani', 'Audit Trail & Sovereign Governance')}
           </h2>
           <div className="small subtle" style={{ marginTop: 2 }}>
-            Read-only, tamper-evident cryptographic log committing every action, decision, and consent mutation
+            {localize(
+              'ناقابلِ ترمیم کریپٹوگرافک لاگ جو ہر عمل، فیصلے اور اجازت کی تبدیلی کو محفوظ کرتا ہے',
+              'Tamper-evident cryptographic log har action aur decision ko record karta hai',
+              'Read-only, tamper-evident cryptographic log committing every action, decision, and consent mutation'
+            )}
           </div>
         </div>
 
@@ -863,10 +909,10 @@ export default function Audit() {
           value={tab}
           onChange={setTab}
           tabs={[
-            ['chain', 'Hash-Chain Visualizer'],
-            ['table', 'Immutable Event Log'],
-            ['citizen', 'Citizen Transparency Lens'],
-            ['dec', 'Algorithmic Decisions']
+            ['chain', localize('ہیش چین بصری خاکہ', 'Hash-Chain Visualizer', 'Hash-Chain Visualizer')],
+            ['table', localize('ناقابلِ ترمیم لاگ ٹیبل', 'Immutable Event Log', 'Immutable Event Log')],
+            ['citizen', localize('شہری شفافیت کا منظر', 'Citizen Transparency Lens', 'Citizen Transparency Lens')],
+            ['dec', localize('الگورتھم کے فیصلے', 'Algorithmic Decisions', 'Algorithmic Decisions')]
           ]}
         />
       </div>
