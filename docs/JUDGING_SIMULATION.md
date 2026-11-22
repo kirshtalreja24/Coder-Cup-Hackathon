@@ -58,7 +58,7 @@ curl -i $API/cases/<CASE_ID>/documents -H "Authorization: Bearer $T"      # -> 4
 * Fake fee SMS → **SCAM** with reasons (`q5a_scam_fake_message`)
 * Official 8171 message → **Probably safe** (`q5b_scam_genuine_message`)
 * Ambiguous → **Not sure, a person should check** (`q5c_scam_uncertain_message`)
-**Say:** "It combines transparent rules with a small ML model and has an explicit *not sure* band, because blocking a real message is also a cost. The held-out set has 22 hand-written messages (10/10 scams caught, 0 false alarms, 2 handed to a human); it is a small set and we say so."
+**Say:** "It combines transparent rules with a small ML model and has an explicit *not sure* band, because blocking a real message is also a cost. The held-out set has 51 hand-written messages, including polite scams and official-looking real notices: 0 wrong verdicts, 8 handed to a person, scam recall 90.9% (sending to a person counts as not caught), 0 false alarms. It is still a small, synthetic set and we say so."
 **Numbers:** auditor/admin → **Evaluation**, or `GET /scam/eval`.
 
 ## Q6 "How do you prove the AI's decision?"

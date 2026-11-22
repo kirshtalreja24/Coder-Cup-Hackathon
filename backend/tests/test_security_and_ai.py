@@ -133,3 +133,11 @@ def test_rag_llm_not_sure_is_respected(client, monkeypatch):
     monkeypatch.setattr(llm, "chat", lambda *a, **k: "NOT_SURE")
     r = client.post("/public/ask", json={"question": "Who can apply for relief?"}).json()
     assert r["answered"] is False and r["handoff"] is True and r["sources"] == []
+
+
+def test_scam_holdout_has_no_wrong_decisions_and_is_not_tiny():
+    """Guard: a wrong 'scam' or 'real' verdict is worse than sending the message to a person."""
+    from app import scam
+    e = scam.evaluate()
+    assert e["n"] >= 50
+    assert e["confusion"]["fp"] == 0 and e["confusion"]["fn"] == 0, e["errors"]

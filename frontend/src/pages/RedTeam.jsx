@@ -461,7 +461,7 @@ function CategorySection({ cat, results }) {
 }
 
 /* ═══════════════════════════════════════════════════════════
-   STATIC ATTACK MANIFEST — 40 scenarios shown before run
+   STATIC ATTACK MANIFEST — a preview of the attacks, shown before a run
    (categories and descriptions from backend source of truth)
 ═══════════════════════════════════════════════════════════ */
 const ATTACK_MANIFEST = [
@@ -805,7 +805,7 @@ export default function RedTeam() {
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.9rem', color: FOREST }}>Attack Scenario Manifest</div>
               <div style={{ fontSize: '0.72rem', color: '#6B7280', marginTop: 1 }}>
-                40 adversarial scenarios across {Object.keys(CAT_META).length} categories — all wired to real backend API semantics
+                A preview of {ATTACK_MANIFEST.length} of the {expected} attacks across {Object.keys(CAT_META).length} categories. The full set runs live against the server.
               </div>
             </div>
           </div>

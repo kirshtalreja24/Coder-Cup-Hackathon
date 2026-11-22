@@ -65,7 +65,7 @@ A calm **Deep Forest × Champagne** design system (forest green, champagne gold,
 | Core SaaS | JWT + RBAC (5 roles) · dashboards · cases (create/assign/escalate/close) · public REST API + API keys + Swagger · audit log · consent mgmt · mock identity/payment/data APIs |
 | "Pick 3" (we built 10) | Multi-tenant (2 departments) · rule editor + Digital Twin · notifications (in-app inbox is real; SMS / WhatsApp / email are simulated and labelled) · webhooks (HMAC-signed, SSRF-guarded) · analytics per tenant · review queue (priority + confidence sort) · subscription plans & quotas · background jobs · rate limiting · offline mode |
 | Bonus | Digital Twin · Helper Mode · Offline-first sync · Scam Map (all four) |
-| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 100 automated tests (`backend/tests`, including the full Red-Team scorecard) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
+| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 101 automated tests (`backend/tests`, including the full Red-Team scorecard) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
 
 ## Real vs simulated
 See [`docs/REAL_VS_SIMULATED.md`](docs/REAL_VS_SIMULATED.md) (also shown in the app under *About*).
@@ -84,9 +84,9 @@ uvicorn app.main:app --reload --port 8000            # seeds synthetic data on f
 # frontend
 cd frontend && npm install && npm run dev            # http://localhost:5173
 ```
-Copy `.env.example` → `.env` and set `DATABASE_URL` (Supabase Postgres) for the deployed setup. Migrations run automatically on start for Postgres (`alembic upgrade head`).
+Copy `.env.example` → `.env` (every setting is explained inside it) and set `DATABASE_URL` (Supabase Postgres) for the deployed setup. Migrations run automatically on start for Postgres (`alembic upgrade head`).
 
-Tests: `cd backend && python -m pytest tests -q` (100 tests, includes the full Red-Team scorecard).
+Tests: `cd backend && python -m pytest tests -q` (101 tests, includes the full Red-Team scorecard).
 
 ### Optional services (everything works without them, with fallbacks)
 | Service | `.env` keys | Without it |
@@ -133,7 +133,7 @@ FastAPI + SQLAlchemy + Alembic · Postgres (Supabase) · React PWA · scikit-lea
 **The decision core is not an LLM.** Rules + calibrated probabilities + explicit costs decide; the LLM (if configured) only explains and answers questions from retrieved documents, and its output is never allowed to approve money.
 
 ## Honest limits
-* Scam classifier and forgery checks are trained/tested on a **small synthetic set**; numbers show behaviour, not production accuracy. ELA (edit detection) is informational only because it gave false alarms on clean cards.
+* Scam classifier and forgery checks are trained/tested on a **small synthetic set** (the scam test has 51 hand-written messages: 0 wrong verdicts, 8 sent to a person); numbers show behaviour, not production accuracy. ELA (edit detection) is informational only because it gave false alarms on clean cards.
 * OCR needs Tesseract on the server (installed in the Docker image); without it the system relies on QR signature + form cross-check and says so.
 * Browser Urdu speech recognition depends on the device; every voice step has an icon/tap fallback.
 * Single-process job runner, in-memory rate limiter and in-memory helper session lock: fine for a prototype, not for horizontal scale.
