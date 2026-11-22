@@ -49,6 +49,8 @@ def test_notifications_inbox(client, tok):
     nid = next(i["id"] for i in inbox["items"] if i["channel"] == "in_app")
     assert client.post(f"/notifications/{nid}/read", headers=h).json()["read"] is True
     assert client.post(f"/notifications/{nid}/read", headers=tok("family06@citizen.demo")).status_code == 404
+    assert client.delete(f"/notifications/{nid}", headers=h).json()["deleted"] is True
+    assert client.delete(f"/notifications/{nid}", headers=h).status_code == 404
 
 
 def test_helper_cannot_self_consent(client, tok, monkeypatch):

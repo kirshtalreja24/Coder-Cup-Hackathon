@@ -151,18 +151,48 @@ export const Spinner = ({ label = 'Loading…' }) => (
   </div>
 )
 
-export const ErrorBox = ({ e }) => {
-  if (!e) return null
+export const ErrorBox = ({ e, onDismiss }) => {
+  const [dismissed, setDismissed] = useState(false)
+  useEffect(() => {
+    setDismissed(false)
+  }, [e])
+
+  if (!e || dismissed) return null
   return (
-    <div className="banner bad">
-      <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
-      <div>
-        {e.offline
-          ? 'No connection to the server. Your work is saved locally and will sync once reconnected.'
-          : typeof e.detail === 'string'
-            ? e.detail
-            : e.message || 'An error occurred'}
+    <div className="banner bad" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flex: 1 }}>
+        <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+        <div style={{ flex: 1 }}>
+          {e.offline
+            ? 'No connection to the server. Your work is saved locally and will sync once reconnected.'
+            : typeof e.detail === 'string'
+              ? e.detail
+              : e.message || 'An error occurred'}
+        </div>
       </div>
+      <button
+        type="button"
+        onClick={() => {
+          setDismissed(true)
+          if (onDismiss) onDismiss()
+        }}
+        title="Remove warning message"
+        aria-label="Remove warning message"
+        style={{
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '2px 4px',
+          color: 'var(--terracotta-dark)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: 0.75,
+          flexShrink: 0
+        }}
+      >
+        <X size={15} />
+      </button>
     </div>
   )
 }

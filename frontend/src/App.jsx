@@ -1,9 +1,10 @@
 import PrototypeBanner from './components/PrototypeBanner'
 import StaffOfflineBanner from './components/StaffOfflineBanner'
+import NotificationBell from './components/NotificationBell'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { api } from './api'
-import { Shield, WifiOff, Bell } from 'lucide-react'
+import { Shield, WifiOff, Bell, X } from 'lucide-react'
 import { useAuth, ProtectedRoute, HOME, AuthErrorScreen } from './auth'
 import { LangSwitch, useLang } from './i18n'
 import { loadBox, onBox } from './offline'
@@ -43,23 +44,12 @@ function useOnline() {
   return on
 }
 
-function useUnread() {
-  const [n, setN] = useState(0)
-  useEffect(() => {
-    let alive = true
-    const load = () => navigator.onLine && api('/notifications?unread_only=true&limit=1').then((d) => alive && setN(d.unread)).catch(() => {})
-    load(); const id = setInterval(load, 30000)
-    return () => { alive = false; clearInterval(id) }
-  }, [])
-  return n
-}
-
 function Shell({ children }) {
   const { user, logout } = useAuth()
   const nav = useNavigate()
   const { t, rtl, localize } = useLang()
   const online = useOnline()
-  const unread = useUnread()
+  const [offlineBannerDismissed, setOfflineBannerDismissed] = useState(false)
   const [box, setBox] = useState(loadBox())
   useEffect(() => onBox(setBox), [])
   const pend = box.filter((x) => x.state !== 'done').length
@@ -87,10 +77,7 @@ function Shell({ children }) {
             <span>{online ? t('online') : t('offline')}</span>
             {pend > 0 ? <span style={{ opacity: 0.85 }}>({pend} {localize('باقی', 'baqi', 'pending')})</span> : null}
           </span>
-          <Link to="/inbox" className="badge" style={{ textDecoration: 'none', background: unread ? '#ffd98a' : 'rgba(255,255,255,.2)', color: unread ? '#2b1b00' : '#fff', display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Inbox">
-            <Bell size={13} strokeWidth={2.2} />
-            {unread ? <span>{unread}</span> : null}
-          </Link>
+          <NotificationBell online={online} />
           <LangSwitch />
           <button className="small" onClick={() => { logout(); nav('/login', { replace: true }) }}>{user?.name ? user.name.split(' ')[0] : t('user')} · {t('logout')}</button>
         </div>
@@ -98,11 +85,22 @@ function Shell({ children }) {
       {staff ? (
         <StaffOfflineBanner online={online} pend={pend} onOpenSyncCenter={() => {}} />
       ) : (
-        !online && (
+        !online && !offlineBannerDismissed && (
           <div className="container">
-            <div className="banner offline" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <WifiOff size={16} />
-              <span>{t('saved_offline')}</span>
+            <div className="banner offline" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <WifiOff size={16} />
+                <span>{t('saved_offline')}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOfflineBannerDismissed(true)}
+                title={localize('وارننگ ہٹائیں', 'Warning hatayein', 'Dismiss warning')}
+                aria-label="Dismiss offline warning"
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'inherit', padding: 2, display: 'inline-flex', alignItems: 'center' }}
+              >
+                <X size={15} />
+              </button>
             </div>
           </div>
         )
