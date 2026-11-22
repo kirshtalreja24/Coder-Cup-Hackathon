@@ -11,7 +11,7 @@ Every step below was executed on the real app (screenshots in [`judging-simulati
 2. **Login is rate limited to 15 per minute per IP.** If several people log in from one network at once, you may see "Too many login attempts". Wait one minute. Stay logged in on separate windows.
 3. **Say "prototype, mock data" out loud.** Every screen already carries the banner.
 4. Never claim: "autonomous agent" (it is an audited deterministic tool-calling pipeline), "forgery detection" beyond QR-signature and cross-checks, "accuracy" on real data, "no one can see your data after withdrawal" (the auditor sees a *masked* view; helpers and officers are blocked), or that voice works until you have heard it on your own phone.
-5. The **Ask a question** page is voice-first: there is no typing box until speech has been transcribed. To show the policy assistant by typing, use Swagger (Q9).
+5. The **Ask a question** page now has a **typed question box at the top** (works without a microphone). The voice part still needs a real phone to prove.
 
 ---
 
@@ -78,9 +78,11 @@ curl -i $API/cases/<CASE_ID>/documents -H "Authorization: Bearer $T"      # -> 4
 The other entries in the same **Judge Evaluation Scenario** list show each behaviour: blurry photo (asks for a clearer photo), edited ID card (human review with fraud flag), name spelled differently (not sure, never a wrong match), claims widow but the registry shows a living spouse (human review), income above the limit (declined WITH appeal), garbage data (no crash). Each scenario signs in as its own citizen (see `GET /demo/scenarios`, field `login`).
 
 ## Q9 "Is it real RAG? What if it does not know?"
-**Go to:** https://bharosa-api-production.up.railway.app/docs → `POST /public/ask` → Try it out.
-* `{"question":"Who can apply for relief?"}` → grounded answer with numbered sources (section, score, text).
-* `{"question":"Can I get a passport through this?"}` → `"answered": false, "handoff": true` ("I am not sure ... I can pass your question to a person") (`q9_swagger_rag_abstains_out_of_scope`).
+**Go to:** citizen (`widow-clean@citizen.demo`) → **Ask a question** → type in the box at the top and press **Ask**.
+* "Who can apply for relief?" → grounded answer with numbered sources (`q9b_ask_typed_answer`).
+* "Can I get a passport through this?" → **POLICY ABSTENTION**: "I am not sure about this ... I can pass your question to a person" (`q9c_ask_typed_abstains`).
+* An Urdu question gets an Urdu answer (`q9d_ask_typed_urdu`). The page itself is `q9a_ask_page_typed_box`.
+**API version (no login):** `POST /public/ask` in Swagger (`q9_swagger_rag_abstains_out_of_scope`).
 **Say:** "BM25 retrieval over our mock policy pack, an LLM that may only use the retrieved excerpts, sources always shown, and it abstains when the text does not cover the question." Do not say "embeddings" or "vector database": it is lexical retrieval.
 
 ## Extras if time allows
@@ -91,6 +93,6 @@ The other entries in the same **Judge Evaluation Scenario** list show each behav
 
 ## Known gaps to be ready for
 * No demo video link yet in the README (add the public Drive link).
-* Voice on a real phone is untested; the Ask page has no typing box.
+* Voice on a real phone is untested. Speaking only fills in the transcript; you must press the button to send it, and it does not work out intent (it only answers policy questions).
 * Auditor view is masked, not consent-gated.
 * Evaluation numbers come from synthetic data; the scam set is small.

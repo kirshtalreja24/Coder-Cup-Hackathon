@@ -80,6 +80,8 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
   const [state, setState] = useState('idle') // 'idle' | 'listening' | 'processing' | 'speaking' | 'error'
   const [audioLevel, setAudioLevel] = useState(0.4)
   const [transcript, setTranscript] = useState('')
+  const [answerLang, setAnswerLang] = useState(null) // language the last question was asked in
+  const [typed, setTyped] = useState('') // typed question (works without a microphone)
   const [isEditing, setIsEditing] = useState(false)
   const [response, setResponse] = useState(null)
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
@@ -168,8 +170,9 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
   }
 
   // Submit transcript to RAG / policy assistant
-  const handleSubmitQuestion = async (queryText = transcript) => {
+  const handleSubmitQuestion = async (queryText = transcript, forceLang) => {
     if (!queryText.trim()) return
+    const qlang = forceLang || (lang === 'en' ? 'en' : 'ur')
     stop()
     setState('processing')
     setErrorMessage('')
@@ -177,19 +180,20 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
     try {
       const res = await apiPost('/ask', {
         question: queryText,
-        lang: lang === 'en' ? 'en' : 'ur'
+        lang: qlang
       })
       setResponse(res)
+      setAnswerLang(qlang)
       setState('idle')
 
       // Automatically speak the answer
       const answerToSpeak = res.answered
         ? res.answer
-        : lang === 'ur'
+        : qlang === 'ur'
           ? (res.answer_ur || res.answer)
           : res.answer
 
-      speak(answerToSpeak, lang === 'en' ? 'en' : 'ur')
+      speak(answerToSpeak, qlang)
     } catch (e) {
       setState('error')
       setErrorMessage(
@@ -345,6 +349,43 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
             background: 'var(--paper, #FFFFFF)'
           }}
         >
+          {/* Typed question: first thing on the page, so the assistant works without a microphone */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const q = typed.trim()
+              if (!q || state === 'processing') return
+              setResponse(null)
+              setErrorMessage('')
+              setTranscript(q)
+              // Urdu script -> Urdu answer; English / Roman Urdu -> English answer
+              handleSubmitQuestion(q, /[؀-ۿ]/.test(q) ? 'ur' : 'en')
+            }}
+            style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}
+          >
+            <label htmlFor="typed-question" style={{ fontWeight: 800, color: 'var(--forest-dark, #0D2318)' }}>
+              {lang === 'ur' ? 'اپنا سوال لکھیں (Type your question)' : 'Type your question'}
+            </label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                id="typed-question"
+                type="text"
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                maxLength={500}
+                dir="auto"
+                placeholder={lang === 'ur' ? 'مثلاً: امدادی رقم کے لیے کون درخواست دے سکتا ہے؟' : 'e.g. Who can apply for relief? Is there a fee?'}
+                style={{ flex: 1, minWidth: 0, padding: '12px 14px', fontSize: '1rem', borderRadius: 10, border: '1.5px solid var(--border-subtle, #E5E7EB)' }}
+              />
+              <button type="submit" className="btn" disabled={!typed.trim() || state === 'processing'} style={{ whiteSpace: 'nowrap' }}>
+                {state === 'processing' ? '…' : (lang === 'ur' ? 'پوچھیں' : 'Ask')}
+              </button>
+            </div>
+            <div className="small subtle">
+              {lang === 'ur' ? 'یا نیچے مائیک دبا کر بولیں۔' : 'Or tap the microphone below and speak.'}
+            </div>
+          </form>
+
           {/* Central Microphone Stage */}
           <div
             style={{
@@ -648,7 +689,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
               >
                 {response.answered
                   ? response.answer
-                  : lang === 'ur'
+                  : (answerLang || (lang === 'en' ? 'en' : 'ur')) === 'ur'
                     ? (response.answer_ur || response.answer)
                     : response.answer}
               </div>
