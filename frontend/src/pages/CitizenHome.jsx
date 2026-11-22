@@ -29,7 +29,7 @@ import { loadBox, flush, isEffectiveOnline } from '../offline'
 import OfflineSyncCenter from '../components/OfflineSyncCenter'
 import VoiceAssistantModal from '../components/VoiceAssistantModal'
 import { useAsync, StatusBadge, Skeleton, MockTag } from '../ui'
-import { playPrompt, speak, stop } from '../voice'
+import { playPrompt, speak, stop, onAudioState } from '../voice'
 
 // High-fidelity, dignified vector illustration of an assisted household
 function FamilyReliefIllustration() {
@@ -163,15 +163,20 @@ export default function CitizenHome() {
     }
   }, [])
 
+  useEffect(() => {
+    const unsub = onAudioState((active) => {
+      setSpeaking(active)
+    })
+    return () => unsub()
+  }, [])
+
   // Spoken text guide for low-literacy users
   const playHomeAudioGuide = async () => {
     if (speaking) {
       stop()
-      setSpeaking(false)
       return
     }
 
-    setSpeaking(true)
     const text = localize(
       'خوش آمدید۔ امداد کی نئی درخواست کے لیے بڑے سبز بٹن کو دبائیں۔ اگر آپ کی درخواست پہلے سے جمع ہے تو نیچے اس کی جانچ دیکھیں۔ کسی بھی مشکوک ایس ایم ایس کو چیک کرنے کے لیے لال بٹن دبائیں۔',
       'Khush aamdeed. Imdad ki nayi darkhast ke liye baray sabz button ko dabayein. Apni darkhast dekhne ke liye neechay status check karein, ya mashkook message check karein.',
@@ -182,8 +187,6 @@ export default function CitizenHome() {
       await playPrompt('welcome', text, lang)
     } catch {
       await speak(text, lang)
-    } finally {
-      setSpeaking(false)
     }
   }
 

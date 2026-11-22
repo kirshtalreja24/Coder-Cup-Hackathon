@@ -3,7 +3,7 @@ import StaffOfflineBanner from './components/StaffOfflineBanner'
 import { useEffect, useState } from 'react'
 import { Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { api } from './api'
-import { Shield, WifiOff } from 'lucide-react'
+import { Shield, WifiOff, Bell } from 'lucide-react'
 import { useAuth, ProtectedRoute, HOME, AuthErrorScreen } from './auth'
 import { LangSwitch, useLang } from './i18n'
 import { loadBox, onBox } from './offline'
@@ -87,7 +87,10 @@ function Shell({ children }) {
             <span>{online ? t('online') : t('offline')}</span>
             {pend > 0 ? <span style={{ opacity: 0.85 }}>({pend} {localize('باقی', 'baqi', 'pending')})</span> : null}
           </span>
-          <Link to="/inbox" className="badge" style={{ textDecoration: 'none', background: unread ? '#ffd98a' : 'rgba(255,255,255,.2)', color: unread ? '#2b1b00' : '#fff' }} title="Inbox">🔔{unread ? ' ' + unread : ''}</Link>
+          <Link to="/inbox" className="badge" style={{ textDecoration: 'none', background: unread ? '#ffd98a' : 'rgba(255,255,255,.2)', color: unread ? '#2b1b00' : '#fff', display: 'inline-flex', alignItems: 'center', gap: 4 }} title="Inbox">
+            <Bell size={13} strokeWidth={2.2} />
+            {unread ? <span>{unread}</span> : null}
+          </Link>
           <LangSwitch />
           <button className="small" onClick={() => { logout(); nav('/login', { replace: true }) }}>{user?.name ? user.name.split(' ')[0] : t('user')} · {t('logout')}</button>
         </div>

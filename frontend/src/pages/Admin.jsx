@@ -18,17 +18,23 @@ import {
 } from 'lucide-react'
 import { apiDel, apiGet, apiPost, apiPut, apiPatch, BASE } from '../api'
 import { ErrorBox, Json, Spinner, Tabs, useAsync } from '../ui'
+import { useLang } from '../i18n'
 
 export default function Admin() {
+  const { t, rtl, lang, localize } = useLang()
   const [tab, setTab] = useState('users')
 
   return (
-    <div className="col" style={{ gap: 20 }}>
-      <div className="row spread" style={{ alignItems: 'flex-start' }}>
+    <div className={`col ${rtl ? 'rtl' : ''}`} dir={rtl ? 'rtl' : 'ltr'} style={{ gap: 20 }}>
+      <div className="row spread" style={{ alignItems: 'flex-start', flexWrap: 'wrap', gap: 14 }}>
         <div>
-          <h2 style={{ margin: 0 }}>System Administration</h2>
+          <h2 style={{ margin: 0 }}>{localize('نظام کی انتظامیہ', 'System Administration', 'System Administration')}</h2>
           <div className="small subtle" style={{ marginTop: 2 }}>
-            Caseworker access control, REST credentials, webhook pipelines, and departmental capacity
+            {localize(
+              'کیس ورکرز کے اختیارات، REST اسناد، ویب ہکس اور محکمانہ گنجائش',
+              'Caseworkers ke ikhtiyarat, REST credentials, webhooks aur quota',
+              'Caseworker access control, REST credentials, webhook pipelines, and departmental capacity'
+            )}
           </div>
         </div>
 
@@ -36,10 +42,10 @@ export default function Admin() {
           value={tab}
           onChange={setTab}
           tabs={[
-            ['users', 'Staff & Caseworkers'],
-            ['keys', 'Developer API Keys'],
-            ['hooks', 'Webhooks & Dispatcher'],
-            ['plan', 'Department Quota']
+            ['users', localize('عملہ اور کیس ورکرز', 'Amla aur Caseworkers', 'Staff & Caseworkers')],
+            ['keys', localize('ڈویلپر API چابیاں', 'Developer API Keys', 'Developer API Keys')],
+            ['hooks', localize('ویب ہکس اور ڈسپیچر', 'Webhooks aur Dispatcher', 'Webhooks & Dispatcher')],
+            ['plan', localize('محکمانہ کوٹہ و پلان', 'Mehkamana Quota', 'Department Quota')]
           ]}
         />
       </div>
@@ -53,6 +59,7 @@ export default function Admin() {
 }
 
 function UsersSection() {
+  const { rtl, localize } = useLang()
   const u = useAsync(() => apiGet('/admin/users'), [])
   const [f, setF] = useState({ email: '', name: '', role: 'officer', password: '' })
   const [err, setErr] = useState(null)
@@ -63,16 +70,18 @@ function UsersSection() {
     <div className="col" style={{ gap: 16 }}>
       {/* Create User Card */}
       <div className="card col" style={{ gap: 14 }}>
-        <h3 style={{ margin: 0 }}>Provision Staff & Caseworker Accounts</h3>
-        <div className="row" style={{ gap: 10 }}>
+        <h3 style={{ margin: 0 }}>
+          {localize('عملے اور کیس ورکر کے اکاؤنٹس تیار کریں', 'Amla aur caseworker accounts tayyar karein', 'Provision Staff & Caseworker Accounts')}
+        </h3>
+        <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
           <input
-            placeholder="Official email (e.g. officer@relief.gov)"
+            placeholder={localize('سرکاری ای میل (مثلاً officer@relief.gov)', 'Sarkari email (maslan officer@relief.gov)', 'Official email (e.g. officer@relief.gov)')}
             style={{ flex: 1.5, minWidth: 200 }}
             value={f.email}
             onChange={(e) => setF({ ...f, email: e.target.value })}
           />
           <input
-            placeholder="Full Name"
+            placeholder={localize('پورا نام', 'Poora Naam', 'Full Name')}
             style={{ flex: 1, minWidth: 160 }}
             value={f.name}
             onChange={(e) => setF({ ...f, name: e.target.value })}
@@ -83,11 +92,17 @@ function UsersSection() {
             onChange={(e) => setF({ ...f, role: e.target.value })}
           >
             {['citizen', 'helper', 'officer', 'admin', 'auditor'].map((r) => (
-              <option key={r}>{r}</option>
+              <option key={r} value={r}>
+                {r === 'citizen' ? localize('شہری (citizen)', 'Citizen', 'Citizen') :
+                 r === 'helper' ? localize('مددگار (helper)', 'Helper', 'Helper') :
+                 r === 'officer' ? localize('افسر (officer)', 'Officer', 'Officer') :
+                 r === 'admin' ? localize('ایڈمن (admin)', 'Admin', 'Admin') :
+                 localize('آڈیٹر (auditor)', 'Auditor', 'Auditor')}
+              </option>
             ))}
           </select>
           <input
-            placeholder="Password (8+ chars)"
+            placeholder={localize('پاس ورڈ (8+ حروف)', 'Password (8+ chars)', 'Password (8+ chars)')}
             type="password"
             style={{ flex: 1, minWidth: 160 }}
             value={f.password}
@@ -106,7 +121,7 @@ function UsersSection() {
             }}
           >
             <Plus size={16} />
-            <span>Create</span>
+            <span>{localize('اکاؤنٹ بنائیں', 'Account banayein', 'Create')}</span>
           </button>
         </div>
         <ErrorBox e={err} />
@@ -114,8 +129,8 @@ function UsersSection() {
 
       {/* Users Table */}
       <div className="card col" style={{ gap: 14, padding: 0 }}>
-        <div className="row spread" style={{ padding: '18px 20px 0' }}>
-          <h3 style={{ margin: 0 }}>Active User Directory</h3>
+        <div className="row spread" style={{ padding: '18px 20px 0', flexWrap: 'wrap', gap: 10 }}>
+          <h3 style={{ margin: 0 }}>{localize('فعال صارفین کی ڈائریکٹری', 'Faal sarfeen ki directory', 'Active User Directory')}</h3>
           <label
             className="row small subtle"
             style={{
@@ -133,20 +148,20 @@ function UsersSection() {
               checked={!!filter}
               onChange={(e) => setFilter(e.target.checked ? '1' : '')}
             />
-            <span>Include citizen claimant accounts</span>
+            <span>{localize('شہری درخواست گزاروں کے اکاؤنٹس بھی دکھائیں', 'Citizen accounts bhi shamil karein', 'Include citizen claimant accounts')}</span>
           </label>
         </div>
 
-        {u.loading && <Spinner label="Loading staff registry…" />}
+        {u.loading && <Spinner label={localize('عملے کی فہرست لوڈ ہو رہی ہے…', 'Amla ki fehrist load ho rahi hai…', 'Loading staff registry…')} />}
 
         <div className="table-wrap" style={{ border: 'none', borderRadius: 0 }}>
           <table>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email Address</th>
-                <th>Assigned Role</th>
-                <th>Account Status</th>
+                <th>{localize('نام', 'Naam', 'Name')}</th>
+                <th>{localize('ای میل ایڈریس', 'Email Address', 'Email Address')}</th>
+                <th>{localize('تفویض کردہ کردار', 'Assigned Role', 'Assigned Role')}</th>
+                <th>{localize('اکاؤنٹ کی حیثیت', 'Account Status', 'Account Status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -168,7 +183,13 @@ function UsersSection() {
                       }}
                     >
                       {['citizen', 'helper', 'officer', 'admin', 'auditor'].map((r) => (
-                        <option key={r}>{r}</option>
+                        <option key={r} value={r}>
+                          {r === 'citizen' ? localize('شہری (citizen)', 'Citizen', 'Citizen') :
+                           r === 'helper' ? localize('مددگار (helper)', 'Helper', 'Helper') :
+                           r === 'officer' ? localize('افسر (officer)', 'Officer', 'Officer') :
+                           r === 'admin' ? localize('ایڈمن (admin)', 'Admin', 'Admin') :
+                           localize('آڈیٹر (auditor)', 'Auditor', 'Auditor')}
+                        </option>
                       ))}
                     </select>
                   </td>
@@ -184,7 +205,7 @@ function UsersSection() {
                         }
                       }}
                     >
-                      {x.is_active ? 'Active' : 'Disabled'}
+                      {x.is_active ? localize('فعال', 'Active', 'Active') : localize('غیر فعال', 'Disabled', 'Disabled')}
                     </button>
                   </td>
                 </tr>
@@ -198,6 +219,7 @@ function UsersSection() {
 }
 
 function KeysSection() {
+  const { localize } = useLang()
   const k = useAsync(() => apiGet('/admin/api-keys'), [])
   const [name, setName] = useState('')
   const [fresh, setFresh] = useState(null)
@@ -207,10 +229,9 @@ function KeysSection() {
     <div className="col" style={{ gap: 16 }}>
       <div className="card col" style={{ gap: 14 }}>
         <div>
-          <h3 style={{ margin: 0 }}>Public REST API Credentials</h3>
+          <h3 style={{ margin: 0 }}>{localize('عوامی REST API اسناد', 'Public REST API Credentials', 'Public REST API Credentials')}</h3>
           <p className="small subtle" style={{ margin: '4px 0 0' }}>
-            Authenticate with header <code className="mono">X-API-Key: bh_...</code> against{' '}
-            <code className="mono">/v1/*</code> endpoints. Interactive docs:{' '}
+            {localize('ہیڈر X-API-Key کے ساتھ /v1/* اینڈ پوائنٹس پر تصدیق کریں۔ تعاملی دستاویزات:', 'Header X-API-Key ke sath authenticate karein. Docs:', 'Authenticate with header X-API-Key: bh_... against /v1/* endpoints. Interactive docs:')}{' '}
             <a href={BASE + '/docs'} target="_blank" rel="noreferrer">
               Swagger UI <ExternalLink size={12} style={{ display: 'inline' }} />
             </a>{' '}
@@ -221,10 +242,10 @@ function KeysSection() {
           </p>
         </div>
 
-        <div className="row" style={{ gap: 10 }}>
+        <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
           <input
-            style={{ flex: 1 }}
-            placeholder="Key name or consumer (e.g. 'Sindh Relief Dashboard')"
+            style={{ flex: 1, minWidth: 260 }}
+            placeholder={localize("چابی کا نام یا صارف (مثلاً 'سندھ ریلیف ڈیش بورڈ')", "Key name ya consumer (maslan 'Sindh Relief Dashboard')", "Key name or consumer (e.g. 'Sindh Relief Dashboard')")}
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -253,15 +274,15 @@ function KeysSection() {
             }}
           >
             <Plus size={16} />
-            <span>Generate Key</span>
+            <span>{localize('چابی تیار کریں', 'Key generate karein', 'Generate Key')}</span>
           </button>
         </div>
 
         {fresh && (
-          <div className="banner ok">
-            <CheckCircle2 size={18} />
+          <div className="banner ok" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
             <div>
-              Copy key now (never displayed again):{' '}
+              {localize('چابی ابھی کاپی کریں (دوبارہ نہیں دکھائی جائے گی):', 'Key abhi copy karein (dobara nahi dikhayi jayegi):', 'Copy key now (never displayed again):')}{' '}
               <b className="mono" style={{ color: 'var(--forest-dark)' }}>
                 {fresh.api_key}
               </b>
@@ -275,11 +296,11 @@ function KeysSection() {
           <table>
             <thead>
               <tr>
-                <th>Consumer Name</th>
-                <th>Prefix</th>
-                <th>Granted Scopes</th>
-                <th>Requests</th>
-                <th>Status</th>
+                <th>{localize('صارف کا نام', 'Consumer Name', 'Consumer Name')}</th>
+                <th>{localize('سابقہ', 'Prefix', 'Prefix')}</th>
+                <th>{localize('اجازت کے دائرے', 'Granted Scopes', 'Granted Scopes')}</th>
+                <th>{localize('درخواستیں', 'Requests', 'Requests')}</th>
+                <th>{localize('حیثیت', 'Status', 'Status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -298,10 +319,10 @@ function KeysSection() {
                           k.reload()
                         }}
                       >
-                        Revoke
+                        {localize('منسوخ کریں', 'Mansookh karein', 'Revoke')}
                       </button>
                     ) : (
-                      <span className="badge red">Revoked</span>
+                      <span className="badge red">{localize('منسوخ شدہ', 'Revoked', 'Revoked')}</span>
                     )}
                   </td>
                 </tr>
@@ -315,6 +336,7 @@ function KeysSection() {
 }
 
 function HooksSection() {
+  const { localize } = useLang()
   const w = useAsync(() => apiGet('/admin/webhooks'), [])
   const j = useAsync(() => apiGet('/admin/jobs'), [])
   const [url, setUrl] = useState('')
@@ -325,16 +347,16 @@ function HooksSection() {
       {/* Webhooks */}
       <div className="card col" style={{ gap: 14 }}>
         <div>
-          <h3 style={{ margin: 0 }}>Outbound Event Webhooks</h3>
+          <h3 style={{ margin: 0 }}>{localize('آؤٹ باؤنڈ ایونٹ ویب ہکس', 'Outbound Event Webhooks', 'Outbound Event Webhooks')}</h3>
           <p className="small subtle" style={{ margin: '4px 0 0' }}>
-            Signed with HMAC-SHA256 (<code className="mono">X-Bharosa-Signature</code>) and dispatched with exponential backoff retries.
+            {localize('HMAC-SHA256 کے ساتھ دستخط شدہ اور خودکار دوبارہ کوششوں کے ساتھ بھیجے جاتے ہیں۔', 'HMAC-SHA256 ke sath signed aur retries ke sath dispatched.', 'Signed with HMAC-SHA256 (X-Bharosa-Signature) and dispatched with exponential backoff retries.')}
           </p>
         </div>
 
-        <div className="row" style={{ gap: 10 }}>
+        <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
           <input
-            style={{ flex: 1 }}
-            placeholder="Webhook destination HTTPS URL"
+            style={{ flex: 1, minWidth: 260 }}
+            placeholder={localize('ویب ہک کی منزل کا HTTPS URL', 'Webhook destination HTTPS URL', 'Webhook destination HTTPS URL')}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
           />
@@ -347,15 +369,15 @@ function HooksSection() {
             }}
           >
             <Plus size={16} />
-            <span>Register Webhook</span>
+            <span>{localize('ویب ہک رجسٹر کریں', 'Webhook register karein', 'Register Webhook')}</span>
           </button>
         </div>
 
         {fresh && (
-          <div className="banner ok">
-            <CheckCircle2 size={18} />
+          <div className="banner ok" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
             <div>
-              HMAC Signing Secret (store safely):{' '}
+              {localize('HMAC دستخطی راز (محفوظ رکھیں):', 'HMAC Signing Secret (mehfooz rakhein):', 'HMAC Signing Secret (store safely):')}{' '}
               <b className="mono" style={{ color: 'var(--forest-dark)' }}>
                 {fresh.secret}
               </b>
@@ -374,13 +396,13 @@ function HooksSection() {
                 border: '1px solid var(--border-subtle)'
               }}
             >
-              <div className="row spread">
+              <div className="row spread" style={{ flexWrap: 'wrap', gap: 6 }}>
                 <b className="mono small" style={{ color: 'var(--forest)' }}>
                   {x.url}
                 </b>
-                <span className="small subtle">Events: {x.events.join(', ')}</span>
+                <span className="small subtle">{localize('ایونٹس:', 'Events:', 'Events:')} {x.events.join(', ')}</span>
               </div>
-              <div className="row" style={{ gap: 6 }}>
+              <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
                 {x.recent?.map((r, i) => (
                   <span
                     key={i}
@@ -398,10 +420,10 @@ function HooksSection() {
 
       {/* Background Jobs */}
       <div className="card col" style={{ gap: 14 }}>
-        <div className="row spread">
+        <div className="row spread" style={{ flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <h3 style={{ margin: 0 }}>Asynchronous Job Workers</h3>
-            <span className="small subtle">SMS notification dispatch & webhook queue</span>
+            <h3 style={{ margin: 0 }}>{localize('پس منظر کے اسسٹنٹ ورکرز', 'Background Jobs', 'Asynchronous Job Workers')}</h3>
+            <span className="small subtle">{localize('ایس ایم ایس اطلاعات اور ویب ہک کی ترسیل', 'SMS aur webhook delivery queue', 'SMS notification dispatch & webhook queue')}</span>
           </div>
           <button
             className="btn ghost small"
@@ -411,11 +433,11 @@ function HooksSection() {
             }}
           >
             <Play size={14} />
-            <span>Trigger Workers Now</span>
+            <span>{localize('ورکرز ابھی چلائیں', 'Workers abhi chalayein', 'Trigger Workers Now')}</span>
           </button>
         </div>
 
-        <div className="row" style={{ gap: 8 }}>
+        <div className="row" style={{ gap: 8, flexWrap: 'wrap' }}>
           {Object.entries(j.data?.counts || {}).map(([k, v]) => (
             <span key={k} className="badge" style={{ background: 'var(--sage-soft)' }}>
               {k}: {v}
@@ -430,31 +452,32 @@ function HooksSection() {
 }
 
 function PlanSection() {
+  const { localize } = useLang()
   const t = useAsync(() => apiGet('/admin/tenant'), [])
-  if (t.loading) return <Spinner label="Loading subscription & quota telemetry…" />
+  if (t.loading) return <Spinner label={localize('سبسکرپشن اور کوٹہ لوڈ ہو رہا ہے…', 'Quota telemetry load ho rahi hai…', 'Loading subscription & quota telemetry…')} />
   const x = t.data
 
   return (
     <div className="card col" style={{ gap: 16 }}>
-      <div className="row spread card-header" style={{ margin: 0, paddingBottom: 10 }}>
+      <div className="row spread card-header" style={{ margin: 0, paddingBottom: 10, flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h3 style={{ margin: 0 }}>Department Plan & Monthly Quota</h3>
-          <span className="small subtle">Tenant: {x.name}</span>
+          <h3 style={{ margin: 0 }}>{localize('محکمانہ منصوبہ اور ماہانہ کوٹہ', 'Department Plan & Quota', 'Department Plan & Monthly Quota')}</h3>
+          <span className="small subtle">{localize('ادارہ:', 'Idara:', 'Tenant:')} {x.name}</span>
         </div>
         <span className="badge" style={{ textTransform: 'uppercase' }}>
-          {x.plan} Tier
+          {x.plan} {localize('درجہ', 'Tier', 'Tier')}
         </span>
       </div>
 
       <div className="grid">
         <div className="card flat col" style={{ gap: 4, padding: 14 }}>
-          <div className="kpi-l">Current Plan</div>
+          <div className="kpi-l">{localize('موجودہ پلان', 'Mojooda Plan', 'Current Plan')}</div>
           <div className="kpi" style={{ textTransform: 'capitalize' }}>
             {x.plan}
           </div>
         </div>
         <div className="card flat col" style={{ gap: 4, padding: 14 }}>
-          <div className="kpi-l">Monthly Claim Quota</div>
+          <div className="kpi-l">{localize('ماہانہ درخواستوں کا کوٹہ', 'Mahana Darkhast Quota', 'Monthly Claim Quota')}</div>
           <div className="kpi">
             {x.usage_this_month} / {x.monthly_quota}
           </div>
@@ -463,7 +486,7 @@ function PlanSection() {
 
       <div className="col" style={{ gap: 6 }}>
         <div className="row spread small subtle">
-          <span>Quota Consumption</span>
+          <span>{localize('کوٹہ کا استعمال', 'Quota ka istemal', 'Quota Consumption')}</span>
           <span className="mono">
             {Math.round((x.usage_this_month / Math.max(1, x.monthly_quota)) * 100)}%
           </span>
@@ -477,7 +500,7 @@ function PlanSection() {
           />
         </div>
         <span className="small subtle">
-          Incoming claims will receive HTTP 429 when quota is fully saturated.
+          {localize('کوٹہ مکمل ہونے پر آنے والی درخواستوں کو HTTP 429 جواب دیا جائے گا۔', 'Quota mukammal hone par HTTP 429 diya jayega.', 'Incoming claims will receive HTTP 429 when quota is fully saturated.')}
         </span>
       </div>
 

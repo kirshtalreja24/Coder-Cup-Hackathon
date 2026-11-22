@@ -130,14 +130,19 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
   useEffect(() => {
     getVoiceStatus().then(setVoiceInfo)
     if (initialPrompt) {
-      playPrompt(initialPrompt, 'خوش آمدید۔ میں آپ کی مدد کروں گا۔', 'ur')
+      const initialText = lang === 'en'
+        ? 'Welcome. I will help you.'
+        : lang === 'roman'
+          ? 'Khush aamdeed. Main aap ki madad karoon ga.'
+          : 'خوش آمدید۔ میں آپ کی مدد کروں گا۔'
+      playPrompt(initialPrompt, initialText, lang)
     }
     return () => {
       stop()
       if (stopListenRef.current) stopListenRef.current()
       setState('idle')
     }
-  }, [initialPrompt])
+  }, [initialPrompt, lang])
 
   // Start / Stop listening
   const handleToggleListen = () => {
@@ -173,7 +178,9 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
         setErrorMessage(
           lang === 'ur'
             ? 'آواز واضح نہیں سنی جا سکی۔ براہ کرم دوبارہ کوشش کریں۔'
-            : 'Could not hear clearly. Tap the microphone and speak again.'
+            : lang === 'roman'
+              ? 'Awaz wazeh nahi suni ja saki. Barah-e-karam dobara koshish karein.'
+              : 'Could not hear clearly. Tap the microphone and speak again.'
         )
       },
       onEnd: () => {
@@ -257,38 +264,46 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
     setErrorMessage('')
 
     try {
+      const queryLang = lang === 'en' ? 'en' : lang === 'roman' ? 'roman' : 'ur'
       const res = await apiPost('/ask', {
         question: queryText,
-        lang: qlang
+        lang: lang === 'en' ? 'en' : 'ur'
       })
       setResponse(res)
       setAnswerLang(qlang)
       setState('idle')
 
-      // Automatically speak the answer
+      // Automatically speak the answer in chosen language
       const answerToSpeak = res.answered
         ? res.answer
-        : qlang === 'ur'
+        : lang === 'ur'
           ? (res.answer_ur || res.answer)
-          : res.answer
+          : (lang === 'roman' ? (res.answer_roman || res.answer) : res.answer)
 
-      speak(answerToSpeak, qlang)
+      speak(answerToSpeak, lang === 'en' ? 'en' : 'ur')
     } catch (e) {
       setState('error')
       setErrorMessage(
         lang === 'ur'
           ? 'معذرت، جواب حاصل کرنے میں خرابی ہوئی۔ براہ کرم دوبارہ کوشش کریں۔'
-          : 'Could not retrieve answer. Please try again.'
+          : lang === 'roman'
+            ? 'Maazrat, jawab hasil karne mein kharabi hui. Dobara koshish karein.'
+            : 'Could not retrieve answer. Please try again.'
       )
     }
   }
 
-  // Quick guidance shortcuts
-  const handlePlayGuidance = (promptId, urduText, enText) => {
+  // Quick guidance shortcuts (toggle playback on click)
+  const handlePlayGuidance = (promptId, urduText, enText, romanText) => {
+    if (playingClipId === promptId) {
+      stop()
+      setPlayingClipId(null)
+      return
+    }
     stop()
     setPlayingClipId(promptId)
-    const targetText = lang === 'en' ? enText : urduText
-    playPrompt(promptId, targetText, lang === 'en' ? 'en' : 'ur')
+    const targetText = lang === 'en' ? enText : lang === 'roman' ? (romanText || enText) : urduText
+    playPrompt(promptId, targetText, lang)
   }
 
   const content = (
@@ -658,7 +673,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                   <button
                     type="button"
                     className="ghost small icon-btn"
-                    onClick={() => speak(transcript, lang === 'en' ? 'en' : 'ur')}
+                    onClick={() => speak(transcript, lang)}
                     title="Read transcript aloud"
                   >
                     <Volume2 size={14} />
@@ -836,7 +851,8 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                   handlePlayGuidance(
                     'welcome',
                     'ہمیں بتائیں کہ آپ کو کس چیز میں مدد چاہیے۔',
-                    'Tell us what you need help with.'
+                    'Tell us what you need help with.',
+                    'Humein batayein ke aap ko kis cheez mein madad chahiye.'
                   )
                 }
                 style={{
@@ -854,7 +870,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                 <div className="row spread" style={{ width: '100%', alignItems: 'center' }}>
                   <Volume2 size={14} style={{ color: 'var(--gold, #C49A56)' }} />
                   <span style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: 'var(--muted, #6B7280)' }}>
-                    PLAY
+                    {playingClipId === 'welcome' ? 'STOP' : 'PLAY'}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--forest-dark, #0D2318)' }}>
@@ -873,7 +889,8 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                   handlePlayGuidance(
                     'offline_saved',
                     'آپ کی درخواست اس فون پر محفوظ ہے۔',
-                    'Your application has been saved.'
+                    'Your application has been saved.',
+                    'Aap ki darkhwast is phone par mehfooz hai.'
                   )
                 }
                 style={{
@@ -891,7 +908,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                 <div className="row spread" style={{ width: '100%', alignItems: 'center' }}>
                   <Volume2 size={14} style={{ color: 'var(--gold, #C49A56)' }} />
                   <span style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: 'var(--muted, #6B7280)' }}>
-                    PLAY
+                    {playingClipId === 'offline_saved' ? 'STOP' : 'PLAY'}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--forest-dark, #0D2318)' }}>
@@ -910,7 +927,8 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                   handlePlayGuidance(
                     'human_review',
                     'ہمیں آپ کی درخواست کی جانچ کے لیے کسی انسان کی ضرورت ہے۔',
-                    'We need someone to review your application.'
+                    'We need someone to review your application.',
+                    'Humein aap ki darkhwast ke jaize ke liye kisi insaan ki zaroorat hai.'
                   )
                 }
                 style={{
@@ -928,7 +946,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                 <div className="row spread" style={{ width: '100%', alignItems: 'center' }}>
                   <Volume2 size={14} style={{ color: 'var(--gold, #C49A56)' }} />
                   <span style={{ fontSize: '0.62rem', fontFamily: 'monospace', color: 'var(--muted, #6B7280)' }}>
-                    PLAY
+                    {playingClipId === 'human_review' ? 'STOP' : 'PLAY'}
                   </span>
                 </div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--forest-dark, #0D2318)' }}>
@@ -1026,7 +1044,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                             stop()
                             setPlayingClipId(null)
                           } else {
-                            handlePlayGuidance(p.id, p.ur, p.en)
+                            handlePlayGuidance(p.id, p.ur, p.en, p.roman)
                           }
                         }}
                         style={{ padding: '4px 10px', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 4 }}

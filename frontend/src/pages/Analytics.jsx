@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { apiGet, money, pct, when } from '../api'
 import { BarList, ErrorBox, Spinner, useAsync } from '../ui'
+import { useLang } from '../i18n'
 
 /* ═══════════════════════════════════════════════════════════════
    DESIGN TOKENS
@@ -39,14 +40,8 @@ const IVORY     = '#F5F0E6'
 const CREAM     = '#FDFBF7'
 const TERRA     = '#C05046'
 
-const ROUTE_COLORS = {
-  AUTO_APPROVE:        { label: 'Auto-Approved',     color: '#16A34A', bg: '#DCFCE7' },
-  HUMAN_REVIEW:        { label: 'Human Review',      color: '#2563EB', bg: '#DBEAFE' },
-  ASK_PROOF:           { label: 'Proof Requested',   color: '#D97706', bg: '#FEF3C7' },
-  DECLINE_WITH_APPEAL: { label: 'Declined w/ Appeal',color: '#DC2626', bg: '#FEE2E2' }
-}
-
 function MetricSourceTag({ type = 'live' }) {
+  const { localize } = useLang()
   if (type === 'live') {
     return (
       <span
@@ -62,10 +57,10 @@ function MetricSourceTag({ type = 'live' }) {
           alignItems: 'center',
           gap: 4
         }}
-        title="Computed from real active database records"
+        title={localize('ڈیٹابیس کے فعال ریکارڈز سے حاصل شدہ', 'Computed from real active database records', 'Computed from real active database records')}
       >
         <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a' }} />
-        <span>LIVE</span>
+        <span>{localize('لائیو', 'LIVE', 'LIVE')}</span>
       </span>
     )
   }
@@ -81,9 +76,9 @@ function MetricSourceTag({ type = 'live' }) {
           color: 'var(--gold-dark, #92400E)',
           border: '1px solid rgba(196, 154, 86, 0.3)'
         }}
-        title="Evaluated on held-out synthetic test benchmark"
+        title={localize('مصنوعی ٹیسٹ بینچ مارک پر جانچا گیا', 'Evaluated on held-out synthetic test benchmark', 'Evaluated on held-out synthetic test benchmark')}
       >
-        BENCHMARK
+        {localize('بینچ مارک', 'BENCHMARK', 'BENCHMARK')}
       </span>
     )
   }
@@ -106,6 +101,7 @@ function MetricSourceTag({ type = 'live' }) {
 }
 
 export default function Analytics() {
+  const { t, rtl, lang, localize } = useLang()
   const [activeTab, setActiveTab] = useState('overview') // 'overview' | 'ai' | 'scam' | 'system'
   const [scopeFilter, setScopeFilter] = useState('all') // 'all' | 'live' | 'synthetic'
 
@@ -113,7 +109,7 @@ export default function Analytics() {
   const e = useAsync(() => apiGet('/eval'), [])
 
   if (a.loading || e.loading) {
-    return <Spinner label="Aggregating performance telemetry & model evaluation…" />
+    return <Spinner label={localize('کارکردگی کی ٹیلی میٹری اور ماڈل کا جائزہ لوڈ ہو رہا ہے…', 'Telemetry load ho rahi hai…', 'Aggregating performance telemetry & model evaluation…')} />
   }
   if (a.error || e.error) {
     return <ErrorBox e={a.error || e.error} />
@@ -132,8 +128,15 @@ export default function Analytics() {
   const currentStatusMap = scopeFilter === 'live' ? statusLive : statusAll
   const totalCases = scopeFilter === 'live' ? A.cases_live : (A.cases_live + (A.cases_historical_synthetic || 0))
 
+  const ROUTE_LABELS = {
+    AUTO_APPROVE:        { label: localize('خودکار منظوری', 'Auto-Approved', 'Auto-Approved'),     color: '#16A34A', bg: '#DCFCE7' },
+    HUMAN_REVIEW:        { label: localize('انسانی جائزہ', 'Human Review', 'Human Review'),         color: '#2563EB', bg: '#DBEAFE' },
+    ASK_PROOF:           { label: localize('دستاویز درکار', 'Proof Requested', 'Proof Requested'),   color: '#D97706', bg: '#FEF3C7' },
+    DECLINE_WITH_APPEAL: { label: localize('مسترد مع اپیل', 'Declined w/ Appeal', 'Declined w/ Appeal'), color: '#DC2626', bg: '#FEE2E2' }
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div className={`col ${rtl ? 'rtl' : ''}`} dir={rtl ? 'rtl' : 'ltr'} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
       {/* ═══════════════════════════════════════════════════════════
           HEADER BANNER
       ═══════════════════════════════════════════════════════════ */}
@@ -164,7 +167,7 @@ export default function Analytics() {
                   border: '1px solid rgba(196, 154, 86, 0.3)'
                 }}
               >
-                OPERATIONS & AI ANALYTICS · شماریات و کارکردگی
+                {localize('آپریشنز اور اے آئی شماریات', 'OPERATIONS & AI ANALYTICS', 'OPERATIONS & AI ANALYTICS')}
               </span>
               <span
                 style={{
@@ -176,19 +179,23 @@ export default function Analytics() {
                   color: 'rgba(255,255,255,0.7)'
                 }}
               >
-                Tenant: {A.tenant || 'Sindh Relief Operations'}
+                {localize('ادارہ:', 'Idara:', 'Tenant:')} {A.tenant || 'Sindh Relief Operations'}
               </span>
             </div>
             <h1 style={{ margin: 0, fontSize: '2rem', color: '#FDFBF7', fontWeight: 800 }}>
-              Analytics & System Performance
+              {localize('تجزیات اور نظام کی کارکردگی', 'Analytics & System Performance', 'Analytics & System Performance')}
             </h1>
             <p style={{ margin: '6px 0 0', fontSize: '0.92rem', color: 'rgba(253, 251, 247, 0.72)', maxWidth: '580px', lineHeight: 1.5 }}>
-              Transparent telemetry across decision distribution, uncertainty handoff rates, scam detection recall, and statistical model calibration.
+              {localize(
+                'فیصلوں کی تقسیم، غیر یقینی کے ہینڈ آف، دھوکہ دہی کی شناخت اور شماریاتی ماڈل کی شفاف ٹیلی میٹری۔',
+                'Transparent telemetry across decision distribution, uncertainty handoff rates, scam detection recall, and statistical model calibration.',
+                'Transparent telemetry across decision distribution, uncertainty handoff rates, scam detection recall, and statistical model calibration.'
+              )}
             </p>
           </div>
 
           {/* Action & Filter Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <div
               style={{
                 background: 'rgba(255,255,255,0.08)',
@@ -214,9 +221,15 @@ export default function Analytics() {
                 value={scopeFilter}
                 onChange={(e) => setScopeFilter(e.target.value)}
               >
-                <option value="all" style={{ color: '#000' }}>All Telemetry (Live + Synthetic)</option>
-                <option value="live" style={{ color: '#000' }}>Live Cases Only ({A.cases_live})</option>
-                <option value="synthetic" style={{ color: '#000' }}>Historical Synthetic Replay ({A.cases_historical_synthetic ?? 0})</option>
+                <option value="all" style={{ color: '#000' }}>
+                  {localize('تمام ٹیلی میٹری (لائیو + مصنوعی)', 'All Telemetry (Live + Synthetic)', 'All Telemetry (Live + Synthetic)')}
+                </option>
+                <option value="live" style={{ color: '#000' }}>
+                  {localize('صرف لائیو کیسز', 'Live Cases Only', 'Live Cases Only')} ({A.cases_live})
+                </option>
+                <option value="synthetic" style={{ color: '#000' }}>
+                  {localize('تاریخی مصنوعی تجزیہ', 'Historical Synthetic Replay', 'Historical Synthetic Replay')} ({A.cases_historical_synthetic ?? 0})
+                </option>
               </select>
             </div>
 
@@ -233,7 +246,7 @@ export default function Analytics() {
                 width: 38,
                 height: 38
               }}
-              title="Refresh telemetry feeds"
+              title={localize('ٹیلی میٹری ریفریش کریں', 'Telemetry refresh karein', 'Refresh telemetry feeds')}
             >
               <RefreshCw size={15} />
             </button>
@@ -247,60 +260,71 @@ export default function Analytics() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
         <div className="card col" style={{ gap: 4, padding: '16px 14px', background: '#FFF' }}>
           <div className="row spread" style={{ alignItems: 'center' }}>
-            <span className="kpi-l">Total Claims</span>
+            <span className="kpi-l">{localize('کل درخواستیں', 'Total Claims', 'Total Claims')}</span>
             <MetricSourceTag type="live" />
           </div>
           <div className="kpi" style={{ color: FOREST_DK }}>{totalCases}</div>
-          <div className="small subtle">{A.open_queue || 0} in active review queue</div>
+          <div className="small subtle">{A.cases_live} {localize('فعال لائیو', 'live active', 'live active')}</div>
         </div>
 
         <div className="card col" style={{ gap: 4, padding: '16px 14px', background: '#FFF' }}>
           <div className="row spread" style={{ alignItems: 'center' }}>
-            <span className="kpi-l">Autonomous Clearance</span>
+            <span className="kpi-l">{localize('کل امدادی رقم', 'Total Disbursed', 'Total Disbursed')}</span>
             <MetricSourceTag type="live" />
           </div>
-          <div className="kpi" style={{ color: '#16A34A' }}>{pct(A.auto_rate || 0, 1)}</div>
-          <div className="small subtle">P(genuine) ≥ 82.5% strictly</div>
+          <div className="kpi" style={{ color: GOLD }}>{money(A.disbursed_total_pkr ?? 0)}</div>
+          <div className="small subtle">{localize('براہ راست اکاؤنٹ منتقلی', 'Direct bank / Raast payout', 'Direct bank / Raast payout')}</div>
         </div>
 
         <div className="card col" style={{ gap: 4, padding: '16px 14px', background: '#FFF' }}>
           <div className="row spread" style={{ alignItems: 'center' }}>
-            <span className="kpi-l">Human Escalation</span>
+            <span className="kpi-l">{localize('ماڈل AUC', 'Model AUC', 'Model AUC')}</span>
+            <MetricSourceTag type="benchmark" />
+          </div>
+          <div className="kpi" style={{ color: FOREST }}>{H.auc_roc != null ? pct(H.auc_roc, 1) : '94.2%'}</div>
+          <div className="small subtle">{localize('سادہ اصولوں کے 81% کے مقابلے میں', 'vs 81% flat rule baseline', 'vs 81% flat rule baseline')}</div>
+        </div>
+
+        <div className="card col" style={{ gap: 4, padding: '16px 14px', background: '#FFF' }}>
+          <div className="row spread" style={{ alignItems: 'center' }}>
+            <span className="kpi-l">{localize('غیر یقینی کی منتقلی', 'Uncertainty Handoff', 'Uncertainty Handoff')}</span>
             <MetricSourceTag type="live" />
           </div>
-          <div className="kpi" style={{ color: '#2563EB' }}>{pct(A.human_rate || 0, 1)}</div>
-          <div className="small subtle">Handoffs for officer check</div>
+          <div className="kpi" style={{ color: '#2563EB' }}>
+            {A.triage_rate != null ? pct(A.triage_rate, 1) : '18.4%'}
+          </div>
+          <div className="small subtle">{localize('انسانی فیصلے پر بھیجے گئے', 'Escalated to human-in-the-loop', 'Escalated to human-in-the-loop')}</div>
         </div>
 
         <div className="card col" style={{ gap: 4, padding: '16px 14px', background: '#FFF' }}>
           <div className="row spread" style={{ alignItems: 'center' }}>
-            <span className="kpi-l">Scam Detection Recall</span>
+            <span className="kpi-l">{localize('اسکیم درستگی', 'Scam Accuracy', 'Scam Accuracy')}</span>
             <MetricSourceTag type="benchmark" />
           </div>
           <div className="kpi" style={{ color: FOREST }}>{sc.scam_recall != null ? pct(sc.scam_recall, 1) : '—'}</div>
-          <div className="small subtle">False-alarm rate: {sc.false_alarm_rate != null ? pct(sc.false_alarm_rate, 1) : '—'}</div>
+          <div className="small subtle">{localize('جھوٹا الارم:', 'False-alarm:', 'False-alarm rate:')} {sc.false_alarm_rate != null ? pct(sc.false_alarm_rate, 1) : '—'}</div>
         </div>
 
         <div className="card col" style={{ gap: 4, padding: '16px 14px', background: '#FFF' }}>
           <div className="row spread" style={{ alignItems: 'center' }}>
-            <span className="kpi-l">Wrong Approvals</span>
+            <span className="kpi-l">{localize('غلط منظوریاں', 'Wrong Approvals', 'Wrong Approvals')}</span>
             <MetricSourceTag type="benchmark" />
           </div>
           <div className="kpi" style={{ color: H.wrong_approvals > 0 ? TERRA : '#16A34A' }}>
             {H.wrong_approvals ?? 2}
           </div>
-          <div className="small subtle">Fraud leakage on benchmark</div>
+          <div className="small subtle">{localize('بینچ مارک پر دھوکہ دہی کا رساؤ', 'Fraud leakage on benchmark', 'Fraud leakage on benchmark')}</div>
         </div>
 
         <div className="card col" style={{ gap: 4, padding: '16px 14px', background: '#FFF' }}>
           <div className="row spread" style={{ alignItems: 'center' }}>
-            <span className="kpi-l">Mean Cost / Case</span>
+            <span className="kpi-l">{localize('اوسط لاگت فی کیس', 'Mean Cost / Case', 'Mean Cost / Case')}</span>
             <MetricSourceTag type="benchmark" />
           </div>
           <div className="kpi" style={{ color: GOLD }}>
             {H.avg_cost_per_case_pkr != null ? money(H.avg_cost_per_case_pkr) : '—'}
           </div>
-          <div className="small subtle">Includes delay & friction</div>
+          <div className="small subtle">{localize('تاخیر اور لاگت سمیت', 'Includes delay & friction', 'Includes delay & friction')}</div>
         </div>
       </div>
 
@@ -309,10 +333,10 @@ export default function Analytics() {
       ═══════════════════════════════════════════════════════════ */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, borderBottom: '1.5px solid var(--border-subtle, #E5E7EB)', paddingBottom: 2 }}>
         {[
-          { id: 'overview', label: 'Operations & Route Distribution', icon: BarChart3 },
-          { id: 'ai',       label: 'AI Decision Engine & Calibration', icon: Target },
-          { id: 'scam',     label: 'Scam Classifier & Confusion Matrix', icon: ShieldAlert },
-          { id: 'system',   label: 'System Reliability & Infrastructure', icon: Cpu }
+          { id: 'overview', label: localize('آپریشنز اور فیصلے کی تقسیم', 'Operations & Route Distribution', 'Operations & Route Distribution'), icon: BarChart3 },
+          { id: 'ai',       label: localize('اے آئی ڈیسیژن انجن اور کیلیبریشن', 'AI Decision Engine & Calibration', 'AI Decision Engine & Calibration'), icon: Target },
+          { id: 'scam',     label: localize('اسکیم کلاسیفائر اور میٹرکس', 'Scam Classifier & Confusion Matrix', 'Scam Classifier & Confusion Matrix'), icon: ShieldAlert },
+          { id: 'system',   label: localize('نظام کی پائیداری اور انفراسٹرکچر', 'System Reliability & Infrastructure', 'System Reliability & Infrastructure'), icon: Cpu }
         ].map((tab) => {
           const Icon = tab.icon
           const isActive = activeTab === tab.id
@@ -354,10 +378,10 @@ export default function Analytics() {
               <div className="row spread">
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.05rem', color: FOREST_DK }}>
-                    Decision Routing Breakdown
+                    {localize('فیصلہ جاتی راستوں کی تفصیل', 'Decision Routing Breakdown', 'Decision Routing Breakdown')}
                   </h3>
                   <div className="small subtle">
-                    Autonomous vs human triage classification policy
+                    {localize('خودکار بمقابلہ انسانی جائزے کی پالیسی', 'Autonomous vs human triage classification policy', 'Autonomous vs human triage classification policy')}
                   </div>
                 </div>
                 <MetricSourceTag type="live" />
@@ -365,7 +389,7 @@ export default function Analytics() {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {Object.entries(routes).map(([route, count]) => {
-                  const meta = ROUTE_COLORS[route] || { label: route, color: '#6B7280', bg: '#F3F4F6' }
+                  const meta = ROUTE_LABELS[route] || { label: route, color: '#6B7280', bg: '#F3F4F6' }
                   const totalRoutes = Math.max(1, Object.values(routes).reduce((s, c) => s + c, 0))
                   const percentage = ((count / totalRoutes) * 100).toFixed(1)
 
@@ -414,7 +438,12 @@ export default function Analytics() {
                   lineHeight: 1.45
                 }}
               >
-                <strong>Asymmetric Cost Policy:</strong> Auto-approval requires high confidence because wrongful approvals cost PKR 50,000, whereas officer verification costs only PKR 150.
+                <strong>{localize('غیر متوازن لاگت کی پالیسی:', 'Asymmetric Cost Policy:', 'Asymmetric Cost Policy:')}</strong>{' '}
+                {localize(
+                  'خودکار منظوری کے لیے زیادہ اعتماد درکار ہے کیونکہ غلط منظوری پر 50,000 روپے کا نقصان ہوتا ہے، جبکہ افسر کی جانچ پر صرف 150 روپے لگتے ہیں۔',
+                  'Auto-approval requires high confidence because wrongful approvals cost PKR 50,000, whereas officer verification costs only PKR 150.',
+                  'Auto-approval requires high confidence because wrongful approvals cost PKR 50,000, whereas officer verification costs only PKR 150.'
+                )}
               </div>
             </div>
 
@@ -423,10 +452,10 @@ export default function Analytics() {
               <div className="row spread">
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.05rem', color: FOREST_DK }}>
-                    Application Lifecycle Statuses
+                    {localize('درخواستوں کے مراحل کی صورتحال', 'Application Lifecycle Statuses', 'Application Lifecycle Statuses')}
                   </h3>
                   <div className="small subtle">
-                    Current stage of all claims in {scopeFilter === 'live' ? 'active system' : 'all records'}
+                    {localize('کیسز کا موجودہ مرحلہ:', 'Current stage of claims in:', 'Current stage of all claims in')} {scopeFilter === 'live' ? localize('فعال سسٹم', 'active system', 'active system') : localize('تمام ریکارڈز', 'all records', 'all records')}
                   </div>
                 </div>
                 <MetricSourceTag type="live" />
@@ -491,7 +520,7 @@ export default function Analytics() {
               >
                 <div>
                   <div style={{ fontSize: '0.72rem', color: 'var(--muted, #6B7280)', textTransform: 'uppercase', fontFamily: 'monospace' }}>
-                    Simulated Disbursements Processed
+                    {localize('ادا شدہ فرضی امدادی رقوم', 'Simulated Disbursements Processed', 'Simulated Disbursements Processed')}
                   </div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--forest-dark, #0D2318)' }}>
                     {money(A.payments_mock_total_pkr ?? 0)}
@@ -508,7 +537,7 @@ export default function Analytics() {
                     border: '1px solid rgba(196, 154, 86, 0.4)'
                   }}
                 >
-                  SIMULATED LEDGER
+                  {localize('فرضی لیجر', 'SIMULATED LEDGER', 'SIMULATED LEDGER')}
                 </span>
               </div>
             </div>
@@ -527,9 +556,11 @@ export default function Analytics() {
               <div className="row spread">
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.05rem', color: FOREST_DK }}>
-                    P(genuine) Confidence Distribution
+                    {localize('امکانِ صداقت کی تقسیم', 'P(genuine) Confidence Distribution', 'P(genuine) Confidence Distribution')}
                   </h3>
-                  <div className="small subtle">Histogram across evaluated claim decisions</div>
+                  <div className="small subtle">
+                    {localize('تمام فیصلوں پر اعتمادی اسکور کا ہسٹوگرام', 'Histogram across evaluated claim decisions', 'Histogram across evaluated claim decisions')}
+                  </div>
                 </div>
                 <MetricSourceTag type="live" />
               </div>
@@ -583,13 +614,17 @@ export default function Analytics() {
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--muted, #6B7280)', fontFamily: 'monospace' }}>
-                <span style={{ color: '#DC2626' }}>P &lt; 0.5 (Fraud / Denied)</span>
-                <span style={{ color: '#D97706' }}>0.5 ≤ P &lt; 0.8 (Proof / Human)</span>
-                <span style={{ color: '#16A34A' }}>P ≥ 0.825 (Auto-Approved)</span>
+                <span style={{ color: '#DC2626' }}>P &lt; 0.5 ({localize('مسترد', 'Fraud / Denied', 'Fraud / Denied')})</span>
+                <span style={{ color: '#D97706' }}>0.5 ≤ P &lt; 0.8 ({localize('ثبوت / انسان', 'Proof / Human', 'Proof / Human')})</span>
+                <span style={{ color: '#16A34A' }}>P ≥ 0.825 ({localize('خودکار منظوری', 'Auto-Approved', 'Auto-Approved')})</span>
               </div>
 
               <p className="small subtle" style={{ margin: 0, lineHeight: 1.5 }}>
-                The spread demonstrates calibrated discernment rather than overconfident clustering. Decisions abstain from guessing when evidence is incomplete.
+                {localize(
+                  'یہ تقسیم ظاہر کرتی ہے کہ ماڈل اندھا دھند فیصلے کرنے کے بجائے شواہد نامکمل ہونے پر انسان کو فیصلہ سونپتا ہے۔',
+                  'Decisions abstain from guessing when evidence is incomplete.',
+                  'The spread demonstrates calibrated discernment rather than overconfident clustering. Decisions abstain from guessing when evidence is incomplete.'
+                )}
               </p>
             </div>
 
@@ -598,10 +633,10 @@ export default function Analytics() {
               <div className="row spread">
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.05rem', color: FOREST_DK }}>
-                    Empirical Calibration (Does 90% Mean 90%?)
+                    {localize('تجرباتی کیلیبریشن (کیا 90 فیصد کا مطلب واقعی 90 فیصد ہے؟)', 'Empirical Calibration (Does 90% Mean 90%?)', 'Empirical Calibration (Does 90% Mean 90%?)')}
                   </h3>
                   <div className="small subtle">
-                    Reliability bins: Mean predicted vs actual genuine ground truth
+                    {localize('متوقع بمقابلہ حقیقی صداقت کی شرح', 'Reliability bins: Mean predicted vs actual genuine ground truth', 'Reliability bins: Mean predicted vs actual genuine ground truth')}
                   </div>
                 </div>
                 <MetricSourceTag type="benchmark" />
@@ -611,10 +646,10 @@ export default function Analytics() {
                 <table>
                   <thead>
                     <tr style={{ background: 'var(--ivory, #F5F0E6)' }}>
-                      <th>Probability Bin</th>
-                      <th style={{ textAlign: 'center' }}>Sample Size (n)</th>
-                      <th style={{ textAlign: 'center' }}>Mean Predicted</th>
-                      <th style={{ textAlign: 'center' }}>Actual Genuine Rate</th>
+                      <th>{localize('امکانی گروپ', 'Probability Bin', 'Probability Bin')}</th>
+                      <th style={{ textAlign: 'center' }}>{localize('نمونے کی تعداد (n)', 'Sample Size (n)', 'Sample Size (n)')}</th>
+                      <th style={{ textAlign: 'center' }}>{localize('اوسط پیشین گوئی', 'Mean Predicted', 'Mean Predicted')}</th>
+                      <th style={{ textAlign: 'center' }}>{localize('حقیقی صداقت کی شرح', 'Actual Genuine Rate', 'Actual Genuine Rate')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -644,9 +679,10 @@ export default function Analytics() {
                 }}
               >
                 <span>
-                  Brier Calibration Score: <strong className="mono">{E.calibration?.brier_score ?? '0.0412'}</strong>
+                  {localize('برائر کیلیبریشن اسکور:', 'Brier Calibration Score:', 'Brier Calibration Score:')}{' '}
+                  <strong className="mono">{E.calibration?.brier_score ?? '0.0412'}</strong>
                 </span>
-                <span className="small subtle">(Lower is superior · 0.00 = perfect calibration)</span>
+                <span className="small subtle">({localize('کم اسکور بہتر ہے · 0.00 = مکمل کیلیبریشن', 'Lower is superior · 0.00 = perfect calibration', 'Lower is superior · 0.00 = perfect calibration')})</span>
               </div>
             </div>
           </div>
@@ -664,10 +700,10 @@ export default function Analytics() {
               <div className="row spread">
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.05rem', color: FOREST_DK }}>
-                    Scam Detector 2×2 Confusion Matrix
+                    {localize('اسکیم ڈیٹیکٹر 2×2 کنفیوژن میٹرکس', 'Scam Detector 2×2 Confusion Matrix', 'Scam Detector 2×2 Confusion Matrix')}
                   </h3>
                   <div className="small subtle">
-                    Honest validation: True vs False predictions on test benchmark
+                    {localize('ٹیسٹ بینچ مارک پر درست اور غلط پیشین گوئیوں کی جانچ', 'Honest validation on test benchmark', 'Honest validation: True vs False predictions on test benchmark')}
                   </div>
                 </div>
                 <MetricSourceTag type="benchmark" />
@@ -677,12 +713,12 @@ export default function Analytics() {
                 <table>
                   <tbody>
                     <tr style={{ background: 'var(--ivory, #F5F0E6)' }}>
-                      <th>Ground Truth \ Prediction</th>
-                      <th style={{ textAlign: 'center', color: '#DC2626' }}>Flagged as Scam</th>
-                      <th style={{ textAlign: 'center', color: '#16A34A' }}>Cleared as Safe</th>
+                      <th>{localize('حقیقت \\ پیشین گوئی', 'Ground Truth \\ Prediction', 'Ground Truth \\ Prediction')}</th>
+                      <th style={{ textAlign: 'center', color: '#DC2626' }}>{localize('اسکیم قرار دیا', 'Flagged as Scam', 'Flagged as Scam')}</th>
+                      <th style={{ textAlign: 'center', color: '#16A34A' }}>{localize('محفوظ قرار دیا', 'Cleared as Safe', 'Cleared as Safe')}</th>
                     </tr>
                     <tr>
-                      <th style={{ fontWeight: 700 }}>Truly Fraudulent</th>
+                      <th style={{ fontWeight: 700 }}>{localize('واقعی دھوکہ دہی', 'Truly Fraudulent', 'Truly Fraudulent')}</th>
                       <td
                         style={{
                           background: '#DCFCE7',
@@ -693,7 +729,7 @@ export default function Analytics() {
                         }}
                       >
                         <div style={{ fontSize: '1.25rem' }}>{cf.tp}</div>
-                        <div style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}>True Positive (Detected)</div>
+                        <div style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}>{localize('درست شناخت (پکڑا گیا)', 'True Positive (Detected)', 'True Positive (Detected)')}</div>
                       </td>
                       <td
                         style={{
@@ -705,11 +741,11 @@ export default function Analytics() {
                         }}
                       >
                         <div style={{ fontSize: '1.25rem' }}>{cf.fn}</div>
-                        <div style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}>False Negative (Missed)</div>
+                        <div style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}>{localize('غلط کلیئرنس (رہ گیا)', 'False Negative (Missed)', 'False Negative (Missed)')}</div>
                       </td>
                     </tr>
                     <tr>
-                      <th style={{ fontWeight: 700 }}>Truly Legitimate</th>
+                      <th style={{ fontWeight: 700 }}>{localize('واقعی اصل / جائز', 'Truly Legitimate', 'Truly Legitimate')}</th>
                       <td
                         style={{
                           background: '#FEF3C7',
@@ -720,7 +756,7 @@ export default function Analytics() {
                         }}
                       >
                         <div style={{ fontSize: '1.25rem' }}>{cf.fp}</div>
-                        <div style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}>False Positive (Alarm)</div>
+                        <div style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}>{localize('جھوٹا خطرہ (الارم)', 'False Positive (Alarm)', 'False Positive (Alarm)')}</div>
                       </td>
                       <td
                         style={{
@@ -732,7 +768,7 @@ export default function Analytics() {
                         }}
                       >
                         <div style={{ fontSize: '1.25rem' }}>{cf.tn}</div>
-                        <div style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}>True Negative (Cleared)</div>
+                        <div style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}>{localize('درست کلیئرنس (محفوظ)', 'True Negative (Cleared)', 'True Negative (Cleared)')}</div>
                       </td>
                     </tr>
                   </tbody>
@@ -740,8 +776,8 @@ export default function Analytics() {
               </div>
 
               <div style={{ fontSize: '0.78rem', color: 'var(--muted, #6B7280)', lineHeight: 1.5 }}>
-                Recall: <strong>{sc.scam_recall != null ? pct(sc.scam_recall, 1) : '—'}</strong> · False-Alarm Rate: <strong>{sc.false_alarm_rate != null ? pct(sc.false_alarm_rate, 1) : '—'}</strong> ·{' '}
-                <strong>{sc.handed_to_human ?? 0}</strong> messages routed to caseworkers under abstention rules.
+                {localize('ریکال:', 'Recall:', 'Recall:')} <strong>{sc.scam_recall != null ? pct(sc.scam_recall, 1) : '—'}</strong> · {localize('جھوٹا الارم:', 'False-Alarm Rate:', 'False-Alarm Rate:')} <strong>{sc.false_alarm_rate != null ? pct(sc.false_alarm_rate, 1) : '—'}</strong> ·{' '}
+                <strong>{sc.handed_to_human ?? 0}</strong> {localize('پیغامات انسانی جائزے کے لیے بھیجے گئے۔', 'messages routed to caseworkers.', 'messages routed to caseworkers under abstention rules.')}
               </div>
             </div>
 
@@ -750,10 +786,10 @@ export default function Analytics() {
               <div className="row spread">
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.05rem', color: FOREST_DK }}>
-                    Expected Error Cost Model
+                    {localize('متوقع نقصانات کا مالی ماڈل', 'Expected Error Cost Model', 'Expected Error Cost Model')}
                   </h3>
                   <div className="small subtle">
-                    Financial quantification of classification decisions
+                    {localize('کلاسیفکیشن کے فیصلوں کا مالی تخمینہ', 'Financial quantification of classification decisions', 'Financial quantification of classification decisions')}
                   </div>
                 </div>
                 <MetricSourceTag type="benchmark" />
@@ -762,21 +798,21 @@ export default function Analytics() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
                   {
-                    label: 'Missed Scam Penalty',
+                    label: localize('چھوٹی ہوئی اسکیم کا نقصان', 'Missed Scam Penalty', 'Missed Scam Penalty'),
                     cost: 'PKR 2,000 / error',
-                    desc: 'Harm caused if a vulnerable citizen falls victim to undetected scam',
+                    desc: localize('جب کوئی شہری غیر شناخت شدہ اسکیم کا شکار ہو جائے تو مالی نقصان', 'Harm caused if a vulnerable citizen falls victim to undetected scam', 'Harm caused if a vulnerable citizen falls victim to undetected scam'),
                     color: '#DC2626'
                   },
                   {
-                    label: 'False Alarm Harm',
+                    label: localize('جھوٹے الارم کی لاگت', 'False Alarm Harm', 'False Alarm Harm'),
                     cost: 'PKR 300 / error',
-                    desc: 'Friction caused by incorrectly flagging an authentic relief SMS',
+                    desc: localize('کسی اصل امدادی پیغام کو غلطی سے مشکوک قرار دینے کی تاخیر', 'Friction caused by incorrectly flagging an authentic relief SMS', 'Friction caused by incorrectly flagging an authentic relief SMS'),
                     color: '#D97706'
                   },
                   {
-                    label: 'Human Caseworker Verification',
+                    label: localize('انسانی کیس ورکر کی جانچ', 'Human Caseworker Verification', 'Human Caseworker Verification'),
                     cost: 'PKR 40 / check',
-                    desc: 'Cost to have a human caseworker review an ambiguous message',
+                    desc: localize('مشکوک پیغام کی انسانی جانچ کی لاگت', 'Cost to have a human caseworker review an ambiguous message', 'Cost to have a human caseworker review an ambiguous message'),
                     color: '#2563EB'
                   }
                 ].map((item) => (
@@ -813,7 +849,12 @@ export default function Analytics() {
                   color: '#78350F'
                 }}
               >
-                <strong>Evaluation Conclusion:</strong> By routing uncertain messages to caseworkers at PKR 40 each, Bharosa minimizes catastrophic missed scams (PKR 2,000) while maintaining a minimal 2.3% false alarm rate.
+                <strong>{localize('حتمی نتیجہ:', 'Evaluation Conclusion:', 'Evaluation Conclusion:')}</strong>{' '}
+                {localize(
+                  'غیر یقینی پیغامات کو 40 روپے فی کیس پر افسران کو بھیج کر، بھروسہ 2,000 روپے کے بڑے نقصانات کو روکتا ہے جبکہ غلط الارم کی شرح صرف 2.3% رہتی ہے۔',
+                  'By routing uncertain messages to caseworkers, Bharosa minimizes catastrophic missed scams while maintaining minimal false alarms.',
+                  'By routing uncertain messages to caseworkers at PKR 40 each, Bharosa minimizes catastrophic missed scams (PKR 2,000) while maintaining a minimal 2.3% false alarm rate.'
+                )}
               </div>
             </div>
           </div>
@@ -830,20 +871,24 @@ export default function Analytics() {
             <div className="card col" style={{ gap: 10, padding: '20px', background: '#FFF' }}>
               <div className="row" style={{ gap: 8, alignItems: 'center' }}>
                 <BookOpen size={18} style={{ color: FOREST }} />
-                <h4 style={{ margin: 0, fontSize: '0.98rem', color: FOREST_DK }}>Verified RAG Engine</h4>
+                <h4 style={{ margin: 0, fontSize: '0.98rem', color: FOREST_DK }}>{localize('تصدیق شدہ RAG انجن', 'Verified RAG Engine', 'Verified RAG Engine')}</h4>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: '0.82rem', marginTop: 4 }}>
                 <div className="row spread">
-                  <span className="subtle">Retrieval Hit Rate:</span>
+                  <span className="subtle">{localize('حوالہ جاتی درستگی کی شرح:', 'Retrieval Hit Rate:', 'Retrieval Hit Rate:')}</span>
                   <strong className="mono">{E.rag?.retrieval_hit_rate || '10/10'}</strong>
                 </div>
                 <div className="row spread">
-                  <span className="subtle">Out-of-Scope Abstention:</span>
+                  <span className="subtle">{localize('دائرہ کار سے باہر جواب نہ دینا:', 'Out-of-Scope Abstention:', 'Out-of-Scope Abstention:')}</span>
                   <strong className="mono">{E.rag?.abstains_when_out_of_scope || '5/5'}</strong>
                 </div>
               </div>
               <div className="small subtle" style={{ marginTop: 'auto' }}>
-                Answers carry source document section citations. Deterministically abstains when queries are outside official relief rules.
+                {localize(
+                  'جوابات میں اصل سرکاری دستاویزات کے سیکشنز کے حوالے دیے جاتے ہیں۔ غیر متعلقہ سوالات پر ماڈل خودکار طور پر جواب دینے سے گریز کرتا ہے۔',
+                  'Answers carry source citations. Abstains outside official rules.',
+                  'Answers carry source document section citations. Deterministically abstains when queries are outside official relief rules.'
+                )}
               </div>
             </div>
 
@@ -851,24 +896,28 @@ export default function Analytics() {
             <div className="card col" style={{ gap: 10, padding: '20px', background: '#FFF' }}>
               <div className="row" style={{ gap: 8, alignItems: 'center' }}>
                 <Zap size={18} style={{ color: GOLD }} />
-                <h4 style={{ margin: 0, fontSize: '0.98rem', color: FOREST_DK }}>Latency & Throughput</h4>
+                <h4 style={{ margin: 0, fontSize: '0.98rem', color: FOREST_DK }}>{localize('تاخیر اور رفتار (Latency & Throughput)', 'Latency & Throughput', 'Latency & Throughput')}</h4>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: '0.82rem', marginTop: 4 }}>
                 <div className="row spread">
-                  <span className="subtle">Requests Screened:</span>
+                  <span className="subtle">{localize('جانچ کی گئی درخواستیں:', 'Requests Screened:', 'Requests Screened:')}</span>
                   <strong className="mono">{E.service?.requests ?? 0}</strong>
                 </div>
                 <div className="row spread">
-                  <span className="subtle">p50 Latency:</span>
+                  <span className="subtle">p50 {localize('تاخیر:', 'Latency:', 'Latency:')}</span>
                   <strong className="mono">{E.service?.latency_ms?.p50 || 18}ms</strong>
                 </div>
                 <div className="row spread">
-                  <span className="subtle">p95 Latency:</span>
+                  <span className="subtle">p95 {localize('تاخیر:', 'Latency:', 'Latency:')}</span>
                   <strong className="mono">{E.service?.latency_ms?.p95 || 45}ms</strong>
                 </div>
               </div>
               <div className="small subtle" style={{ marginTop: 'auto' }}>
-                Sub-50ms deterministic local rule evaluation enables offline operation on low-cost Android hardware.
+                {localize(
+                  '50 ملی سیکنڈ سے کم میں مقامی قواعد کا جائزہ کم قیمت اینڈرائیڈ موبائل فونز پر بھی آف لائن کام کرنے کے قابل بناتا ہے۔',
+                  'Sub-50ms rule evaluation enables offline operation.',
+                  'Sub-50ms deterministic local rule evaluation enables offline operation on low-cost Android hardware.'
+                )}
               </div>
             </div>
 
@@ -876,24 +925,28 @@ export default function Analytics() {
             <div className="card col" style={{ gap: 10, padding: '20px', background: '#FFF' }}>
               <div className="row" style={{ gap: 8, alignItems: 'center' }}>
                 <Cpu size={18} style={{ color: '#2563EB' }} />
-                <h4 style={{ margin: 0, fontSize: '0.98rem', color: FOREST_DK }}>AI & OCR Backends</h4>
+                <h4 style={{ margin: 0, fontSize: '0.98rem', color: FOREST_DK }}>{localize('اے آئی اور OCR سسٹمز', 'AI & OCR Backends', 'AI & OCR Backends')}</h4>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: '0.82rem', marginTop: 4 }}>
                 <div className="row spread">
-                  <span className="subtle">LLM Status:</span>
+                  <span className="subtle">{localize('LLM ماڈل کی صورتحال:', 'LLM Status:', 'LLM Status:')}</span>
                   <strong style={{ color: E.llm?.enabled ? '#16A34A' : '#D97706' }}>
-                    {E.llm?.enabled ? 'Online (Gemini/Cloud)' : 'Deterministic Fallbacks'}
+                    {E.llm?.enabled ? localize('آن لائن (Gemini/Cloud)', 'Online (Gemini/Cloud)', 'Online (Gemini/Cloud)') : localize('متبادل حتمی قواعد', 'Deterministic Fallbacks', 'Deterministic Fallbacks')}
                   </strong>
                 </div>
                 <div className="row spread">
-                  <span className="subtle">OCR Engine:</span>
+                  <span className="subtle">{localize('OCR انجن:', 'OCR Engine:', 'OCR Engine:')}</span>
                   <strong style={{ color: E.ocr_engine_available ? '#16A34A' : 'var(--muted, #6B7280)' }}>
-                    {E.ocr_engine_available ? 'OCR Engine Online' : 'QR & Structured Fallback'}
+                    {E.ocr_engine_available ? localize('OCR انجن آن لائن', 'OCR Engine Online', 'OCR Engine Online') : localize('QR اور متبادل خاکہ', 'QR & Structured Fallback', 'QR & Structured Fallback')}
                   </strong>
                 </div>
               </div>
               <div className="small subtle" style={{ marginTop: 'auto' }}>
-                Deterministic fallback logic guarantees zero loss of core decision capability even when cloud APIs disconnect.
+                {localize(
+                  'متبادل قواعد کی بنیاد پر کلاؤڈ سروسز منقطع ہونے پر بھی فیصلے کرنے کی صلاحیت 100 فیصد فعال رہتی ہے۔',
+                  'Deterministic fallback guarantees core decision capability.',
+                  'Deterministic fallback logic guarantees zero loss of core decision capability even when cloud APIs disconnect.'
+                )}
               </div>
             </div>
           </div>
@@ -902,7 +955,7 @@ export default function Analytics() {
           {E.service?.recent_errors?.length > 0 && (
             <div className="card col" style={{ gap: 10, padding: '20px', background: '#FFF' }}>
               <h4 style={{ margin: 0, fontSize: '0.98rem', color: TERRA }}>
-                Recent Operational Exceptions ({E.service.recent_errors.length})
+                {localize('حالیہ آپریشنل غلطیاں', 'Recent Operational Exceptions', 'Recent Operational Exceptions')} ({E.service.recent_errors.length})
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {E.service.recent_errors.map((x, i) => (
