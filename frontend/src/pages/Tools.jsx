@@ -47,6 +47,7 @@ import {
 } from '../voice'
 import { ErrorBox, MockTag } from '../ui'
 import { VoiceAssistant } from '../components/VoiceAssistantModal'
+import { scamTypeLabel } from '../scamTypes'
 
 const AREAS = [
   'Karachi East',
@@ -897,7 +898,7 @@ export function ScamPage({ pub }) {
               </div>
               <div className="row spread" style={{ fontSize: '0.85rem' }}>
                 <span className="muted">Fraud Pattern Classification:</span>
-                <span className="mono bold">{res.scam_type || 'unclassified'}</span>
+                <span className="bold">{res.scam_type ? scamTypeLabel(res.scam_type) : localize('غیر درجہ بند', 'Ghair daraja-band', 'Not classified')}</span>
               </div>
               <div className="row spread" style={{ fontSize: '0.85rem' }}>
                 <span className="muted">Official Designated Helpline:</span>

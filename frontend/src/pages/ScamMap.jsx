@@ -22,6 +22,7 @@ import {
 } from 'lucide-react'
 import { apiGet, when } from '../api'
 import { ErrorBox, LineChart, Spinner, useAsync } from '../ui'
+import { SCAM_TYPES, scamTypeLabel, scamTypeMeta } from '../scamTypes'
 
 /* ═══════════════════════════════════════════════════════════════
    DESIGN TOKENS & METRIC DEFINITIONS
@@ -54,13 +55,7 @@ const DISTRICT_COORDS = {
   'Unknown':      { x: 300, y: 300, province: 'Unspecified' }
 }
 
-const TYPE_META = {
-  advance_fee_fraud: { label: 'Advance Fee Fraud', color: '#DC2626', desc: 'Demands upfront payment before fake relief release' },
-  imposter_8171:     { label: '8171 SMS Imposter',  color: '#EA580C', desc: 'Spoofs government shortcode asking for CNIC/PIN' },
-  phishing_link:     { label: 'Fake Web Portal',   color: '#7C3AED', desc: 'Fraudulent registration links harvesting credentials' },
-  lottery_scam:      { label: 'Fake Prize / Grant', color: '#CA8A04', desc: 'Bogus lucky draw claiming unrequested cash prize' },
-  other:             { label: 'Other Suspicious',   color: '#4B5563', desc: 'Unclassified pattern under human analyst review' }
-}
+const TYPE_META = SCAM_TYPES
 
 export default function ScamMap() {
   const [days, setDays] = useState(30)
@@ -275,7 +270,9 @@ export default function ScamMap() {
         <div className="card col" style={{ gap: 4, padding: '16px 18px', background: '#FFF' }}>
           <div className="kpi-l">Active Fraud Archetypes</div>
           <div className="kpi" style={{ color: FOREST }}>{typeList.length}</div>
-          <div className="small subtle">Advance fee, shortcode spoofing</div>
+          <div className="small subtle">
+            {typeList.length > 0 ? typeList.slice(0, 3).map(([t]) => scamTypeLabel(t)).join(', ') : 'No incidents in this window'}
+          </div>
         </div>
       </div>
 
@@ -537,7 +534,7 @@ export default function ScamMap() {
                 </div>
                 <div className="col" style={{ gap: 6 }}>
                   {Object.entries(activeAreaTypes).map(([type, count]) => {
-                    const meta = TYPE_META[type] || TYPE_META.other
+                    const meta = scamTypeMeta(type)
                     return (
                       <div
                         key={type}
@@ -666,7 +663,7 @@ export default function ScamMap() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {typeList.map(([type, count]) => {
-              const meta = TYPE_META[type] || TYPE_META.other
+              const meta = scamTypeMeta(type)
               const pct = totalFlagged > 0 ? ((count / totalFlagged) * 100).toFixed(1) : 0
               const isSelected = selectedType === type
 
@@ -765,7 +762,7 @@ export default function ScamMap() {
             </h3>
             <div className="small subtle">
               {filteredRecent.length} classified message(s) {selectedArea ? `in ${selectedArea}` : ''}{' '}
-              {selectedType !== 'ALL' ? `matching ${TYPE_META[selectedType]?.label}` : ''}
+              {selectedType !== 'ALL' ? `matching ${scamTypeLabel(selectedType)}` : ''}
             </div>
           </div>
 
@@ -818,7 +815,7 @@ export default function ScamMap() {
                     </span>
                   </td>
                   <td className="small mono" style={{ color: 'var(--muted, #6B7280)' }}>
-                    {TYPE_META[r.type]?.label || r.type || 'General'}
+                    {r.verdict === 'LIKELY_REAL' ? 'Not a scam' : r.verdict === 'UNSURE' && !r.type ? 'Needs a person to check' : scamTypeLabel(r.type)}
                   </td>
                   <td className="small" style={{ maxWidth: '380px', lineHeight: 1.4 }}>
                     {r.text}
