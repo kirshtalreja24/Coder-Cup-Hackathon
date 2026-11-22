@@ -6,6 +6,7 @@ from collections import Counter
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import String, cast, or_
 from sqlalchemy.orm import Session
 
 from .. import audit, consent as consent_mod, decision as dec, rules, twin
@@ -146,9 +147,19 @@ def _ev(e: AuditEvent) -> dict:
 
 @router.get("/audit", summary="Audit log (read-only; auditor/admin)")
 def audit_log(action: str | None = None, actor_type: str | None = None, outcome: str | None = None, resource_id: str | None = None,
+              search: str | None = Query(None, max_length=100, description="Free-text search over action, actor, resource, outcome and details. "
+                                                                           "A '*' makes it an action pattern (e.g. consent.*)."),
               limit: int = Query(100, le=500), before_seq: int | None = None,
               user: User = Depends(require_roles("auditor", "admin")), db: Session = Depends(get_db)):
     q = db.query(AuditEvent).filter(AuditEvent.tenant_id == user.tenant_id)
+    term = (search or "").strip()
+    if term and "*" in term:
+        action = term  # "consent.*" keeps working as an action pattern
+    elif term:
+        # plain words search everything a person would look for, case-insensitively; % and _ are matched literally
+        q = q.filter(or_(*[col.icontains(term, autoescape=True) for col in (
+            AuditEvent.action, AuditEvent.actor_type, AuditEvent.actor_role, AuditEvent.actor_id,
+            AuditEvent.resource_type, AuditEvent.resource_id, AuditEvent.outcome, cast(AuditEvent.details, String))]))
     if action: q = q.filter(AuditEvent.action.like(action.replace("*", "%")))
     if actor_type: q = q.filter(AuditEvent.actor_type == actor_type)
     if outcome: q = q.filter(AuditEvent.outcome == outcome)

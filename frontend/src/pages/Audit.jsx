@@ -498,12 +498,17 @@ function HashChainVisualizer({ onSelectEvent }) {
 
 // 2. Full Ledger Table Tab
 function EventLogTable({ onSelectEvent }) {
-  const [action, setAction] = useState('')
+  const [action, setAction] = useState('') // what is typed in the search box
+  const [searchTerm, setSearchTerm] = useState('') // the same text, sent to the server after a short pause
   const [outcome, setOutcome] = useState('')
   const [actor, setActor] = useState('')
+  useEffect(() => {
+    const t = setTimeout(() => setSearchTerm(action.trim()), 300) // do not fire a request on every keystroke
+    return () => clearTimeout(t)
+  }, [action])
   const qs = new URLSearchParams({
     limit: 150,
-    ...(action && { action }),
+    ...(searchTerm && { search: searchTerm }),
     ...(outcome && { outcome }),
     ...(actor && { actor_type: actor })
   }).toString()
@@ -555,7 +560,8 @@ function EventLogTable({ onSelectEvent }) {
 
           <input
             style={{ maxWidth: 220, background: '#fff' }}
-            placeholder="Action e.g. consent.* or case.*"
+            placeholder="Search: action, person, case ID, outcome… e.g. consent, denied, case.*"
+            aria-label="Search the audit log"
             value={action}
             onChange={(e) => setAction(e.target.value)}
           />

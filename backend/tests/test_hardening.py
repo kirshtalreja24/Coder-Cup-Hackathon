@@ -136,3 +136,44 @@ def test_helper_code_is_stored_hashed(client, tok):
     with SessionLocal() as db:
         rec = [x for x in db.query(IdempotencyRecord).all() if x.key.startswith("otp:") and x.key.endswith(fam)]
         assert rec and all("code" not in x.response and len(x.response["code_hash"]) == 64 for x in rec)
+
+
+# ---------------------------------------------------------------- 7. audit log search
+def test_audit_search_finds_what_a_person_types(client, tok):
+    # a throw-away citizen, so this test does not use up a demo person's one-time payout
+    reg = client.post("/auth/register", json={"email": f"srch{uuid.uuid4().hex[:6]}@t.demo", "name": "Search Test", "password": "Passw0rd!!"}).json()
+    h = {"Authorization": "Bearer " + reg["access_token"]}
+    # (the form carries a registry person's ID number, so use one whose claim goes to a human and is never paid)
+    cid = client.post("/cases", json={"data": demo.SCENARIOS["claims_widow_but_married"]["form"]}, headers=h).json()["id"]
+    assert client.post(f"/cases/{cid}/submit", json={"consent": ALL}, headers=h).status_code == 200
+    client.post("/consents/withdraw-all", headers=h)
+    client.get(f"/cases/{cid}", headers=tok("officer1@relief.demo"))  # the officer is now refused: an access.denied event
+    aud, adm = tok("auditor@relief.demo"), tok("admin@relief.demo")
+    by_action = lambda q, who=aud: client.get("/audit", params={"search": q, "limit": 500}, headers=who).json()
+    # a plain word matches (before: only exact names or patterns worked)
+    rows = by_action("consent")
+    assert rows and all("consent" in str(r).lower() for r in rows)
+    assert any(r["action"] == "consent.withdraw_all" for r in rows)
+    assert by_action("CONSENT") == rows                                  # case-insensitive
+    # the case id, the outcome and the actor role are searchable too
+    assert any(r["resource_id"] == cid for r in by_action(cid[:12]))
+    assert by_action("denied") and all(r["outcome"] == "denied" or "denied" in str(r["details"]).lower() for r in by_action("denied"))
+    assert by_action("auditor") and by_action("citizen")
+    # '*' still means an action pattern
+    pat = by_action("consent.*")
+    assert pat and all(r["action"].startswith("consent.") for r in pat)
+    # no match -> empty list, not an error; works for the admin too
+    assert by_action("zzzz-no-such-thing") == [] and by_action("consent", adm)
+
+
+def test_audit_search_treats_percent_and_underscore_literally_and_stays_in_the_tenant(client, tok):
+    aud = tok("auditor@relief.demo")
+    everything = client.get("/audit", params={"limit": 500}, headers=aud).json()
+    pct = client.get("/audit", params={"search": "%", "limit": 500}, headers=aud).json()
+    assert pct and len(pct) < len(everything) and all("%" in str(r) for r in pct)       # only rows that really contain a '%': it is NOT "match all"
+    assert client.get("/audit", params={"search": "ai.decisio"}, headers=aud).json()            # a real action name prefix matches ...
+    assert client.get("/audit", params={"search": "ai.decisio_"}, headers=aud).json() == []     # ... but '_' is NOT a one-character wildcard
+    assert client.get("/audit", params={"search": "x" * 101}, headers=aud).status_code == 422
+    flood = client.get("/audit", params={"search": "login"}, headers=tok("admin@flood.demo")).json()
+    relief_actors = {r["actor_id"] for r in client.get("/audit", params={"search": "login"}, headers=aud).json()}
+    assert not (relief_actors & {r["actor_id"] for r in flood})                          # another department's log is never searched
