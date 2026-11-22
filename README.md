@@ -8,6 +8,7 @@
 | **Live app** | https://coder-cup-hackathon.vercel.app |
 | **Live API / Swagger** | https://bharosa-api-production.up.railway.app · [`/docs`](https://bharosa-api-production.up.railway.app/docs) · [`/health`](https://bharosa-api-production.up.railway.app/health) |
 | **Demo video** | _add the public Google Drive link here_ |
+| **Judging walkthrough** | [`docs/JUDGING_SIMULATION.md`](docs/JUDGING_SIMULATION.md): the 9 hardest judge questions, where to click, what you will see (with screenshots) |
 | **Repository** | https://github.com/kirshtalreja24/Coder-Cup-Hackathon |
 
 **We help widows and low-literacy households (and the helpers who serve them) claim a relief payment, even though they cannot read the forms, have a weak signal, and are flooded with fake "relief" SMS.**
