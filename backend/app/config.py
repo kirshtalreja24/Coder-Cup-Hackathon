@@ -43,6 +43,9 @@ def get_settings() -> Settings:
         s.llm_api_key = s.groq_api
         s.llm_base_url = s.llm_base_url or s.groq_base_url or "https://api.groq.com/openai/v1"
         s.llm_model = s.llm_model or "openai/gpt-oss-120b"
+    if s.env.lower() in ("prod", "production") and s.jwt_secret.startswith("dev-only-change-me"):
+        # fail fast: anyone who knows the public default could mint a valid login token
+        raise RuntimeError("JWT_SECRET is still the built-in development value. Set a long random JWT_SECRET before running with ENV=prod.")
     return s
 
 

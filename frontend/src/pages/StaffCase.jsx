@@ -58,7 +58,12 @@ export default function StaffCase() {
   const c = useAsync(() => apiGet('/cases/' + id), [id])
   const dec = useAsync(() => apiGet(`/cases/${id}/decision`).catch(() => null), [id])
   const tl = useAsync(() => apiGet(`/cases/${id}/timeline`), [id])
-  const docs = useAsync(() => apiGet(`/cases/${id}/documents`).catch((e) => ({ denied: e })), [id])
+  // Only the reviewing officer can ever see uploaded documents (consent-gated on the server); do not ask for them as admin / auditor.
+  const canSeeDocs = me?.role === 'officer'
+  const docs = useAsync(
+    () => (canSeeDocs ? apiGet(`/cases/${id}/documents`).catch((e) => ({ denied: e })) : Promise.resolve({ officerOnly: true })),
+    [id]
+  )
   const [tab, setTab] = useState('brief')
   const [note, setNote] = useState('')
   const [err, setErr] = useState(null)
@@ -275,6 +280,10 @@ export default function StaffCase() {
                 ))}
               </div>
             ))}
+
+          {docs.data?.officerOnly && (
+            <p className="small muted">Uploaded documents are visible only to the reviewing officer, and only with the citizen's consent.</p>
+          )}
 
           {docs.data?.denied && (
             <p className="small muted">

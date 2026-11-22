@@ -2842,3 +2842,14 @@ tr:hover td {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+
+/* Long unbroken strings (receipt hashes, case ids) must wrap instead of pushing the page wider than a phone screen. */
+.mono, .receipt-table td, .receipt-table th { overflow-wrap: anywhere; word-break: break-word; }
+.row > .mono, .row > span { min-width: 0; }
+
+/* Wide data tables scroll inside their own box instead of making the whole page wider than the screen. */
+.admin-table { display: block; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* Multi-column dashboards collapse to one column on a phone. */
+@media (max-width: 720px) { .stack-sm { grid-template-columns: minmax(0, 1fr) !important; } }

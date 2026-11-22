@@ -247,7 +247,7 @@ export default function ScamMap() {
       {/* ═══════════════════════════════════════════════════════════
           KPI OVERVIEW CARDS
       ═══════════════════════════════════════════════════════════ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
         <div className="card col" style={{ gap: 4, padding: '16px 18px', background: '#FFF' }}>
           <div className="kpi-l">Screened Messages</div>
           <div className="kpi" style={{ color: FOREST_DK }}>{totalReports}</div>
@@ -282,7 +282,7 @@ export default function ScamMap() {
       {/* ═══════════════════════════════════════════════════════════
           INTERACTIVE MAP & SIDE DETAIL PANEL
       ═══════════════════════════════════════════════════════════ */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 18, alignItems: 'start' }}>
+      <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 18, alignItems: 'start' }}>
         {/* Left: Stylized Map Card */}
         <div
           className="card col"
@@ -642,7 +642,7 @@ export default function ScamMap() {
       {/* ═══════════════════════════════════════════════════════════
           ARCHETYPE BREAKDOWN & DAILY VELOCITY CHART
       ═══════════════════════════════════════════════════════════ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
+      <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
         {/* Fraud Archetypes */}
         <div className="card col" style={{ gap: 14, padding: '20px 22px', background: '#FFF' }}>
           <div className="row spread">

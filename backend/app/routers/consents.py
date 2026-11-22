@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import random
 from datetime import timedelta
 
@@ -97,6 +99,10 @@ def access_log(subject_id: str | None = None, limit: int = 50, user: User = Depe
 # ---------------------------------------------------------------- Helper Mode (one shared phone, many families)
 helper_router = APIRouter(prefix="/helper", tags=["helper-mode"])
 MAX_OTP_ATTEMPTS = 5
+
+
+def _otp_hash(helper_id: str, citizen_id: str, code: str) -> str:
+    return hashlib.sha256(f"{helper_id}:{citizen_id}:{code}".encode()).hexdigest()
 ALLOWED_SCOPES = ("identity", "documents", "payment")
 
 
@@ -145,7 +151,8 @@ def req_otp(citizen_id: str, body: OtpRequest | None = None, user: User = Depend
     scopes = [x for x in (body.scopes if body else list(ALLOWED_SCOPES)) if x in ALLOWED_SCOPES]
     code = f"{random.randint(0, 999999):06d}"
     db.merge(IdempotencyRecord(key=f"otp:{user.id}:{citizen_id}"[:80], user_id=user.id,
-                               response={"code": code, "exp": (now() + timedelta(minutes=10)).isoformat(), "scopes": scopes, "attempts": 0}))
+                               response={"code_hash": _otp_hash(user.id, citizen_id, code), "exp": (now() + timedelta(minutes=10)).isoformat(),
+                                         "scopes": scopes, "attempts": 0}))  # only a hash is stored: the code lives in the family's inbox
     notify(db, citizen_id, f"Code {code}: allow helper {user.name} to help you with {', '.join(scopes)}. Do not share this code unless you agree.",
            short=f"Code {code}: allow helper {user.name}? Share only if you agree.", channels=("in_app", "sms"))
     db.commit()
@@ -170,7 +177,7 @@ def confirm_otp(citizen_id: str, body: OtpIn, user: User = Depends(require_roles
     if not rec or not exp_ok or rec.response.get("attempts", 0) >= MAX_OTP_ATTEMPTS:
         audit.log(db, action="helper.consent_otp_failed", actor=user, outcome="denied", details={"subject": citizen_id, "reason": "no valid code"})
         raise HTTPException(403, "No valid code. Request a new one. No consent recorded.")
-    if rec.response.get("code") != body.code.strip():
+    if not hmac.compare_digest(rec.response.get("code_hash", ""), _otp_hash(user.id, citizen_id, body.code.strip())):
         rec.response = {**rec.response, "attempts": rec.response.get("attempts", 0) + 1}
         db.commit()
         audit.log(db, action="helper.consent_otp_failed", actor=user, outcome="denied", details={"subject": citizen_id, "reason": "wrong code"})

@@ -104,3 +104,35 @@ def test_public_scam_reports_are_kept_out_of_the_department_map(client, tok):
     assert after["flagged"] == before["flagged"] and after["total_reports"] == before["total_reports"]
     assert "Poisoned Town" not in dict(after["by_area"]) and all(a["area"] != "Poisoned Town" for a in after["rising_areas"])
     assert after["public_unverified"]["flagged"] >= 1 and "Poisoned Town" in dict(after["public_unverified"]["by_area"])
+
+
+# ---------------------------------------------------------------- 5. the audit table refuses UPDATE / DELETE in the database itself
+def test_audit_table_is_append_only_in_the_database(client, tok):
+    import pytest
+    from sqlalchemy import text
+    from sqlalchemy.exc import DBAPIError
+    from app.db import SessionLocal
+    client.post("/auth/login", data={"username": "nobody@x.demo", "password": "x"}, headers={"x-forwarded-for": "10.99.0.1"})  # make sure a row exists
+    with SessionLocal() as db:
+        seq = db.execute(text("select min(seq) from audit_events")).scalar()
+        assert seq is not None
+        for stmt in ("update audit_events set outcome='ok' where seq=:s", "delete from audit_events where seq=:s"):
+            with pytest.raises(DBAPIError, match="append-only"):
+                db.execute(text(stmt), {"s": seq}); db.commit()
+            db.rollback()
+    v = client.get("/audit/verify", headers=tok("auditor@relief.demo")).json()
+    assert v["ok"] is True and v["append_only_enforced"] is True
+
+
+# ---------------------------------------------------------------- 6. helper one-time codes are never stored in clear
+def test_helper_code_is_stored_hashed(client, tok):
+    from app.db import SessionLocal
+    from app.models import IdempotencyRecord
+    h = tok("helper@relief.demo")
+    fam = client.get("/helper/families", headers=h).json()["families"][20]["citizen_id"]
+    client.post(f"/helper/switch/{fam}", headers=h)
+    r = client.post(f"/helper/families/{fam}/consent/request", headers=h, json={"scopes": ["identity"]})
+    assert r.status_code == 200
+    with SessionLocal() as db:
+        rec = [x for x in db.query(IdempotencyRecord).all() if x.key.startswith("otp:") and x.key.endswith(fam)]
+        assert rec and all("code" not in x.response and len(x.response["code_hash"]) == 64 for x in rec)

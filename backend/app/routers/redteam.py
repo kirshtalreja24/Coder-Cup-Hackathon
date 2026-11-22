@@ -19,7 +19,7 @@ from .. import audit, rules, scam, seed, vision
 from ..config import get_settings
 from ..db import SessionLocal, get_db
 from ..identity import name_key
-from ..models import ApiKey, HelperLink, IdempotencyRecord, MockNadraRecord, Payment, Tenant, User
+from ..models import ApiKey, HelperLink, MockNadraRecord, Payment, Tenant, User
 from ..security import hash_key, hash_password, require_roles
 
 router = APIRouter(tags=["ops"])
@@ -301,7 +301,6 @@ def _rules(box: Sandbox, sc: Scorecard, db: Session, paid_case: str) -> None:
 def _helper(box: Sandbox, sc: Scorecard, db: Session) -> None:
     c, h = box.client, box.h
     fam = box.users["citizen2"]
-    key = f"otp:{box.users['helper'].id}:{fam.id}"[:80]
     c.post("/helper/lock", headers=h["helper"])
     r = c.post("/cases", json={"citizen_id": fam.id, "data": {"name": "x"}}, headers=h["helper"])
     sc.add("hlp-01", "helper", "Helper acts for a family WITHOUT switching to it (session locked)", "423 locked", r.status_code == 423, r.status_code)
@@ -315,8 +314,9 @@ def _helper(box: Sandbox, sc: Scorecard, db: Session) -> None:
     inbox = c.get("/notifications", headers=h["citizen2"]).json()["items"]
     in_inbox = any("Code" in n["body"] for n in inbox if n["channel"] == "in_app")
     sc.add("hlp-04", "helper", "The family receives the code in its own inbox (simulated SMS)", "code visible to the family only", in_inbox, "in family inbox" if in_inbox else "missing")
-    rec = db.get(IdempotencyRecord, key)
-    code = rec.response["code"] if rec else "999999"
+    import re  # the family reads the code from ITS OWN inbox (the server keeps only a hash of it)
+    found = [m.group(1) for n in inbox if n["channel"] == "in_app" for m in [re.search(r"Code (\d{6})", n["body"])] if m]
+    code = found[0] if found else "999999"
     r = c.post(f"/helper/families/{fam.id}/consent/confirm", json={"code": code}, headers=h["helper"])
     sc.add("hlp-05", "helper", "Family reads out the real code; helper confirms", "201: consent recorded for ONLY the requested scope", r.status_code == 201, r.status_code)
     p = box.fresh_person(db, "Family")

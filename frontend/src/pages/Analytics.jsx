@@ -212,7 +212,7 @@ export default function Analytics() {
               >
                 <option value="all" style={{ color: '#000' }}>All Telemetry (Live + Synthetic)</option>
                 <option value="live" style={{ color: '#000' }}>Live Cases Only ({A.cases_live})</option>
-                <option value="synthetic" style={{ color: '#000' }}>Historical Synthetic Replay ({A.cases_historical_synthetic || 214})</option>
+                <option value="synthetic" style={{ color: '#000' }}>Historical Synthetic Replay ({A.cases_historical_synthetic ?? 0})</option>
               </select>
             </div>
 
@@ -240,7 +240,7 @@ export default function Analytics() {
       {/* ═══════════════════════════════════════════════════════════
           CORE KPI METRICS ROW
       ═══════════════════════════════════════════════════════════ */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
         <div className="card col" style={{ gap: 4, padding: '16px 14px', background: '#FFF' }}>
           <div className="row spread" style={{ alignItems: 'center' }}>
             <span className="kpi-l">Total Claims</span>
@@ -273,8 +273,8 @@ export default function Analytics() {
             <span className="kpi-l">Scam Detection Recall</span>
             <MetricSourceTag type="benchmark" />
           </div>
-          <div className="kpi" style={{ color: FOREST }}>{pct(sc.scam_recall || 0.982, 1)}</div>
-          <div className="small subtle">False-alarm rate: {pct(sc.false_alarm_rate || 0.023, 1)}</div>
+          <div className="kpi" style={{ color: FOREST }}>{sc.scam_recall != null ? pct(sc.scam_recall, 1) : '—'}</div>
+          <div className="small subtle">False-alarm rate: {sc.false_alarm_rate != null ? pct(sc.false_alarm_rate, 1) : '—'}</div>
         </div>
 
         <div className="card col" style={{ gap: 4, padding: '16px 14px', background: '#FFF' }}>
@@ -294,7 +294,7 @@ export default function Analytics() {
             <MetricSourceTag type="benchmark" />
           </div>
           <div className="kpi" style={{ color: GOLD }}>
-            {money(H.avg_cost_per_case_pkr || 1450)}
+            {H.avg_cost_per_case_pkr != null ? money(H.avg_cost_per_case_pkr) : '—'}
           </div>
           <div className="small subtle">Includes delay & friction</div>
         </div>
@@ -303,7 +303,7 @@ export default function Analytics() {
       {/* ═══════════════════════════════════════════════════════════
           NAVIGATION TABS
       ═══════════════════════════════════════════════════════════ */}
-      <div style={{ display: 'flex', gap: 8, borderBottom: '1.5px solid var(--border-subtle, #E5E7EB)', paddingBottom: 2 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, borderBottom: '1.5px solid var(--border-subtle, #E5E7EB)', paddingBottom: 2 }}>
         {[
           { id: 'overview', label: 'Operations & Route Distribution', icon: BarChart3 },
           { id: 'ai',       label: 'AI Decision Engine & Calibration', icon: Target },
@@ -344,7 +344,7 @@ export default function Analytics() {
       ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'overview' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
+          <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
             {/* Route Distribution Card */}
             <div className="card col" style={{ gap: 16, padding: '22px', background: '#FFF' }}>
               <div className="row spread">
@@ -490,7 +490,7 @@ export default function Analytics() {
                     Simulated Disbursements Processed
                   </div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--forest-dark, #0D2318)' }}>
-                    {money(A.payments_mock_total_pkr || 700000)}
+                    {money(A.payments_mock_total_pkr ?? 0)}
                   </div>
                 </div>
                 <span
@@ -517,7 +517,7 @@ export default function Analytics() {
       ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'ai' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
+          <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
             {/* Probability Histogram */}
             <div className="card col" style={{ gap: 14, padding: '22px', background: '#FFF' }}>
               <div className="row spread">
@@ -654,7 +654,7 @@ export default function Analytics() {
       ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'scam' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
+          <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 18 }}>
             {/* 2x2 Confusion Matrix Card */}
             <div className="card col" style={{ gap: 16, padding: '22px', background: '#FFF' }}>
               <div className="row spread">
@@ -736,8 +736,8 @@ export default function Analytics() {
               </div>
 
               <div style={{ fontSize: '0.78rem', color: 'var(--muted, #6B7280)', lineHeight: 1.5 }}>
-                Recall: <strong>{pct(sc.scam_recall || 0.982, 1)}</strong> · False-Alarm Rate: <strong>{pct(sc.false_alarm_rate || 0.023, 1)}</strong> ·{' '}
-                <strong>{sc.handed_to_human || 8}</strong> messages routed to caseworkers under abstention rules.
+                Recall: <strong>{sc.scam_recall != null ? pct(sc.scam_recall, 1) : '—'}</strong> · False-Alarm Rate: <strong>{sc.false_alarm_rate != null ? pct(sc.false_alarm_rate, 1) : '—'}</strong> ·{' '}
+                <strong>{sc.handed_to_human ?? 0}</strong> messages routed to caseworkers under abstention rules.
               </div>
             </div>
 
@@ -821,7 +821,7 @@ export default function Analytics() {
       ═══════════════════════════════════════════════════════════ */}
       {activeTab === 'system' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+          <div className="stack-sm" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
             {/* RAG Engine */}
             <div className="card col" style={{ gap: 10, padding: '20px', background: '#FFF' }}>
               <div className="row" style={{ gap: 8, alignItems: 'center' }}>
@@ -852,7 +852,7 @@ export default function Analytics() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: '0.82rem', marginTop: 4 }}>
                 <div className="row spread">
                   <span className="subtle">Requests Screened:</span>
-                  <strong className="mono">{E.service?.requests || 248}</strong>
+                  <strong className="mono">{E.service?.requests ?? 0}</strong>
                 </div>
                 <div className="row spread">
                   <span className="subtle">p50 Latency:</span>

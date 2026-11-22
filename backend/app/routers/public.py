@@ -1,6 +1,7 @@
 """Public REST API (API-key auth, scoped, rate-limited) + MOCK national services + health/metrics."""
 import os
 import secrets
+from collections import OrderedDict
 import time
 from urllib.parse import urlparse
 
@@ -116,7 +117,8 @@ class MockPay(BaseModel):
     idempotency_key: str = Field(min_length=6)
 
 
-_seen_pay: dict[str, dict] = {}
+_seen_pay: "OrderedDict[str, dict]" = OrderedDict()  # bounded: the oldest idempotency keys are forgotten first
+_SEEN_PAY_MAX = 2000
 
 
 @router.post("/mock/raast/transfer", tags=["mock-services"], summary="MOCK instant payment. No money moves. Idempotent.")
@@ -126,6 +128,8 @@ def mock_transfer(body: MockPay, key: ApiKey = Depends(api_key_auth("mock:raast"
     r = {"mock": True, "banner": ms.MOCK_BANNER, "status": "SIMULATED_OK", "rail": "MOCK-RAAST", "amount": body.amount,
          "to": "*" * 9 + "".join(c for c in body.to_cnic if c.isdigit())[-4:], "reference": "MOCK-" + secrets.token_hex(5).upper()}
     _seen_pay[body.idempotency_key] = r
+    while len(_seen_pay) > _SEEN_PAY_MAX:
+        _seen_pay.popitem(last=False)
     return r
 
 

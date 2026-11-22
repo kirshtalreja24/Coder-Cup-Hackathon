@@ -286,3 +286,16 @@ class Job(Base):
     result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+# ---- the audit log is append-only AT THE DATABASE LEVEL (not just by convention) ---------------------------
+# SQLite (local dev + tests): triggers created together with the table. Postgres (Supabase): the same rule is installed by
+# migration 0002. Either way an UPDATE or DELETE on audit_events fails, so a bug or an injected statement cannot rewrite history.
+from sqlalchemy import DDL, event  # noqa: E402
+
+event.listen(AuditEvent.__table__, "after_create", DDL(
+    "CREATE TRIGGER IF NOT EXISTS audit_events_no_update BEFORE UPDATE ON audit_events "
+    "BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END").execute_if(dialect="sqlite"))
+event.listen(AuditEvent.__table__, "after_create", DDL(
+    "CREATE TRIGGER IF NOT EXISTS audit_events_no_delete BEFORE DELETE ON audit_events "
+    "BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END").execute_if(dialect="sqlite"))

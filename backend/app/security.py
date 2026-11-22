@@ -80,9 +80,19 @@ def new_api_key() -> tuple[str, str, str]:
 _buckets: dict[str, list[float]] = {}
 
 
+def _prune(table: dict, window: float, max_keys: int = 20000) -> None:
+    """Keep the in-memory limiter tables bounded: drop keys whose newest entry is older than the window."""
+    if len(table) > max_keys:
+        import time
+        t = time.time()
+        for k in [k for k, v in table.items() if not v or t - v[-1] > window]:
+            table.pop(k, None)
+
+
 def rate_limited(key: str, limit: int, window: float = 60.0) -> bool:
     import time
     t = time.time()
+    _prune(_buckets, window)
     arr = [x for x in _buckets.get(key, []) if t - x < window]
     if len(arr) >= limit:
         _buckets[key] = arr
@@ -105,6 +115,7 @@ def too_many_failures(key: str, limit: int, window: float = 300.0) -> bool:
 
 def record_failure(key: str) -> None:
     import time
+    _prune(_fails, 300.0)
     _fails.setdefault(key, []).append(time.time())
 
 

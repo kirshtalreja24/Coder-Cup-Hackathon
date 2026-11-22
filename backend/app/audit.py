@@ -4,6 +4,7 @@ import json
 import threading
 from datetime import datetime, timezone
 
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from .models import AuditEvent, User, now
@@ -49,6 +50,12 @@ def log(db: Session, *, action: str, actor: User | None = None, actor_type: str 
 
 
 def verify_chain(db: Session, simulate_tamper_seq: int | None = None) -> dict:
+    res = _verify_chain(db, simulate_tamper_seq)
+    res["append_only_enforced"] = append_only_enforced(db)  # real state of the database-level protection
+    return res
+
+
+def _verify_chain(db: Session, simulate_tamper_seq: int | None = None) -> dict:
     """Recompute the whole chain. If simulate_tamper_seq is set, that row is altered IN MEMORY ONLY to prove detection."""
     prev = GENESIS
     checked = 0
@@ -65,3 +72,17 @@ def verify_chain(db: Session, simulate_tamper_seq: int | None = None) -> dict:
         checked += 1
     return {"ok": True, "checked": checked, "head_hash": prev, "broken_at_seq": None,
             "message": f"All {checked} audit events verify. No tampering detected."}
+
+
+def append_only_enforced(db: Session) -> bool | None:
+    """Is the database itself refusing UPDATE/DELETE on audit_events? None = could not tell."""
+    try:
+        name = db.get_bind().dialect.name
+        if name == "sqlite":
+            n = db.execute(text("select count(*) from sqlite_master where type='trigger' and name like 'audit_events_no_%'")).scalar()
+            return n == 2
+        if name == "postgresql":
+            return bool(db.execute(text("select 1 from pg_trigger where tgname='audit_events_no_change' and not tgisinternal")).first())
+    except Exception:  # noqa
+        db.rollback()
+    return None

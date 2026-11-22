@@ -591,8 +591,8 @@ export function CaseView({ helper }) {
               marginTop: 4
             }}
           >
-            <span>Policy: Rule v{decisionData?.rule_version || '1.0'}</span>
-            <span>Confidence: {Math.round((decisionData?.confidence || 0.94) * 100)}%</span>
+            <span>Policy: Rule v{decisionData?.rule_version ?? '—'}</span>
+            <span>Confidence: {decisionData?.confidence != null ? Math.round(decisionData.confidence * 100) + '%' : '—'}</span>
             <span>Evaluated: {when(decisionData?.created_at || x.created_at)}</span>
           </div>
         </div>
@@ -797,7 +797,7 @@ export function CaseView({ helper }) {
           <div className="col" style={{ gap: 4 }}>
             <span className="payment-metric-label">Relief Grant Transferred</span>
             <div className="payment-amount-large">
-              {money(parsedAmount || x.amount || 25000)}
+              {money(parsedAmount || x.amount || 0)}
             </div>
           </div>
 
