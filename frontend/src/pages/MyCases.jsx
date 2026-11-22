@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Recourse from '../components/Recourse'
+import { useCameraCapture } from '../components/CameraCapture'
 import DecisionReceipt from '../components/Receipt'
 import {
   FileText,
@@ -195,13 +196,11 @@ export function CaseView({ helper }) {
   const docs = useAsync(() => apiGet(`/cases/${id}/documents`).catch(() => []), [id])
   const [err, setErr] = useState(null)
   const [copied, setCopied] = useState(false)
-  const fileInputRef = useRef(null)
 
   const L = lang === 'ur' ? 'ur' : lang === 'roman' ? 'roman' : 'en'
 
   // Document retake / re-upload
-  const retake = async (e) => {
-    const f = e.target.files?.[0]
+  const retake = async (f) => {
     if (!f) return
     try {
       const small = await shrinkImage(f)
@@ -218,6 +217,8 @@ export function CaseView({ helper }) {
       setErr(x)
     }
   }
+
+  const retakeCam = useCameraCapture(retake)
 
   // Copy helper
   const copyText = (text) => {
@@ -699,8 +700,10 @@ export function CaseView({ helper }) {
           </div>
 
           <div className="col" style={{ gap: 8, marginTop: 4 }}>
-            <label
+            <button
+              type="button"
               className="btn"
+              onClick={retakeCam.openCamera}
               style={{
                 background: 'var(--terracotta)',
                 textAlign: 'center',
@@ -711,16 +714,9 @@ export function CaseView({ helper }) {
               }}
             >
               <Camera size={20} />
-              <span>{localize('شناختی کارڈ کی صاف تصویر لیں', 'Shanakhti card ki saaf tasveer lein', 'Take / Upload Clear ID Photo')}</span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                hidden
-                onChange={retake}
-              />
-            </label>
+              <span>{localize('شناختی کارڈ کی صاف تصویر لیں', 'Shanakhti card ki saaf tasveer lein', 'Take Clear ID Photo')}</span>
+            </button>
+            {retakeCam.cameraUI}
             <span className="small subtle" style={{ textAlign: 'center' }}>
               Ensure all 4 corners and the 13-digit CNIC number are clearly visible without flash glare.
             </span>

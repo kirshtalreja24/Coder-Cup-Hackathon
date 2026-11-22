@@ -39,6 +39,7 @@ import { EMPTY_FORM, clearDraft, flush, loadDraft, queueClaim, saveDraft, shrink
 import { canListen, listen, playPrompt, recognitionLang, speak, spokenNumber, stop } from '../voice'
 import { ErrorBox, MockTag } from '../ui'
 import Recourse from '../components/Recourse'
+import { useCameraCapture } from '../components/CameraCapture'
 import DecisionReceipt from '../components/Receipt'
 
 const DISTRICTS = [
@@ -344,6 +345,8 @@ export default function ClaimFlow({ helper }) {
     }
   }
 
+  const retakeCam = useCameraCapture(retakePhoto)
+
   // Offline Saved Confirmation View
   if (queued) {
     return (
@@ -487,8 +490,11 @@ export default function ClaimFlow({ helper }) {
               </div>
             </div>
 
-            <label
+            <button
+              type="button"
               className="btn"
+              disabled={busy}
+              onClick={retakeCam.openCamera}
               style={{
                 background: 'var(--terracotta)',
                 textAlign: 'center',
@@ -499,8 +505,8 @@ export default function ClaimFlow({ helper }) {
             >
               <Camera size={18} />
               <span>{t('takephoto')}</span>
-              <input type="file" accept="image/*" capture="environment" hidden onChange={retakePhoto} />
-            </label>
+            </button>
+            {retakeCam.cameraUI}
           </div>
         )}
 
