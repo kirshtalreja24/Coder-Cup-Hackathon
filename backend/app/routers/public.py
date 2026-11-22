@@ -40,7 +40,7 @@ def about():
     return {"name": "Bharosa", "status": "PROTOTYPE ONLY - not an official service.",
             "real": ["JWT auth + RBAC (server-side)", "consent broker + hash-chained audit log", "versioned rules engine + digital twin",
                      "Fellegi-Sunter identity matching", "expected-cost decision engine", "document forensics (blur/QR/ELA)", "scam classifier (rules + ML)",
-                     "RAG with citations", "idempotent offline sync", "background jobs + webhooks", "API keys + rate limits"],
+                     "RAG with citations", "voice/typed intent understanding (rules + validated LLM tie-break)", "idempotent offline sync", "background jobs + webhooks", "API keys + rate limits"],
             "simulated": ["NADRA-style identity registry (synthetic people)", "Raast-style payments (no money moves)", "SMS/WhatsApp (logged only)",
                           "OTP codes (shown in demo responses)", "ID cards (watermarked samples)", "all citizen data (synthetic)"]}
 

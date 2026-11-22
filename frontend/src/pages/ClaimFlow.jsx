@@ -33,7 +33,7 @@ import {
 } from 'lucide-react'
 import { api, apiPost, BASE } from '../api'
 import { useLang } from '../i18n'
-import { clearDraft, flush, loadDraft, queueClaim, saveDraft, shrinkImage } from '../offline'
+import { EMPTY_FORM, clearDraft, flush, loadDraft, queueClaim, saveDraft, shrinkImage } from '../offline'
 import { canListen, listen, playPrompt, speak, spokenNumber, stop } from '../voice'
 import { ErrorBox, MockTag } from '../ui'
 import Recourse from '../components/Recourse'
@@ -74,17 +74,6 @@ const PROMPTS = {
   3: 'say_income',
   4: 'take_photo',
   6: 'consent_identity'
-}
-
-const EMPTY_FORM = {
-  name: '',
-  father_name: '',
-  cnic: '',
-  marital_status: '',
-  monthly_income: '',
-  household_size: 4,
-  district: 'Karachi East',
-  dob: ''
 }
 
 const RESULT_UI = {

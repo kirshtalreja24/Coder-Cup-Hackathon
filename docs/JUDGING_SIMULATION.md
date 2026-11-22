@@ -11,7 +11,7 @@ Every step below was executed on the real app (screenshots in [`judging-simulati
 2. **Login is rate limited to 15 per minute per IP.** If several people log in from one network at once, you may see "Too many login attempts". Wait one minute. Stay logged in on separate windows.
 3. **Say "prototype, mock data" out loud.** Every screen already carries the banner.
 4. Never claim: "autonomous agent" (it is an audited deterministic tool-calling pipeline), "forgery detection" beyond QR-signature and cross-checks, "accuracy" on real data, "no one can see your data after withdrawal" (the auditor sees a *masked* view; helpers and officers are blocked), or that voice works until you have heard it on your own phone.
-5. The **Ask a question** page now has a **typed question box at the top** (works without a microphone). The voice part still needs a real phone to prove.
+5. The **Ask a question** page has a **typed box at the top** and a microphone. Both go through the same "what do you want?" step (Q10). Speech is sent automatically when you stop talking.
 
 ---
 
@@ -85,6 +85,19 @@ The other entries in the same **Judge Evaluation Scenario** list show each behav
 **API version (no login):** `POST /public/ask` in Swagger (`q9_swagger_rag_abstains_out_of_scope`).
 **Say:** "BM25 retrieval over our mock policy pack, an LLM that may only use the retrieved excerpts, sources always shown, and it abstains when the text does not cover the question." Do not say "embeddings" or "vector database": it is lexical retrieval.
 
+## Q10 "Does the voice assistant actually understand and act?"
+**Go to:** citizen → **Ask a question**. Type in the box (or tap the microphone, speak, tap again to finish). No extra button is needed.
+| Say or type | What happens | Screenshot |
+|---|---|---|
+| "I want to apply, my name is Zainab Bibi, I am a widow, my income is 18000 a month and we are 5 people at home" | A card says "Apply for relief · 99% sure", lists the details it heard, then opens the claim form with name, income, household and widow already filled in (Cancel stops it) | `v1a_typed_apply_understood`, `v1b_claim_form_prefilled` |
+| "Who can apply for relief?" | Answers in place from the official documents with sources | `v2_typed_policy_answer` |
+| "I got a message: BISP relief approved, send your CNIC and fee Rs 500 to JazzCash 0300-1234567. Is this real?" | Opens the message checker with that text and checks it | `v3_typed_scam_checked` |
+| "What is the status of my application?" | Opens My requests | `v4_status_opens_requests` |
+| "Mujhe imdadi raqam ke liye darkhwast deni hai" (Roman Urdu) | Opens the claim form | |
+| "the weather is nice today" | Does nothing risky: says it is not sure | |
+| Urdu speech: "میں امدادی رقم کے لیے درخواست دینا چاہتی ہوں" | Real speech recognition, then the claim form opens by voice alone | `v9a_voice_understood`, `v9b_voice_opened_claim` |
+A helper is sent to the family list (never pre-filled). **Say:** "It only suggests a page; the person confirms, and nothing is submitted for them. Numbers like the ID and income are read by regular expressions, not by an LLM." `POST /voice/intent` is in Swagger.
+
 ## Extras if time allows
 * **Red-Team page** (`admin` → **Red-Team** → Run): the system attacks itself with 61 attacks and prints a scorecard (`x1_redteam`).
 * **Scam Map**, **Analytics**, **Admin** (users, API keys, webhooks, jobs, plan), **About** (what is real vs simulated): `x2` to `x5`. Login screen: `x0`. Swagger overview: `x6`.
@@ -93,6 +106,6 @@ The other entries in the same **Judge Evaluation Scenario** list show each behav
 
 ## Known gaps to be ready for
 * No demo video link yet in the README (add the public Drive link).
-* Voice on a real phone is untested. Speaking only fills in the transcript; you must press the button to send it, and it does not work out intent (it only answers policy questions).
+* Voice on a real phone is still untested (I tested with a recorded Urdu sentence through a virtual microphone and the real speech service). Browser speech recognition fallback is weaker, and Roman Urdu speech is recognised as Urdu.
 * Auditor view is masked, not consent-gated.
 * Evaluation numbers come from synthetic data; the scam set is small.

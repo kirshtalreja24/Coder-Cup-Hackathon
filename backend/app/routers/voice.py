@@ -10,11 +10,11 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import audit
+from .. import audit, intent as intent_mod
 from ..config import get_settings
 from ..db import get_db
 from ..models import User
-from ..security import current_user, rate_limited
+from ..security import current_user, rate_limited, require_roles
 
 router = APIRouter(prefix="/voice", tags=["voice"])
 TTS_FORMAT = "MP3_22050_64"  # small files: friendly to weak connections
@@ -99,3 +99,24 @@ async def stt(file: UploadFile = File(...), user: User = Depends(current_user), 
     audit.log(db, action="ai.stt", actor_type="ai", actor_id="uplift-scribe", tenant_id=user.tenant_id,
               details={"chars": len(text), "bytes": len(raw), "by": user.id})
     return {"text": text, "provider": "Uplift AI (scribe)", "chars": len(text)}
+
+
+class IntentIn(BaseModel):
+    text: str = Field(min_length=1, max_length=600)
+    lang: str = Field(default="en", pattern="^(en|ur|roman)$")
+
+
+@router.post("/intent", summary="Understand what the person wants (apply / status / scam check / policy question / human / my data) and say where to go")
+def understand(body: IntentIn, user: User = Depends(require_roles("citizen", "helper")), db: Session = Depends(get_db)):
+    """Works on the transcript of speech OR typed text. It only SUGGESTS a next step; the app opens the page and the person confirms.
+    Any number that matters (ID, income, household) is read with regular expressions, never trusted from an LLM."""
+    if rate_limited(f"intent:{user.id}", 60, 60):
+        raise HTTPException(429, "Too many requests", headers={"Retry-After": "20"})
+    res = intent_mod.classify(body.text, body.lang)
+    nxt = intent_mod.plan(res, user.role)
+    audit.log(db, action="ai.intent", actor_type="ai", actor_id="intent-1.0", tenant_id=user.tenant_id,
+              details={"intent": res.intent, "confidence": res.confidence, "source": res.source,
+                       "filled": sorted(nxt["prefill"]), "by": user.id})  # what was filled, never the values or the speech itself
+    return {"intent": res.intent, "confidence": res.confidence, "source": res.source, "entities": res.entities.model_dump(exclude_none=True),
+            "action": {"type": nxt["type"], "to": nxt["to"]}, "prefill": nxt["prefill"],
+            "reply": nxt["reply"], "model_version": "intent-1.0"}

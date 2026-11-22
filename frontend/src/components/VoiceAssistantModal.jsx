@@ -35,7 +35,9 @@ import {
   canListen,
   PRE_RENDERED_PROMPTS
 } from '../voice'
-import { apiPost } from '../api'
+import { useNavigate } from 'react-router-dom'
+import { apiPost, getUser } from '../api'
+import { prefillDraft } from '../offline'
 
 // Audio Waveform Visualizer Component
 function Waveform({ active, level = 0.5, color = 'var(--gold, #C49A56)' }) {
@@ -91,6 +93,10 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
   const [playingClipId, setPlayingClipId] = useState(null)
 
   const stopListenRef = useRef(null)
+  const nav = useNavigate()
+  const [pending, setPending] = useState(null) // what the assistant understood and is about to open
+  const navTimer = useRef(null)
+  const lastHeard = useRef({ text: '', at: 0 })
 
   // Listen to audio playback events
   useEffect(() => {
@@ -108,6 +114,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
 
     return () => {
       unsub()
+      clearTimeout(navTimer.current)
       stop()
       if (stopListenRef.current) stopListenRef.current()
     }
@@ -147,6 +154,12 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
         setTranscript(text)
         if (isFinal) {
           setState('idle')
+          // No extra tap needed: as soon as the speech is final, work out what the person wants and act on it.
+          const now = Date.now()
+          if (text.trim() && !(lastHeard.current.text === text && now - lastHeard.current.at < 3000)) {
+            lastHeard.current = { text, at: now }
+            handleUtterance(text)
+          }
         }
       },
       onError: (err) => {
@@ -167,6 +180,66 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
         if (busy) setState('processing')
       }
     })
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // UNDERSTAND what the person wants (speech or typing), then act: open the right page, or answer a policy question.
+  // The server only SUGGESTS a step; nothing is submitted for the person. Roman Urdu is handled by the same classifier.
+  // ---------------------------------------------------------------------------------------------
+  const cancelPending = () => {
+    clearTimeout(navTimer.current)
+    navTimer.current = null
+    setPending(null)
+  }
+
+  const goTo = (it) => {
+    clearTimeout(navTimer.current)
+    navTimer.current = null
+    const role = getUser()?.role
+    let to = it.action?.to
+    try {
+      if (it.intent === 'apply_relief') {
+        if (role === 'helper') {
+          if (sessionStorage.getItem('bh_family')) to = '/h/claim' // a family is already selected on this phone
+        } else {
+          prefillDraft(it.prefill, null) // what they said goes into the form; they still check it
+        }
+      }
+      const msg = it.entities?.message_text
+      if (it.intent === 'scam_check' && msg && msg.length >= 40) sessionStorage.setItem('bh_scam_prefill', msg)
+    } catch {}
+    setPending(null)
+    if (to) {
+      onClose?.()
+      nav(to)
+    }
+  }
+
+  const handleUtterance = async (text) => {
+    const q = (text || '').trim()
+    if (!q) return
+    stop()
+    cancelPending()
+    setResponse(null)
+    setErrorMessage('')
+    setState('processing')
+    const urduScript = /[؀-ۿ]/.test(q)
+    const qlang = urduScript ? 'ur' : lang === 'roman' ? 'roman' : 'en' // language of what was SAID
+    const ragLang = urduScript ? 'ur' : 'en'
+    let it = null
+    try {
+      it = await apiPost('/voice/intent', { text: q, lang: qlang })
+    } catch {
+      it = null // intent service unavailable: fall back to the policy assistant so the person is never stuck
+    }
+    if (!it || it.intent === 'policy_question' || it.intent === 'unknown' || it.action?.type !== 'navigate') {
+      return handleSubmitQuestion(q, ragLang)
+    }
+    setState('idle')
+    setPending({ ...it, qlang })
+    const line = it.reply?.[qlang] || it.reply?.en || ''
+    speak(it.reply?.[qlang === 'en' ? 'en' : 'ur'] || line, qlang === 'en' ? 'en' : 'ur')
+    navTimer.current = setTimeout(() => goTo(it), 4500)
   }
 
   // Submit transcript to RAG / policy assistant
@@ -358,8 +431,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
               setResponse(null)
               setErrorMessage('')
               setTranscript(q)
-              // Urdu script -> Urdu answer; English / Roman Urdu -> English answer
-              handleSubmitQuestion(q, /[؀-ۿ]/.test(q) ? 'ur' : 'en')
+              handleUtterance(q) // typed text goes through the same "what do you want?" step as speech
             }}
             style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}
           >
@@ -432,6 +504,8 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
             <button
               type="button"
               onClick={handleToggleListen}
+              aria-label={state === 'listening' ? 'Stop listening' : 'Speak to the assistant'}
+              data-testid="assistant-mic"
               disabled={state === 'processing'}
               style={{
                 width: '88px',
@@ -519,6 +593,35 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
           {/* ══════════════════════════════════════════════
               TRANSCRIPT SECTION (EDITABLE BEFORE SUBMIT)
           ══════════════════════════════════════════════ */}
+          {/* What the assistant understood, and where it is taking the person (Cancel stops it) */}
+          {pending && (
+            <div
+              role="status"
+              aria-live="polite"
+              data-testid="intent-card"
+              style={{ width: '100%', background: '#ECFDF5', border: '1.5px solid #A7F3D0', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}
+            >
+              <div style={{ fontWeight: 800, color: 'var(--forest-dark, #0D2318)' }}>
+                {{ apply_relief: 'Apply for relief', check_status: 'Check my request', scam_check: 'Check a message', talk_to_human: 'Talk to a person', my_data: 'My data and permissions' }[pending.intent] || pending.intent}
+                <span className="small subtle" style={{ fontWeight: 400 }}> · {Math.round((pending.confidence || 0) * 100)}% sure</span>
+              </div>
+              <div dir={pending.qlang === 'ur' ? 'rtl' : 'ltr'}>{pending.reply?.[pending.qlang] || pending.reply?.en}</div>
+              {Object.keys(pending.prefill || {}).length > 0 && (
+                <div className="small subtle">
+                  {Object.entries(pending.prefill).map(([k, v]) => `${k.replace('_', ' ')}: ${v}`).join(' · ')}
+                </div>
+              )}
+              <div className="row" style={{ gap: 8 }}>
+                <button type="button" className="btn" onClick={() => goTo(pending)}>
+                  {pending.qlang === 'ur' ? 'ابھی کھولیں' : 'Open now'}
+                </button>
+                <button type="button" className="btn ghost" onClick={cancelPending}>
+                  {pending.qlang === 'ur' ? 'منسوخ' : 'Cancel'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {(transcript || isEditing) && (
             <div
               style={{
@@ -604,7 +707,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                 <button
                   type="button"
                   className="btn"
-                  onClick={() => handleSubmitQuestion()}
+                  onClick={() => handleUtterance(transcript)}
                   disabled={!transcript.trim() || state === 'processing'}
                   style={{
                     padding: '8px 18px',

@@ -201,6 +201,30 @@ export const loadDraft = () => {
 export const saveDraft = (d) => localStorage.setItem(DKEY, JSON.stringify(d))
 export const clearDraft = () => localStorage.removeItem(DKEY)
 
+// The blank claim form. Lives here so the claim page and the voice assistant start from the same defaults.
+export const EMPTY_FORM = {
+  name: '',
+  father_name: '',
+  cnic: '',
+  marital_status: '',
+  monthly_income: '',
+  household_size: 4,
+  district: 'Karachi East',
+  dob: ''
+}
+
+// Voice / typed intent: put what the person said into the claim draft. The form still opens at step 1 for them to check.
+export function prefillDraft(fields, familyId = null) {
+  const cur = loadDraft()
+  const base = cur && cur.forFamily === familyId ? cur.d : EMPTY_FORM
+  const d = { ...EMPTY_FORM, ...base }
+  for (const [k, v] of Object.entries(fields || {})) {
+    if (v === null || v === undefined || v === '') continue
+    d[k] = k === 'monthly_income' ? String(v) : v
+  }
+  saveDraft({ d, photo: cur?.photo || null, forFamily: familyId })
+}
+
 // shrink a camera photo to ~100-200KB so it uploads on 2G
 export function shrinkImage(file, max = 1000, q = 0.7) {
   return new Promise((resolve) => {

@@ -113,6 +113,19 @@ export function ScamPage({ pub }) {
       .catch(() => {})
   }, [])
 
+  // The voice assistant hands over a message the person read out ("I got a message that says ..."): show it and check it.
+  useEffect(() => {
+    let handed = null
+    try {
+      handed = sessionStorage.getItem('bh_scam_prefill')
+      sessionStorage.removeItem('bh_scam_prefill')
+    } catch {}
+    if (handed && handed.trim()) {
+      setText(handed)
+      check(handed)
+    }
+  }, [])
+
   const handlePaste = async () => {
     try {
       if (navigator.clipboard?.readText) {
