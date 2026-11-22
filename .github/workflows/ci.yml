@@ -20,7 +20,7 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements.txt
       - run: pip install -r requirements.txt
-      - name: Run tests (SQLite, no LLM, no voice keys: everything must work on the fallbacks)
+      - name: "Run tests (SQLite, no LLM and no voice keys, so everything runs on the fallbacks)"
         run: python -m pytest tests -q
         env:
           LLM_BASE_URL: ""
