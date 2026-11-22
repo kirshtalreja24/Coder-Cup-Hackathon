@@ -55,6 +55,7 @@ Most entries will be an assistant that fills in forms. Bharosa is a system that 
 A calm **Deep Forest × Champagne** design system (forest green, champagne gold, ivory paper) with Urdu / Roman Urdu / English switching on every screen, large tap targets and a prototype banner on every route.
 * **Citizen:** a 7-step claim wizard (one question per screen, voice and icon input, auto-save), a 7-stage case tracker with a distinct screen for *approved*, *under human review*, *needs proof* and *not approved (with appeal)*, a decision receipt, and a "who accessed my data?" page.
 * **Voice that understands and acts:** speak (or type) on the *Ask a question* page and the assistant works out what you want (apply, check my request, check a message, ask a policy question, talk to a person, my data) in Urdu, Roman Urdu or English. It opens the right page and fills in what you said (name, income, household, widow) for you to check; it never submits anything for you. Policy questions are answered from the official documents or it says it is not sure. Speech is sent for recognition as soon as you stop talking, no extra tap. Numbers are read with regular expressions, never trusted from an LLM; the LLM is only a tie-breaker and its output is schema-validated (`backend/app/intent.py`, `POST /voice/intent`).
+* **Listens and speaks in the language you chose.** With the site in English, the first question is spoken in English, the microphone listens in English and the answer is written in English letters (Whisper via the Groq key; browser recognition as the fallback). In Urdu it uses the Urdu speech service and pre-rendered Urdu clips. Roman Urdu listens for Latin letters.
 * **Offline and voice:** an offline banner for staff, an **Offline Sync Center** (every claim waiting on the device, for citizens and helpers) and a voice assistant for hands-free help.
 * **Staff:** review queue, case view with handoff brief, Rules editor with Digital Twin and safety gate, Risk dial, Scam Map, Audit, Analytics, Admin and Red-Team pages.
 
@@ -65,7 +66,7 @@ A calm **Deep Forest × Champagne** design system (forest green, champagne gold,
 | Core SaaS | JWT + RBAC (5 roles) · dashboards · cases (create/assign/escalate/close) · public REST API + API keys + Swagger · audit log · consent mgmt · mock identity/payment/data APIs |
 | "Pick 3" (we built 10) | Multi-tenant (2 departments) · rule editor + Digital Twin · notifications (in-app inbox is real; SMS / WhatsApp / email are simulated and labelled) · webhooks (HMAC-signed, SSRF-guarded) · analytics per tenant · review queue (priority + confidence sort) · subscription plans & quotas · background jobs · rate limiting · offline mode |
 | Bonus | Digital Twin · Helper Mode · Offline-first sync · Scam Map (all four) |
-| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 103 automated tests (`backend/tests`, including the full Red-Team scorecard) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
+| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 106 automated tests (`backend/tests`, including the full Red-Team scorecard) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
 
 ## Real vs simulated
 See [`docs/REAL_VS_SIMULATED.md`](docs/REAL_VS_SIMULATED.md) (also shown in the app under *About*).
@@ -86,7 +87,7 @@ cd frontend && npm install && npm run dev            # http://localhost:5173
 ```
 Copy `.env.example` → `.env` (every setting is explained inside it) and set `DATABASE_URL` (Supabase Postgres) for the deployed setup. Migrations run automatically on start for Postgres (`alembic upgrade head`).
 
-Tests: `cd backend && python -m pytest tests -q` (103 tests, includes the full Red-Team scorecard).
+Tests: `cd backend && python -m pytest tests -q` (106 tests, includes the full Red-Team scorecard).
 
 ### Optional services (everything works without them, with fallbacks)
 | Service | `.env` keys | Without it |

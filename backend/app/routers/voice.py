@@ -5,7 +5,7 @@ import hashlib
 from pathlib import Path
 
 import httpx
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -31,10 +31,15 @@ def enabled() -> bool:
     return bool(_cfg()[0])
 
 
+def english_stt_enabled() -> bool:
+    """English speech-to-text uses a Whisper model on the Groq endpoint (the same key as the LLM). Optional."""
+    return bool(get_settings().groq_api)
+
+
 @router.get("/status", summary="Which voice features are available on this server")
 def status():
     on = enabled()
-    return {"provider": "Uplift AI" if on else None, "tts": on, "stt": on, "stats": _stats,
+    return {"provider": "Uplift AI" if on else None, "tts": on, "stt": on, "stt_en": english_stt_enabled(), "stats": _stats,
             "fallback": "pre-rendered Urdu clips + browser speech engine"}
 
 
@@ -72,8 +77,12 @@ def tts(body: TTSIn, user: User = Depends(current_user), db: Session = Depends(g
     return Response(r.content, media_type="audio/mpeg", headers={"X-TTS-Cache": "miss"})
 
 
-@router.post("/stt", summary="Urdu speech-to-text. Send a short WAV/MP3/OGG recording.")
-async def stt(file: UploadFile = File(...), user: User = Depends(current_user), db: Session = Depends(get_db)):
+@router.post("/stt", summary="Speech-to-text. Urdu (default) or English (lang=en|roman). Send a short WAV/MP3/OGG recording.")
+async def stt(file: UploadFile = File(...), lang: str = Form("ur"), user: User = Depends(current_user), db: Session = Depends(get_db)):
+    if lang not in ("ur", "en", "roman"):
+        raise HTTPException(422, "lang must be ur, en or roman")
+    if lang in ("en", "roman"):
+        return await _stt_english(file, lang, user, db)
     key, base, _ = _cfg()
     if not key:
         raise HTTPException(503, "Voice service not configured; use the built-in browser speech recognition")
@@ -120,3 +129,34 @@ def understand(body: IntentIn, user: User = Depends(require_roles("citizen", "he
     return {"intent": res.intent, "confidence": res.confidence, "source": res.source, "entities": res.entities.model_dump(exclude_none=True),
             "action": {"type": nxt["type"], "to": nxt["to"]}, "prefill": nxt["prefill"],
             "reply": nxt["reply"], "model_version": "intent-1.0"}
+
+
+async def _stt_english(file: UploadFile, lang: str, user: User, db: Session):
+    """English (and Roman-Urdu spoken in Latin letters) dictation. The text comes back in English letters."""
+    st = get_settings()
+    if not st.groq_api:
+        raise HTTPException(503, "English speech recognition is not configured; use the built-in browser speech recognition")
+    if rate_limited(f"stt:{user.id}", 30, 60):
+        raise HTTPException(429, "Too many voice requests", headers={"Retry-After": "20"})
+    raw = await file.read(MAX_AUDIO + 1)
+    if not raw:
+        raise HTTPException(422, "Empty recording")
+    if len(raw) > MAX_AUDIO:
+        raise HTTPException(413, "Recording too long (max 5 MB)")
+    base = (st.groq_base_url or "https://api.groq.com/openai/v1").rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=30) as c:
+            r = await c.post(f"{base}/audio/transcriptions", headers={"Authorization": f"Bearer {st.groq_api}"},
+                             files={"file": (file.filename or "speech.wav", raw, file.content_type or "audio/wav")},
+                             data={"model": "whisper-large-v3-turbo", "language": "en", "response_format": "json", "temperature": "0",
+                                   # a vocabulary hint: people speak Pakistani names, districts and rupee amounts into this app
+                                   "prompt": "Pakistani names and places, for example Fatima Bibi, Zainab, Muhammad Ali, Abdul Karim, Karachi, Hyderabad. Amounts in rupees."})
+            r.raise_for_status()
+            text = ((r.json() or {}).get("text") or "").strip()
+    except Exception as e:  # noqa
+        _stats["errors"] += 1; _stats["last_error"] = type(e).__name__
+        raise HTTPException(502, "Speech recognition unavailable; type or use the buttons")
+    _stats["stt_calls"] += 1
+    audit.log(db, action="ai.stt", actor_type="ai", actor_id="whisper-en", tenant_id=user.tenant_id,
+              details={"chars": len(text), "bytes": len(raw), "by": user.id, "lang": lang})
+    return {"text": text, "provider": "Whisper (English)", "chars": len(text)}

@@ -7,6 +7,7 @@ import { BASE, getToken } from './api'
 let current = null // currently playing Audio
 const blobCache = new Map()
 let statusCache = null
+let englishSttCache = null
 let lastSpokenText = ''
 let lastSpokenLang = 'ur'
 let lastPromptId = null
@@ -27,6 +28,7 @@ export async function getVoiceStatus() {
     if (!res.ok) throw new Error('status ' + res.status)
     const json = await res.json()
     statusCache = json.tts === true
+    englishSttCache = json.stt_en === true
     return {
       upliftOnline: json.tts === true,
       provider: json.provider || 'Uplift AI (Pakistani Urdu)',
@@ -46,6 +48,20 @@ export async function getVoiceStatus() {
       offlineClipsCount: 21
     }
   }
+}
+
+// Which language to LISTEN in for each site language: Urdu -> Urdu; English and Roman Urdu -> Latin letters.
+export const recognitionLang = (siteLang) => (siteLang === 'en' ? 'en-US' : siteLang === 'roman' ? 'en-IN' : 'ur-PK')
+
+async function serverEnglishStt() {
+  if (englishSttCache === null) {
+    try {
+      await getVoiceStatus()
+    } catch {
+      englishSttCache = false
+    }
+  }
+  return englishSttCache === true
 }
 
 async function serverVoice() {
@@ -162,20 +178,28 @@ export async function speak(text, lang = 'ur') {
 }
 
 // Fixed prompts: pre-rendered Urdu clip (works 100% offline) -> speak(text) fallback
+// The wording of a pre-rendered prompt in a given language (ur / roman / en), if we have it.
+export const promptText = (id, lang) => {
+  const p = PRE_RENDERED_PROMPTS.find((x) => x.id === id)
+  return p ? p[lang === 'en' ? 'en' : lang === 'roman' ? 'roman' : 'ur'] : null
+}
+
 export function playPrompt(id, fallbackText, lang = 'ur') {
   lastPromptId = id
-  lastSpokenText = fallbackText
-  lastSpokenLang = lang
   stop()
+  // English: speak the English wording (the pre-rendered clips are Urdu). Urdu / Roman Urdu: play the Urdu clip.
+  const text = lang === 'en' ? promptText(id, 'en') || fallbackText : promptText(id, 'ur') || fallbackText
+  lastSpokenText = text
+  lastSpokenLang = lang === 'en' ? 'en' : 'ur'
   return new Promise((resolve) => {
-    if (lang !== 'ur') {
-      speak(fallbackText, lang).then(resolve)
+    if (lang === 'en') {
+      speak(text, 'en').then(resolve)
       return
     }
     playUrl(`/audio/${id}.mp3`)
       .then(() => resolve(true))
       .catch(() => {
-        speak(fallbackText, lang).then(resolve)
+        speak(text, 'ur').then(resolve)
       })
   })
 }
@@ -332,12 +356,12 @@ export function listen({
   let stopped = false
 
   ;(async () => {
-    // Try Uplift AI STT first if online and token available
+    // Server recognition first when online and signed in: Uplift for Urdu, Whisper for English / Roman Urdu.
+    const urdu = lang.startsWith('ur')
     if (
-      lang.startsWith('ur') &&
       navigator.onLine &&
       getToken() &&
-      (await serverVoice()) &&
+      (urdu ? await serverVoice() : await serverEnglishStt()) &&
       navigator.mediaDevices?.getUserMedia &&
       window.MediaRecorder
     ) {
@@ -346,6 +370,7 @@ export function listen({
         onProcessing?.(true)
         const fd = new FormData()
         fd.append('file', wav, 'speech.wav')
+        fd.append('lang', urdu ? 'ur' : lang === 'en-IN' ? 'roman' : 'en')
         const r = await fetch(BASE + '/voice/stt', {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + getToken() },
@@ -423,7 +448,7 @@ export const PRE_RENDERED_PROMPTS = [
     id: 'say_name',
     ur: 'اپنا نام بولیں۔',
     roman: 'Apna naam bolein.',
-    en: 'Please speak your full name.',
+    en: 'What is your name?',
     category: 'form'
   },
   {

@@ -96,6 +96,7 @@ The other entries in the same **Judge Evaluation Scenario** list show each behav
 | "Mujhe imdadi raqam ke liye darkhwast deni hai" (Roman Urdu) | Opens the claim form | |
 | "the weather is nice today" | Does nothing risky: says it is not sure | |
 | Urdu speech: "میں امدادی رقم کے لیے درخواست دینا چاہتی ہوں" | Real speech recognition, then the claim form opens by voice alone | `v9a_voice_understood`, `v9b_voice_opened_claim` |
+**Language follows the site setting:** switch the site to English (top right), open **Apply for relief**: the first question "What is your name?" is spoken in English, the microphone listens in English and the name is written in English letters (`lang_en_step1`, `lang_en_after_speaking`). In Urdu it speaks and listens in Urdu.
 A helper is sent to the family list (never pre-filled). **Say:** "It only suggests a page; the person confirms, and nothing is submitted for them. Numbers like the ID and income are read by regular expressions, not by an LLM." `POST /voice/intent` is in Swagger.
 
 ## Extras if time allows

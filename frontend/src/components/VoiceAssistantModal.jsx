@@ -33,6 +33,7 @@ import {
   onAudioState,
   getVoiceStatus,
   canListen,
+  recognitionLang as recognitionLangFor,
   PRE_RENDERED_PROMPTS
 } from '../voice'
 import { useNavigate } from 'react-router-dom'
@@ -130,7 +131,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
   useEffect(() => {
     getVoiceStatus().then(setVoiceInfo)
     if (initialPrompt) {
-      playPrompt(initialPrompt, 'خوش آمدید۔ میں آپ کی مدد کروں گا۔', 'ur')
+      playPrompt(initialPrompt, 'خوش آمدید۔ میں آپ کی مدد کروں گا۔', globalLang === 'en' ? 'en' : 'ur')
     }
     return () => {
       stop()
@@ -152,7 +153,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
     setState('listening')
     setResponse(null)
 
-    const recognitionLang = lang === 'en' ? 'en-US' : 'ur-PK'
+    const recognitionLang = recognitionLangFor(lang)
 
     stopListenRef.current = listen({
       lang: recognitionLang,

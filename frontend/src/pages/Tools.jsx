@@ -42,6 +42,7 @@ import {
   replayLast,
   getVoiceStatus,
   onAudioState,
+  recognitionLang,
   PRE_RENDERED_PROMPTS
 } from '../voice'
 import { ErrorBox, MockTag } from '../ui'
@@ -69,7 +70,9 @@ const COLORS = {
   UNSURE: ['human', UserCheck]
 }
 
-function Mic({ onText, lang = 'ur-PK' }) {
+function Mic({ onText }) {
+  const { lang: siteLang, localize } = useLang()
+  const lang = recognitionLang(siteLang) // the language the person chose is the language we listen in
   const [rec, setRec] = useState(false)
   const stopRef = useRef(null)
 
@@ -92,10 +95,10 @@ function Mic({ onText, lang = 'ur-PK' }) {
           onError: () => setRec(false)
         })
       }}
-      title="Speak message in Urdu"
+      title={localize('پیغام اردو میں بولیں', 'Paigham Urdu mein bolein', 'Speak the message in English')}
     >
       {rec ? <Square size={14} /> : <MicIcon size={14} />}
-      <span>{rec ? 'Listening…' : 'Speak'}</span>
+      <span>{rec ? localize('سن رہا ہوں…', 'Sun raha hoon…', 'Listening…') : localize('بولیں', 'Bolein', 'Speak')}</span>
     </button>
   )
 }

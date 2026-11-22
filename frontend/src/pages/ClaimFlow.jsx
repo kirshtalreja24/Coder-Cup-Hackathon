@@ -176,7 +176,6 @@ export default function ClaimFlow({ helper }) {
   const [result, setResult] = useState(null)
   const [queued, setQueued] = useState(false)
   const [demos, setDemos] = useState(null)
-  const cameraRef = useRef()
   const galleryRef = useRef()
 
   const setField = (k, v) => setD((p) => ({ ...p, [k]: v }))
@@ -257,63 +256,8 @@ export default function ClaimFlow({ helper }) {
     }
   }
 
-  // Live camera: getUserMedia works on desktop too (the `capture` attribute is ignored there).
-  const [camOpen, setCamOpen] = useState(false)
-  const [camError, setCamError] = useState('')
-  const videoRef = useRef()
-  const streamRef = useRef(null)
-
-  const stopCamera = () => {
-    streamRef.current?.getTracks().forEach((t) => t.stop())
-    streamRef.current = null
-    setCamOpen(false)
-  }
-
-  const openCamera = async () => {
-    setCamError('')
-    if (!navigator.mediaDevices?.getUserMedia) {
-      cameraRef.current?.click() // fallback to native capture input
-      return
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' } },
-        audio: false
-      })
-      streamRef.current = stream
-      setCamOpen(true)
-    } catch {
-      setCamError('Camera permission denied or unavailable. Please allow camera access or use Gallery.')
-      cameraRef.current?.click()
-    }
-  }
-
-  useEffect(() => {
-    if (camOpen && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current
-      videoRef.current.play?.().catch(() => {})
-    }
-  }, [camOpen])
-
-  useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), [])
-
-  const snapPhoto = () => {
-    const v = videoRef.current
-    if (!v || !v.videoWidth) return
-    const canvas = document.createElement('canvas')
-    canvas.width = v.videoWidth
-    canvas.height = v.videoHeight
-    canvas.getContext('2d').drawImage(v, 0, 0)
-    canvas.toBlob(
-      async (blob) => {
-        stopCamera()
-        if (!blob) return
-        await handlePhotoUpload({ target: { files: [new File([blob], 'id-card.jpg', { type: 'image/jpeg' })] } })
-      },
-      'image/jpeg',
-      0.9
-    )
-  }
+  const photoCam = useCameraCapture((f) => handlePhotoUpload({ target: { files: [f] } }))
+  const openCamera = photoCam.openCamera
 
   const payload = () => ({
     ...d,
@@ -376,8 +320,7 @@ export default function ClaimFlow({ helper }) {
   }
 
   // Retake photo action on proof request
-  const retakePhoto = async (e) => {
-    const f = e.target.files?.[0]
+  const retakePhoto = async (f) => {
     if (!f) return
     setBusy(true)
     try {
@@ -1215,43 +1158,9 @@ export default function ClaimFlow({ helper }) {
                 </>
               )}
 
-              {camError && <span className="small" style={{ color: 'var(--danger, #b00020)' }}>{camError}</span>}
-              {camOpen && (
-                <div
-                  style={{
-                    position: 'fixed', inset: 0, zIndex: 1000, background: '#000',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    justifyContent: 'center', gap: 16, padding: 16
-                  }}
-                >
-                  <video
-                    ref={videoRef}
-                    playsInline
-                    muted
-                    autoPlay
-                    style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 12 }}
-                  />
-                  <div className="row" style={{ gap: 12 }}>
-                    <button type="button" onClick={snapPhoto} style={{ padding: '12px 24px' }}>
-                      <Camera size={18} />
-                      <span>{localize('تصویر کھینچیں', 'Tasveer khainchein', 'Capture')}</span>
-                    </button>
-                    <button type="button" className="btn secondary" onClick={stopCamera} style={{ padding: '12px 24px' }}>
-                      <span>{localize('منسوخ', 'Cancel', 'Cancel')}</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+              {photoCam.cameraUI}
 
               {/* Hidden file inputs */}
-              <input
-                ref={cameraRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                hidden
-                onChange={handlePhotoUpload}
-              />
               <input
                 ref={galleryRef}
                 type="file"

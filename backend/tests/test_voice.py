@@ -77,3 +77,42 @@ def test_stt_proxies_and_survives_provider_failure(client, tok, monkeypatch):
         assert client.post("/voice/stt", files={"file": ("s.wav", b"", "audio/wav")}, headers=h).status_code in (422, 502)
     finally:
         s.uplift_api_key = ""
+
+
+# ---------------------------------------------------------------- English dictation (site language = English)
+def test_stt_rejects_unknown_language(client, tok):
+    r = client.post("/voice/stt", headers=tok("widow-clean@citizen.demo"), data={"lang": "klingon"}, files={"file": ("a.wav", b"RIFFxxxx", "audio/wav")})
+    assert r.status_code == 422
+
+
+def test_english_stt_is_unavailable_without_a_key_and_status_says_so(client, tok, monkeypatch):
+    from app.config import get_settings
+    monkeypatch.setattr(get_settings(), "groq_api", "")
+    assert client.get("/voice/status").json()["stt_en"] is False
+    r = client.post("/voice/stt", headers=tok("widow-clean@citizen.demo"), data={"lang": "en"}, files={"file": ("a.wav", b"RIFFxxxx", "audio/wav")})
+    assert r.status_code == 503  # the app then falls back to the browser's own English recognition
+
+
+def test_english_stt_returns_english_text_and_is_audited(client, tok, monkeypatch):
+    from app.config import get_settings
+    from app.routers import voice
+    monkeypatch.setattr(get_settings(), "groq_api", "test-key")
+
+    class FakeResp:
+        def raise_for_status(self): pass
+        def json(self): return {"text": " My name is Zainab Bibi "}
+
+    class FakeClient:
+        def __init__(self, *a, **k): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): return False
+        async def post(self, url, **kw):
+            assert url.endswith("/audio/transcriptions") and kw["data"]["language"] == "en"
+            return FakeResp()
+
+    monkeypatch.setattr(voice.httpx, "AsyncClient", FakeClient)
+    assert client.get("/voice/status").json()["stt_en"] is True
+    r = client.post("/voice/stt", headers=tok("widow-clean@citizen.demo"), data={"lang": "en"}, files={"file": ("a.wav", b"RIFFxxxx", "audio/wav")})
+    assert r.status_code == 200 and r.json()["text"] == "My name is Zainab Bibi"
+    ev = client.get("/audit?action=ai.stt&limit=3", headers=tok("auditor@relief.demo")).json()
+    assert ev and ev[0]["details"]["lang"] == "en" and "Zainab" not in str(ev[0]["details"])  # the speech itself is never logged
