@@ -51,7 +51,11 @@ def public_scam_check(body: ScamIn, request: Request, db: Session = Depends(get_
 @router.get("/scam/map", summary="Scam Map: live patterns by type, area and time (from classified reports)")
 def scam_map(days: int = 30, user: User = Depends(require_roles("officer", "admin", "auditor")), db: Session = Depends(get_db)):
     since = now() - timedelta(days=days)
-    rows = db.query(ScamMessage).filter(ScamMessage.created_at >= since).filter((ScamMessage.tenant_id == user.tenant_id) | (ScamMessage.tenant_id.is_(None))).all()
+    # Only this department's classified reports feed the map. Anonymous public reports (tenant NULL) are unverified and anyone can
+    # send them, so they are reported separately below and can never move the department's totals or "rising areas".
+    rows = db.query(ScamMessage).filter(ScamMessage.created_at >= since, ScamMessage.tenant_id == user.tenant_id).all()
+    pub = db.query(ScamMessage).filter(ScamMessage.created_at >= since, ScamMessage.tenant_id.is_(None)).all()
+    pub_flagged = [r for r in pub if r.verdict in ("SCAM", "SUSPICIOUS")]
     flagged = [r for r in rows if r.verdict in ("SCAM", "SUSPICIOUS")]
     by_area, by_type, by_day = Counter(r.area or "Unknown" for r in flagged), Counter(r.scam_type or "other" for r in flagged), Counter(r.created_at.strftime("%Y-%m-%d") for r in flagged)
     cell = defaultdict(Counter)
@@ -64,7 +68,9 @@ def scam_map(days: int = 30, user: User = Depends(require_roles("officer", "admi
     rising = [{"area": a, "recent": recent[a], "earlier": older.get(a, 0)} for a in recent if recent[a] > older.get(a, 0) * 1.5 and recent[a] >= 3]
     return {"window_days": days, "total_reports": len(rows), "flagged": len(flagged), "by_area": by_area.most_common(), "by_type": by_type.most_common(),
             "by_day": sorted(by_day.items()), "area_x_type": {a: dict(c) for a, c in cell.items()}, "rising_areas": sorted(rising, key=lambda x: -x["recent"]),
-            "note": "Built from classified (synthetic + reported) messages. Area is as reported by the user."}
+            "public_unverified": {"reports": len(pub), "flagged": len(pub_flagged), "by_area": Counter(r.area or "Unknown" for r in pub_flagged).most_common(),
+                                  "note": "Anonymous public reports. Shown for information only; not counted above."},
+            "note": "Built from this department's classified messages. Area is as reported by the user."}
 
 
 @router.get("/scam/recent")

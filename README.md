@@ -65,7 +65,7 @@ A calm **Deep Forest × Champagne** design system (forest green, champagne gold,
 | Core SaaS | JWT + RBAC (5 roles) · dashboards · cases (create/assign/escalate/close) · public REST API + API keys + Swagger · audit log · consent mgmt · mock identity/payment/data APIs |
 | "Pick 3" (we built 10) | Multi-tenant (2 departments) · rule editor + Digital Twin · notifications (in-app inbox is real; SMS / WhatsApp / email are simulated and labelled) · webhooks (HMAC-signed, SSRF-guarded) · analytics per tenant · review queue (priority + confidence sort) · subscription plans & quotas · background jobs · rate limiting · offline mode |
 | Bonus | Digital Twin · Helper Mode · Offline-first sync · Scam Map (all four) |
-| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 93 automated tests (`backend/tests`, including the full Red-Team scorecard) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
+| Engineering | Postgres (Supabase) + Alembic migrations · Docker · 100 automated tests (`backend/tests`, including the full Red-Team scorecard) · `/health` `/metrics` · structured error handling · request IDs · audit of every AI/agent call |
 
 ## Real vs simulated
 See [`docs/REAL_VS_SIMULATED.md`](docs/REAL_VS_SIMULATED.md) (also shown in the app under *About*).
@@ -86,7 +86,7 @@ cd frontend && npm install && npm run dev            # http://localhost:5173
 ```
 Copy `.env.example` → `.env` and set `DATABASE_URL` (Supabase Postgres) for the deployed setup. Migrations run automatically on start for Postgres (`alembic upgrade head`).
 
-Tests: `cd backend && python -m pytest tests -q` (93 tests, includes the full Red-Team scorecard).
+Tests: `cd backend && python -m pytest tests -q` (100 tests, includes the full Red-Team scorecard).
 
 ### Optional services (everything works without them, with fallbacks)
 | Service | `.env` keys | Without it |
@@ -139,6 +139,7 @@ FastAPI + SQLAlchemy + Alembic · Postgres (Supabase) · React PWA · scikit-lea
 * Single-process job runner, in-memory rate limiter and in-memory helper session lock: fine for a prototype, not for horizontal scale.
 * The claim agent is a deliberately **deterministic** tool-calling pipeline, not an LLM that improvises; the LLM only explains and answers questions.
 * Helper one-time codes are delivered to the family's *simulated* SMS / in-app inbox. For a single-person demo, set `DEMO_SHOW_OTP=true` to also return the code in the API response (off by default, clearly labelled when on).
+* Photo uploads are accepted only if the file really is a JPEG, PNG or WebP (checked by its signature), max 5 MB. Login limits count failed attempts per account and per address, so a shared network is not locked out. Anonymous scam reports are shown separately on the Scam Map and never counted in the department's numbers. Withdrawing consent hides case data from officers, auditors and admins alike; only the decision record and the audit log (no personal data) remain.
 * Demo logins and the demo API key are public on purpose (so judges can try everything); they only unlock synthetic data.
 * The Red-Team run creates a throw-away sandbox department in the database each time (synthetic users only; real demo data is untouched).
 * The anomaly detector flags 8+ claims from one account within an hour, which is intentional (batch-filing is a fraud signal) but means a very busy helper's batch would be reviewed by a person.

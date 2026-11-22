@@ -115,3 +115,10 @@ def require_access(db: Session, *, subject_id: str, accessor: User, scope: str,
     audit.log(db, action="access.denied", actor=accessor, resource_type=resource_type, resource_id=resource_id,
               outcome="denied", details={"subject": subject_id, "scope": scope, "reason": "no active consent or not authorised"})
     raise HTTPException(403, f"No active consent for scope '{scope}'. The citizen has not shared this data or has withdrawn it.")
+
+
+def identity_shared(db: Session, subject_id: str) -> bool:
+    """True while the citizen currently shares identity data with the department (any active identity grant).
+    Auditors and admins see a masked view only while this is true: withdrawing consent hides the data from them too."""
+    return db.query(Consent).filter(Consent.subject_id == subject_id, Consent.status == "active",
+                                    Consent.scope.in_(["identity", "*"])).first() is not None

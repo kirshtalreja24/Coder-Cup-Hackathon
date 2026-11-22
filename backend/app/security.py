@@ -92,6 +92,26 @@ def rate_limited(key: str, limit: int, window: float = 60.0) -> bool:
     return False
 
 
+_fails: dict[str, list[float]] = {}
+
+
+def too_many_failures(key: str, limit: int, window: float = 300.0) -> bool:
+    import time
+    t = time.time()
+    arr = [x for x in _fails.get(key, []) if t - x < window]
+    _fails[key] = arr
+    return len(arr) >= limit
+
+
+def record_failure(key: str) -> None:
+    import time
+    _fails.setdefault(key, []).append(time.time())
+
+
+def clear_failures(key: str) -> None:
+    _fails.pop(key, None)
+
+
 def api_key_auth(scope: str | None = None):
     def dep(x_api_key: str | None = Header(default=None), db: Session = Depends(get_db)) -> ApiKey:
         if not x_api_key:

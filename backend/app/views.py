@@ -65,9 +65,13 @@ def case_detail(db: Session, c: Case, viewer: User) -> dict:
                       details={"subject": c.citizen_id, "scope": "identity"})
         out["handoff_brief"] = c.handoff_brief if not out["redacted"] else {"headline": (c.handoff_brief or {}).get("headline"),
                                                                            "why_unsure": (c.handoff_brief or {}).get("why_unsure")}
-    else:  # admin / auditor: masked
-        out["data"] = mask_form({k: v for k, v in (c.data or {}).items() if k != "signals"})
-        out["redacted"], out["masked"] = False, True
+    else:  # admin / auditor: a MASKED view, and only while the citizen still shares identity data
+        if consent.identity_shared(db, c.citizen_id):
+            out["data"] = mask_form({k: v for k, v in (c.data or {}).items() if k != "signals"})
+            out["redacted"], out["masked"] = False, True
+        else:
+            out["data"], out["redacted"] = None, True
+            out["redaction_reason"] = "Citizen has not shared (or has withdrawn) identity data."
     if viewer.role == "citizen" or viewer.role == "helper":
         out["handoff_brief"] = None
     return out
@@ -83,13 +87,16 @@ def decision_view(d: Decision, viewer: User, subject_allowed: bool) -> dict:
     if viewer.role == "officer" and subject_allowed:
         base["trace"] = trace
     else:
-        base["trace"] = _mask_trace(trace)  # auditors/admins see the full reasoning but not personal identifiers
+        # auditors/admins see the full reasoning but not personal identifiers, and not even the masked input once consent is withdrawn
+        base["trace"] = _mask_trace(trace, include_input=subject_allowed)
     return base
 
 
-def _mask_trace(t: dict) -> dict:
+def _mask_trace(t: dict, include_input: bool = True) -> dict:
     t = dict(t)
-    if isinstance(t.get("input"), dict):
+    if not include_input:
+        t["input"] = {"redacted": True, "reason": "Citizen has not shared (or has withdrawn) identity data."}
+    elif isinstance(t.get("input"), dict):
         t["input"] = mask_form(t["input"])
     ident = t.get("identity")
     if isinstance(ident, dict):

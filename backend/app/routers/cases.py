@@ -22,6 +22,11 @@ FINAL = ("paid", "closed", "rejected")  # a finished case cannot be reopened, re
 MAX_UPLOAD = 5 * 1024 * 1024
 
 
+def _is_image(b: bytes) -> bool:
+    # JPEG (ff d8 ff), PNG (89 50 4e 47 0d 0a 1a 0a) or WebP (RIFF....WEBP)
+    return b.startswith(bytes.fromhex("ffd8ff")) or b.startswith(bytes.fromhex("89504e470d0a1a0a")) or (b[:4] == b"RIFF" and b[8:12] == b"WEBP")
+
+
 # ---------------------------------------------------------------- helpers
 def _load(db: Session, case_id: str, user: User) -> Case:
     c = db.get(Case, case_id)
@@ -126,6 +131,8 @@ async def upload_document(case_id: str, file: UploadFile = File(...), kind: str 
         raise HTTPException(413, "File too large (max 5 MB). Try a smaller photo.")
     if not raw:
         raise HTTPException(422, "Empty file")
+    if not _is_image(raw):  # decided by the file's own signature, not its name or the browser's content type
+        raise HTTPException(415, "Only photos are accepted (JPEG, PNG or WebP). Please upload a photo of the card.")
     analysis = vision.analyze_document(raw, claimed=c.data or {})
     sha = hashlib.sha256(raw).hexdigest()
     d = Document(case_id=c.id, owner_id=c.citizen_id, kind=kind[:30], filename=os.path.basename(file.filename or "upload")[:150], path="", sha256=sha, analysis=analysis)
@@ -254,7 +261,10 @@ def latest_decision(case_id: str, user: User = Depends(current_user), db: Sessio
     d = db.query(Decision).filter_by(case_id=c.id).order_by(Decision.created_at.desc()).first()
     if not d:
         raise HTTPException(404, "No decision yet")
-    allowed = user.role == "officer" and consent.check_access(db, subject_id=c.citizen_id, accessor=user, scope="identity")
+    if user.role == "officer":
+        allowed = consent.check_access(db, subject_id=c.citizen_id, accessor=user, scope="identity")
+    else:  # auditor / admin: a masked view, only while the citizen still shares identity data
+        allowed = consent.identity_shared(db, c.citizen_id)
     if user.role == "officer" and allowed:
         audit.log(db, action="data.read", actor=user, resource_type="decision", resource_id=d.id, details={"subject": c.citizen_id, "scope": "identity"})
     return decision_view(d, user, allowed)

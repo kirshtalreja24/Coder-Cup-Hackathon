@@ -8,9 +8,9 @@ Every step below was executed on the real app (screenshots in [`judging-simulati
 
 ## Rules of the room (read first)
 1. **Each scenario citizen can be run cleanly once.** A second run of the same person is flagged as a repeat claim (that is the anomaly detector working). Do **not** rehearse on the live site before judging, or ask for a re-seed first.
-2. **Login is rate limited to 15 per minute per IP.** If several people log in from one network at once, you may see "Too many login attempts". Wait one minute. Stay logged in on separate windows.
+2. **Only failed logins are limited** (8 wrong passwords per account, 60 per address, per 5 minutes). Judges sharing a network can log in freely. If you mistype a password 8 times, that account is locked for about 5 minutes.
 3. **Say "prototype, mock data" out loud.** Every screen already carries the banner.
-4. Never claim: "autonomous agent" (it is an audited deterministic tool-calling pipeline), "forgery detection" beyond QR-signature and cross-checks, "accuracy" on real data, "no one can see your data after withdrawal" (the auditor sees a *masked* view; helpers and officers are blocked), or that voice works until you have heard it on your own phone.
+4. Never claim: "autonomous agent" (it is an audited deterministic tool-calling pipeline), "forgery detection" beyond QR-signature and cross-checks, "accuracy" on real data, "no one can see your data after withdrawal" without the caveat in Q4 (the audit log, which holds no personal data, and the decision record stay), or that voice works until you have heard it on your own phone.
 5. The **Ask a question** page has a **typed box at the top** and a microphone. Both go through the same "what do you want?" step (Q10). Speech is sent automatically when you stop talking.
 
 ---
@@ -51,7 +51,7 @@ curl -i $API/cases/<CASE_ID>/documents -H "Authorization: Bearer $T"      # -> 4
 ```
 5. `auditor@relief.demo` → **Audit** → Immutable Event Log: `consent.withdraw` and `access.denied` entries (`q4f`).
 **Helper Mode:** `helper@relief.demo` → 40 families (`q4g_helper_40_families`). Pick a family → send the one-time code → the helper never sees it (the code goes to the family's inbox: log in as `family01@citizen.demo` → 🔔). A helper cannot act for family B while on family A, and the screen locks after 60 s, enforced on the server (HTTP 423).
-**Honest caveat if asked:** the auditor role reads a *masked* view (masked ID number) by design; it is not blocked by withdrawal.
+**Auditor and admin too:** `auditor@relief.demo` → open the same case (`q4h` before, `q4i` after): after withdrawal the claimant data is gone and the decision trace shows `input: redacted`. What stays is the decision record (route, confidence, rule and model version) and the hash-chained log, which contain no personal data. That is the honest answer if asked.
 
 ## Q5 "How do you prevent false scam detection?"
 **Go to:** `widow-clean@citizen.demo` → **Is this message real?** (also works without login at `/public/scam`). Tap the three examples or paste your own:
@@ -107,5 +107,5 @@ A helper is sent to the family list (never pre-filled). **Say:** "It only sugges
 ## Known gaps to be ready for
 * No demo video link yet in the README (add the public Drive link).
 * Voice on a real phone is still untested (I tested with a recorded Urdu sentence through a virtual microphone and the real speech service). Browser speech recognition fallback is weaker, and Roman Urdu speech is recognised as Urdu.
-* Auditor view is masked, not consent-gated.
+* Audit entries (who did what, when) stay after withdrawal by design: they contain no personal data.
 * Evaluation numbers come from synthetic data; the scam set is small.

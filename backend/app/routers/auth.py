@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 from .. import audit
 from ..db import get_db
 from ..models import Tenant, User
-from ..security import client_ip, create_token, current_user, hash_password, rate_limited, verify_password
+from ..security import (clear_failures, client_ip, create_token, current_user, hash_password, rate_limited, record_failure,
+                        too_many_failures, verify_password)
 from ..views import mask_cnic
 
 router = APIRouter(tags=["auth"])
@@ -19,12 +20,18 @@ def user_out(u: User) -> dict:
 
 @router.post("/auth/login", summary="Login (OAuth2 password form) -> JWT")
 def login(request: Request, form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    if rate_limited(f"login:{client_ip(request)}", 15, 60):
-        raise HTTPException(429, "Too many login attempts. Wait a minute.", headers={"Retry-After": "60"})
+    # Only FAILED attempts are limited (a shared network of judges or a busy helper phone must not lock each other out),
+    # per address (guessing across accounts) and per account (guessing one password).
+    ip_key, acct_key = f"loginfail:ip:{client_ip(request)}", f"loginfail:acct:{form.username.strip().lower()[:100]}"
+    if too_many_failures(ip_key, 60) or too_many_failures(acct_key, 8):
+        raise HTTPException(429, "Too many failed login attempts. Wait a few minutes.", headers={"Retry-After": "120"})
     u = db.query(User).filter(User.email == form.username.strip().lower()).first()
     if not u or not u.is_active or not verify_password(form.password, u.password_hash):
+        record_failure(ip_key)
+        record_failure(acct_key)
         audit.log(db, action="auth.login_failed", actor_type="system", details={"email": form.username[:60]}, outcome="denied")
         raise HTTPException(401, "Wrong email or password")
+    clear_failures(acct_key)
     audit.log(db, action="auth.login", actor=u)
     return {"access_token": create_token(u), "token_type": "bearer", "user": user_out(u)}
 

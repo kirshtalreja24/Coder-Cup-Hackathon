@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from .. import audit, decision as dec, rules, twin
+from .. import audit, consent as consent_mod, decision as dec, rules, twin
 from ..db import get_db
 from ..models import (AuditEvent, Case, Consent, Decision, RuleVersion, ScamMessage, Tenant, User)
 from ..security import current_user, require_roles
@@ -175,10 +175,14 @@ def audit_decisions(limit: int = 50, route: str | None = None, user: User = Depe
     q = db.query(Decision).filter(Decision.tenant_id == user.tenant_id)
     if route: q = q.filter(Decision.route == route)
     out = []
+    shared: dict[str, bool] = {}  # per citizen: does the department still hold their identity consent?
     for d in q.order_by(Decision.created_at.desc()).limit(limit).all():
+        cid = db.query(Case.citizen_id).filter(Case.id == d.case_id).scalar()
+        if cid not in shared:
+            shared[cid] = consent_mod.identity_shared(db, cid) if cid else False
         out.append({"id": d.id, "case_id": d.case_id, "route": d.route, "p_legit": d.p_legit, "confidence": d.confidence, "rule_version": d.rule_version,
                     "model_version": d.model_version, "final_outcome": d.final_outcome, "created_at": d.created_at.isoformat(),
-                    "reason_user": d.reason_user, "trace": _mask_trace(d.trace or {})})
+                    "reason_user": d.reason_user, "trace": _mask_trace(d.trace or {}, include_input=shared[cid])})
     return out
 
 
