@@ -23,7 +23,8 @@ import {
   X,
   Code,
   Copy,
-  AlertTriangle
+  AlertTriangle,
+  Landmark
 } from 'lucide-react'
 import { apiGet, BASE, getToken, when } from '../api'
 import { ErrorBox, Json, Spinner, Tabs, useAsync, RouteBadge } from '../ui'
@@ -385,7 +386,7 @@ function HashChainVisualizer({ onSelectEvent }) {
               Interactive Block Linkage Feed
             </h4>
             <div className="small subtle">
-              Genesis Root (0x0000) ➔ Chronological Blocks. Click any block to inspect full trace.
+              Genesis Root (0x0000) &rarr; Chronological Blocks. Click any block to inspect full trace.
             </div>
           </div>
           <span className="badge small bold">{sorted.length} Blocks Rendered</span>
@@ -405,8 +406,8 @@ function HashChainVisualizer({ onSelectEvent }) {
             maxWidth: 380
           }}
         >
-          <div className="row" style={{ gap: 8 }}>
-            <span style={{ fontSize: '1rem' }}>🏛️</span>
+          <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+            <Landmark size={18} style={{ color: 'var(--gold)' }} />
             <div>
               <b style={{ fontSize: '0.85rem', color: 'var(--gold)' }}>GENESIS ROOT BLOCK</b>
               <div className="mono small" style={{ opacity: 0.8 }}>0x00000000000000000000000000000000</div>

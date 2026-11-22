@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { useLocation, useNavigate, Navigate } from 'react-router-dom'
+import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { api, clearSession, getToken, getUser, setSession, login as apiLogin } from './api'
 import { Spinner } from './ui'
 
@@ -258,19 +259,18 @@ export function AuthErrorScreen({ error, onRetry, onOffline, onLogout, hasUser }
           height: 56,
           borderRadius: 28,
           background: 'rgba(196, 154, 86, 0.15)',
-          border: '1px solid var(--champagne, #C49A56)',
+          border: '1px solid var(--champagne, #D5B982)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'var(--terracotta, #c2593f)',
-          fontSize: 26
+          color: 'var(--terracotta, #c2593f)'
         }}
       >
-        ⚠️
+        <AlertTriangle size={24} strokeWidth={2} />
       </div>
 
       <div className="col" style={{ gap: 8 }}>
-        <h3 style={{ margin: 0, color: 'var(--forest-dark, #13302a)', fontSize: '1.25rem' }}>
+        <h3 style={{ margin: 0, color: 'var(--forest-dark, #102B24)', fontSize: '1.25rem' }}>
           Backend Temporarily Unavailable
         </h3>
         <p className="subtle" style={{ margin: 0, fontSize: '0.95rem', lineHeight: 1.5 }}>
@@ -282,9 +282,10 @@ export function AuthErrorScreen({ error, onRetry, onOffline, onLogout, hasUser }
         <button
           type="button"
           onClick={onRetry}
-          style={{ minWidth: 140 }}
+          style={{ minWidth: 140, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
         >
-          🔄 Retry Connection
+          <RefreshCw size={14} />
+          <span>Retry Connection</span>
         </button>
         {hasUser && (
           <button

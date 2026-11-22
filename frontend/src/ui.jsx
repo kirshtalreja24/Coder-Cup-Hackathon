@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { useLang } from './i18n'
 import {
   CheckCircle2,
   Clock,
@@ -46,13 +47,31 @@ export const ROUTE_UI = {
   HUMAN_REVIEW: ['human', '🤝', 'human_review'], DECLINE_WITH_APPEAL: ['stop', '🛑', 'declined_appeal'], NEEDS_CONSENT: ['wait', '🔒', 'consent_identity'],
 }
 
+const STATUS_LABELS = {
+  paid: { ur: 'رقم جاری', roman: 'Raqam jaari', en: 'Paid' },
+  approved: { ur: 'منظور شدہ', roman: 'Manzoor shuda', en: 'Approved' },
+  closed: { ur: 'مکمل', roman: 'Mukammal', en: 'Closed' },
+  declined: { ur: 'مسترد', roman: 'Mustared', en: 'Declined' },
+  rejected: { ur: 'مسترد', roman: 'Mustared', en: 'Rejected' },
+  needs_proof: { ur: 'دستاویز درکار', roman: 'Dastaweez darkaar', en: 'Needs Proof' },
+  needs_consent: { ur: 'اجازت درکار', roman: 'Ijazat darkaar', en: 'Needs Consent' },
+  awaiting_human: { ur: 'انسانی جائزہ', roman: 'Insani jaiza', en: 'Awaiting Human' },
+  escalated: { ur: 'اہم جانچ', roman: 'Ahem jaanch', en: 'Escalated' },
+  draft: { ur: 'محفوظ شدہ ڈرافٹ', roman: 'Draft', en: 'Draft' },
+  awaiting_payment_consent: { ur: 'ادائیگی کی اجازت', roman: 'Payment consent', en: 'Payment Consent' },
+  under_review: { ur: 'زیرِ جائزہ', roman: 'Zair-e-jaiza', en: 'Under Review' },
+  submitted: { ur: 'درخواست موصول', roman: 'Darkhast mosool', en: 'Submitted' }
+}
+
 export const StatusBadge = ({ s }) => {
+  const { lang } = useLang()
   const conf = STATUS_CONFIG[s] || { cls: 'grey', icon: AlertCircle }
   const Icon = conf.icon
+  const localizedText = STATUS_LABELS[s]?.[lang] || STATUS_LABELS[s]?.en || (s || '').replaceAll('_', ' ')
   return (
     <span className={'badge ' + conf.cls}>
       <Icon size={12} strokeWidth={2.5} />
-      {(s || '').replaceAll('_', ' ')}
+      {localizedText}
     </span>
   )
 }
@@ -65,13 +84,23 @@ const ROUTE_CONFIG = {
   NEEDS_CONSENT: { cls: 'amber', icon: Clock }
 }
 
+const ROUTE_LABELS = {
+  AUTO_APPROVE: { ur: 'خودکار منظوری', roman: 'Auto Approve', en: 'Auto Approve' },
+  ASK_PROOF: { ur: 'دستاویز درکار', roman: 'Ask Proof', en: 'Ask Proof' },
+  HUMAN_REVIEW: { ur: 'انسانی جائزہ', roman: 'Human Review', en: 'Human Review' },
+  DECLINE_WITH_APPEAL: { ur: 'مسترد مع اپیل', roman: 'Decline with Appeal', en: 'Decline with Appeal' },
+  NEEDS_CONSENT: { ur: 'اجازت درکار', roman: 'Needs Consent', en: 'Needs Consent' }
+}
+
 export const RouteBadge = ({ r }) => {
+  const { lang } = useLang()
   const conf = ROUTE_CONFIG[r] || { cls: 'grey', icon: AlertCircle }
   const Icon = conf.icon
+  const localizedText = ROUTE_LABELS[r]?.[lang] || ROUTE_LABELS[r]?.en || (r || '').replaceAll('_', ' ')
   return (
     <span className={'badge ' + conf.cls}>
       <Icon size={12} strokeWidth={2.5} />
-      {(r || '').replaceAll('_', ' ')}
+      {localizedText}
     </span>
   )
 }

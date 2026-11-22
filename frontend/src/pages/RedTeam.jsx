@@ -421,7 +421,7 @@ function CategorySection({ cat, results }) {
             color: allPass ? GREEN : RED,
             border: `1px solid ${allPass ? GREEN_BRD : RED_BRD}`
           }}>
-            {allPass ? '✓ ALL PASS' : `${total - passed} FAIL`}
+            {allPass ? 'ALL PASS' : `${total - passed} FAIL`}
           </span>
 
           {collapsed
@@ -674,7 +674,7 @@ export default function RedTeam() {
             )}
 
             <div style={{ fontFamily: 'monospace', fontSize: '0.68rem', padding: '5px 12px', borderRadius: 999, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}>
-              {res ? `Last run: ${res.ran_at}` : '◯ Awaiting execution'}
+              {res ? `Last run: ${res.ran_at}` : 'Awaiting execution'}
             </div>
           </div>
         </div>
@@ -827,7 +827,7 @@ export default function RedTeam() {
                   </div>
                   {catTests.map(a => (
                     <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 7, padding: '3px 0' }}>
-                      <span style={{ fontFamily: 'monospace', fontSize: '0.62rem', color: '#D1D5DB', marginTop: 2, flexShrink: 0 }}>◯</span>
+                      <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#D1D5DB', marginTop: 6, flexShrink: 0 }} />
                       <div>
                         <span style={{ fontFamily: 'monospace', fontSize: '0.62rem', color: '#9CA3AF', marginRight: 5 }}>{a.id}</span>
                         <span style={{ fontSize: '0.74rem', color: '#4B5563' }}>{a.label}</span>
@@ -856,11 +856,13 @@ export default function RedTeam() {
               <span style={{ fontWeight: 700, fontSize: '0.95rem', color: FOREST }}>Security Test Execution</span>
               {busy && (
                 <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
                   fontFamily: 'monospace', fontSize: '0.65rem', padding: '2px 8px',
                   background: 'rgba(220,38,38,0.08)', border: '1px solid rgba(220,38,38,0.2)',
                   borderRadius: 999, color: RED, animation: 'pulse 1.5s ease-in-out infinite'
                 }}>
-                  ● LIVE
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: RED, display: 'inline-block' }} />
+                  <span>LIVE</span>
                 </span>
               )}
             </div>

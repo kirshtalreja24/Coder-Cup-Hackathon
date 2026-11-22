@@ -3,7 +3,7 @@ import { WifiOff } from 'lucide-react'
 import { useLang } from '../i18n'
 
 export default function StaffOfflineBanner({ online, pend, onOpenSyncCenter }) {
-  const { t } = useLang()
+  const { t, localize } = useLang()
   if (online) return null
 
   return (
@@ -27,10 +27,10 @@ export default function StaffOfflineBanner({ online, pend, onOpenSyncCenter }) {
           <WifiOff size={20} style={{ color: 'var(--gold-dark, #92400E)', flexShrink: 0 }} />
           <div>
             <strong style={{ color: 'var(--forest-dark, #0D2318)' }}>
-              Offline Mode — Working Locally
+              {localize('آف لائن موڈ — مقامی طور پر کام جاری ہے', 'Offline Mode — Local kaam jaari hai', 'Offline Mode — Working Locally')}
             </strong>
             <div className="small subtle" style={{ marginTop: 2 }}>
-              {t('saved_offline')} · Local audit logs and staging queue available ({pend} pending)
+              {t('saved_offline')} ({pend} {localize('باقی', 'baqi', 'pending')})
             </div>
           </div>
         </div>
@@ -48,7 +48,7 @@ export default function StaffOfflineBanner({ online, pend, onOpenSyncCenter }) {
             onOpenSyncCenter()
           }}
         >
-          Sync Center
+          {localize('سنک سینٹر', 'Sync Center', 'Sync Center')}
         </button>
       </div>
     </div>

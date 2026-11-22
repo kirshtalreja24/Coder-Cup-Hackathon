@@ -168,6 +168,10 @@ export function playPrompt(id, fallbackText, lang = 'ur') {
   lastSpokenLang = lang
   stop()
   return new Promise((resolve) => {
+    if (lang !== 'ur') {
+      speak(fallbackText, lang).then(resolve)
+      return
+    }
     playUrl(`/audio/${id}.mp3`)
       .then(() => resolve(true))
       .catch(() => {

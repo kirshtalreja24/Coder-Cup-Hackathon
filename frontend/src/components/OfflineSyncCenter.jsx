@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLang } from '../i18n'
 import {
   Wifi,
   WifiOff,
@@ -13,7 +14,8 @@ import {
   X,
   ExternalLink,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Check
 } from 'lucide-react'
 import {
   loadBox,
@@ -31,6 +33,7 @@ import {
 import { when } from '../api'
 
 export default function OfflineSyncCenter({ isOpen, onClose }) {
+  const { lang, rtl, localize } = useLang()
   const [box, setBox] = useState(loadBox())
   const [syncState, setSyncState] = useState({ isSyncing: isFlushing(), current: 0, total: 0 })
   const [online, setOnline] = useState(isEffectiveOnline())
@@ -167,7 +170,7 @@ export default function OfflineSyncCenter({ isOpen, onClose }) {
                     border: `1px solid ${online ? 'rgba(74, 222, 128, 0.4)' : 'rgba(252, 211, 77, 0.4)'}`
                   }}
                 >
-                  {online ? '● ONLINE' : '◯ OFFLINE STAGING'}
+                  {online ? 'ONLINE' : 'OFFLINE STAGING'}
                 </span>
               </div>
               <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: 'rgba(253, 251, 247, 0.72)' }}>
@@ -215,20 +218,38 @@ export default function OfflineSyncCenter({ isOpen, onClose }) {
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: '0.98rem', color: 'var(--forest-dark, #0D2318)', lineHeight: 1.3 }}>
-                Your application is saved on this device. It will sync when your connection returns.
+                {localize(
+                  'آپ کی درخواست اس ڈیوائس پر محفوظ ہے۔',
+                  'Aap ki application is device par mehfooz hai.',
+                  'Your application is saved on this device. It will sync when your connection returns.'
+                )}
               </div>
-              <div
-                style={{
-                  fontSize: '0.82rem',
-                  color: 'var(--gold-dark, #92400E)',
-                  marginTop: 4,
-                  lineHeight: 1.4,
-                  direction: 'rtl',
-                  fontFamily: 'Noto Nastaliq Urdu, serif, Tahoma'
-                }}
-              >
-                آپ کی درخواست اس فون پر محفوظ ہے۔ جیسے ہی نیٹ ورک بحال ہوگا یہ خود بخود جمع ہو جائے گی۔
-              </div>
+              {lang === 'ur' ? (
+                <div
+                  style={{
+                    fontSize: '0.82rem',
+                    color: 'var(--gold-dark, #92400E)',
+                    marginTop: 4,
+                    lineHeight: 1.4,
+                    direction: 'rtl',
+                    fontFamily: 'Noto Nastaliq Urdu, serif, Tahoma'
+                  }}
+                >
+                  آپ کی درخواست اس فون پر محفوظ ہے۔ جیسے ہی نیٹ ورک بحال ہوگا یہ خود بخود جمع ہو جائے گی۔
+                </div>
+              ) : lang === 'roman' ? (
+                <div
+                  style={{
+                    fontSize: '0.82rem',
+                    color: 'var(--gold-dark, #92400E)',
+                    marginTop: 4,
+                    lineHeight: 1.4,
+                    direction: 'ltr'
+                  }}
+                >
+                  Aap ki darkhast is phone par mehfooz hai. Net aane par khud ba khud sync ho jaye gi.
+                </div>
+              ) : null}
               <div style={{ fontSize: '0.72rem', color: 'var(--muted, #6B7280)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
                 <ShieldCheck size={13} style={{ color: 'var(--forest, #173D32)' }} />
                 <span>
@@ -251,12 +272,14 @@ export default function OfflineSyncCenter({ isOpen, onClose }) {
               }}
             >
               <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--muted, #6B7280)', fontFamily: 'monospace' }}>
-                Pending Sync
+                {localize('باقی سنک', 'Pending Sync', 'Pending Sync')}
               </div>
               <div style={{ fontSize: '1.4rem', fontWeight: 800, color: queued.length > 0 ? 'var(--gold-dark, #B45309)' : 'var(--forest, #173D32)' }}>
                 {queued.length}
               </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--muted, #9CA3AF)' }}>Waiting for signal</div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--muted, #9CA3AF)' }}>
+                {localize('سگنل کا انتظار', 'Waiting for signal', 'Waiting for signal')}
+              </div>
             </div>
 
             <div
@@ -268,12 +291,14 @@ export default function OfflineSyncCenter({ isOpen, onClose }) {
               }}
             >
               <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--muted, #6B7280)', fontFamily: 'monospace' }}>
-                Synced to Server
+                {localize('کامیاب سنک', 'Synced', 'Synced to Server')}
               </div>
               <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#16A34A' }}>
                 {done.length}
               </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--muted, #9CA3AF)' }}>Confirmed processed</div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--muted, #9CA3AF)' }}>
+                {localize('مکمل تصدیق شدہ', 'Confirmed', 'Confirmed processed')}
+              </div>
             </div>
 
             <div
@@ -285,13 +310,13 @@ export default function OfflineSyncCenter({ isOpen, onClose }) {
               }}
             >
               <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--muted, #6B7280)', fontFamily: 'monospace' }}>
-                Sync Errors
+                {localize('خرابیاں', 'Sync Errors', 'Sync Errors')}
               </div>
               <div style={{ fontSize: '1.4rem', fontWeight: 800, color: errors.length > 0 ? '#DC2626' : 'var(--muted, #9CA3AF)' }}>
                 {errors.length}
               </div>
               <div style={{ fontSize: '0.68rem', color: 'var(--muted, #9CA3AF)' }}>
-                {errors.length > 0 ? 'Needs retry' : 'No errors'}
+                {errors.length > 0 ? localize('دوبارہ کوشش درکار', 'Needs retry', 'Needs retry') : localize('کوئی خرابی نہیں', 'No errors', 'No errors')}
               </div>
             </div>
 
@@ -304,7 +329,7 @@ export default function OfflineSyncCenter({ isOpen, onClose }) {
               }}
             >
               <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'var(--muted, #6B7280)', fontFamily: 'monospace' }}>
-                Last Sync
+                {localize('آخری سنک', 'Last Sync', 'Last Sync')}
               </div>
               <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--forest-dark, #0D2318)', marginTop: 4 }}>
                 {formatLastSync(lastSync)}
@@ -476,10 +501,14 @@ export default function OfflineSyncCenter({ isOpen, onClose }) {
                               borderRadius: 999,
                               background: '#DCFCE7',
                               color: '#15803D',
-                              border: '1px solid #BBF7D0'
+                              border: '1px solid #BBF7D0',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4
                             }}
                           >
-                            ✓ SYNCED
+                            <Check size={11} />
+                            <span>SYNCED</span>
                           </span>
                         )}
 

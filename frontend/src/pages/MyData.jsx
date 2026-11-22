@@ -19,7 +19,9 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
-  ShieldX
+  ShieldX,
+  Scale,
+  Landmark
 } from 'lucide-react'
 import { apiGet, apiPatch, apiPost, getUser, when } from '../api'
 import { useLang } from '../i18n'
@@ -72,7 +74,7 @@ const GRANTEE_LABELS = {
 }
 
 export default function MyData({ subjectId, subjectName }) {
-  const { t, lang } = useLang()
+  const { t, lang, rtl, localize } = useLang()
   const q = subjectId ? `?subject_id=${subjectId}` : ''
   const cons = useAsync(() => apiGet('/consents' + q), [subjectId])
   const log = useAsync(() => apiGet('/consents/access-log' + q), [subjectId])
@@ -109,7 +111,11 @@ export default function MyData({ subjectId, subjectName }) {
     setErr(null)
     try {
       await apiPost(`/consents/${c.id}/withdraw`)
-      playPrompt('consent_withdrawn', 'Your permission was withdrawn.', lang === 'ur' ? 'ur' : 'en')
+      playPrompt(
+        'consent_withdrawn',
+        localize('آپ کی اجازت واپس لے لی گئی ہے۔', 'Aap ki ijazat wapis le li gayi hai.', 'Your permission was withdrawn.'),
+        lang
+      )
       setMsg(`Permission for "${c.scope}" revoked successfully.`)
       setBlockedExplain(true)
       setWithdrawTarget(null)
@@ -129,7 +135,11 @@ export default function MyData({ subjectId, subjectName }) {
       const r = await apiPost('/consents/withdraw-all' + q)
       setMsg(`Sovereign Lockdown Active: ${r.withdrawn} permission(s) revoked.`)
       setBlockedExplain(true)
-      playPrompt('consent_withdrawn', 'All permissions withdrawn.', lang === 'ur' ? 'ur' : 'en')
+      playPrompt(
+        'consent_withdrawn',
+        localize('تمام اجازتیں منسوخ کر دی گئی ہیں۔', 'Tamam ijazatein mansookh kar di gayi hain.', 'All permissions withdrawn.'),
+        lang
+      )
       setConfirmAllOpen(false)
       refresh()
     } catch (e) {
@@ -153,7 +163,7 @@ export default function MyData({ subjectId, subjectName }) {
   const withdrawnConsents = cons.data?.withdrawn || []
 
   return (
-    <div className="col narrow" style={{ gap: 24, maxWidth: 840, margin: '0 auto' }}>
+    <div className={`col narrow ${rtl ? 'rtl' : ''}`} dir={rtl ? 'rtl' : 'ltr'} style={{ gap: 24, maxWidth: 840, margin: '0 auto' }}>
       {/* Title Header with Sovereign Trust Theme */}
       <div
         className="card flat"
@@ -169,10 +179,10 @@ export default function MyData({ subjectId, subjectName }) {
           <div>
             <div className="row" style={{ gap: 8, marginBottom: 6 }}>
               <span className="badge" style={{ background: 'var(--gold)', color: '#fff', fontWeight: 700, fontSize: '0.75rem' }}>
-                DATA SOVEREIGNTY CONSOLE
+                {localize('ڈیٹا حاکمیت و پرائیویسی کنٹرول', 'Data Sovereignty Console', 'DATA SOVEREIGNTY CONSOLE')}
               </span>
               <span className="badge" style={{ background: 'rgba(255, 255, 255, 0.2)', color: '#fff', fontSize: '0.75rem' }}>
-                Zero-Knowledge Privacy
+                {localize('زیرو نالج پرائیویسی', 'Zero-Knowledge Privacy', 'Zero-Knowledge Privacy')}
               </span>
             </div>
             <h1 style={{ margin: 0, fontSize: '1.85rem', color: '#fff', lineHeight: 1.25 }}>
@@ -180,7 +190,11 @@ export default function MyData({ subjectId, subjectName }) {
               {subjectName && <span style={{ fontSize: '1.2rem', opacity: 0.9 }}> · {subjectName}</span>}
             </h1>
             <p style={{ margin: '8px 0 0', fontSize: '0.95rem', opacity: 0.88, maxWidth: 580, lineHeight: 1.5 }}>
-              You own your data. Government agencies, verification services, and welfare officers can only access your information with explicit, revocable permission.
+              {localize(
+                'آپ کا ڈیٹا آپ کی ملکیت ہے۔ سرکاری ادارے، تصدیقی سروسز اور ریلیف افسران صرف آپ کی صریح اور قابل تنسیخ اجازت سے ہی ڈیٹا دیکھ سکتے ہیں۔',
+                'Aap ka data aap ki milkiyat hai. Koi bhi idara bina ijazat data nahi dekh sakta.',
+                'You own your data. Government agencies, verification services, and welfare officers can only access your information with explicit, revocable permission.'
+              )}
             </p>
           </div>
 
@@ -197,7 +211,7 @@ export default function MyData({ subjectId, subjectName }) {
               onClick={() => setConfirmAllOpen(true)}
             >
               <ShieldAlert size={14} />
-              <span>Panic Button: Revoke All</span>
+              <span>{localize('پینک بٹن: تمام اجازتیں واپس لیں', 'Panic Button: Revoke All', 'Panic Button: Revoke All')}</span>
             </button>
           )}
         </div>
@@ -477,12 +491,12 @@ export default function MyData({ subjectId, subjectName }) {
                     <div>
                       <div className="row" style={{ gap: 8 }}>
                         <b style={{ fontSize: '1.05rem', color: 'var(--forest-dark)' }}>
-                          {meta.title?.[lang === 'ur' ? 'ur' : 'en'] || meta.title?.en}
+                          {meta.title?.[lang] || meta.title?.en}
                         </b>
-                        <span className="badge green small">ACTIVE</span>
+                        <span className="badge green small">{localize('فعال', 'Active', 'ACTIVE')}</span>
                       </div>
                       <div className="small subtle" style={{ marginTop: 2 }}>
-                        Granted to: <b>{granteeName}</b> · Since {when(c.granted_at)}
+                        {localize('اختیار دیا گیا:', 'Granted to:', 'Granted to:')} <b>{granteeName}</b> · {localize('تاریخ:', 'Since', 'Since')} {when(c.granted_at)}
                       </div>
                     </div>
                   </div>
@@ -492,7 +506,7 @@ export default function MyData({ subjectId, subjectName }) {
                     onClick={() => setWithdrawTarget(c)}
                     style={{ fontWeight: 600 }}
                   >
-                    Withdraw Consent
+                    {localize('اجازت واپس لیں', 'Ijazat wapis lein', 'Withdraw Consent')}
                   </button>
                 </div>
 
@@ -508,8 +522,9 @@ export default function MyData({ subjectId, subjectName }) {
                   }}
                 >
                   <div className="col" style={{ gap: 2 }}>
-                    <span className="small bold" style={{ color: 'var(--forest-dark)', fontSize: '0.78rem' }}>
-                      📋 WHAT DATA IS ACCESSED
+                    <span className="small bold" style={{ color: 'var(--forest-dark)', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <FileText size={13} style={{ color: 'var(--champagne)' }} />
+                      <span>WHAT DATA IS ACCESSED</span>
                     </span>
                     <span className="small muted" style={{ lineHeight: 1.4 }}>
                       {meta.what}
@@ -517,8 +532,9 @@ export default function MyData({ subjectId, subjectName }) {
                   </div>
 
                   <div className="col" style={{ gap: 2 }}>
-                    <span className="small bold" style={{ color: 'var(--forest-dark)', fontSize: '0.78rem' }}>
-                      ⚖️ WHY IT IS NEEDED
+                    <span className="small bold" style={{ color: 'var(--forest-dark)', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Scale size={13} style={{ color: 'var(--champagne)' }} />
+                      <span>WHY IT IS NEEDED</span>
                     </span>
                     <span className="small muted" style={{ lineHeight: 1.4 }}>
                       {c.purpose || meta.why}
@@ -526,8 +542,9 @@ export default function MyData({ subjectId, subjectName }) {
                   </div>
 
                   <div className="col" style={{ gap: 2 }}>
-                    <span className="small bold" style={{ color: 'var(--forest-dark)', fontSize: '0.78rem' }}>
-                      🏛️ WHO CAN ACCESS
+                    <span className="small bold" style={{ color: 'var(--forest-dark)', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <Landmark size={13} style={{ color: 'var(--champagne)' }} />
+                      <span>WHO CAN ACCESS</span>
                     </span>
                     <span className="small muted" style={{ lineHeight: 1.4 }}>
                       {granteeName} (Subject ID: {c.id.slice(0, 8)}…)

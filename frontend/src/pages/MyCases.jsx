@@ -106,15 +106,17 @@ function ReceiptQr({ value }) {
 // MY CASES (LIST VIEW)
 // ============================================================================
 export function MyCases() {
-  const { t } = useLang()
+  const { t, localize, rtl } = useLang()
   const { data, loading, error } = useAsync(() => apiGet('/cases?limit=50'), [])
 
   return (
-    <div className="col narrow" style={{ gap: 18 }}>
+    <div className={`col narrow ${rtl ? 'rtl' : ''}`} dir={rtl ? 'rtl' : 'ltr'} style={{ gap: 18 }}>
       <div className="row spread">
         <div>
           <h2 style={{ margin: 0 }}>{t('mycases')}</h2>
-          <span className="small subtle">Track your filed relief requests and decisions</span>
+          <span className="small subtle">
+            {localize('اپنی جمع کردہ تمام درخواستوں اور فیصلوں کا ریکارڈ دیکھیں', 'Apni darkhaston aur faislon ka record dekhein', 'Track your filed relief requests and decisions')}
+          </span>
         </div>
         <Link to="/c/claim" className="btn small">
           + {t('claim')}
@@ -134,9 +136,11 @@ export function MyCases() {
       {data?.length === 0 && (
         <div className="card col" style={{ alignItems: 'center', padding: '40px 20px', textAlign: 'center' }}>
           <FileText size={44} className="subtle" />
-          <h3 style={{ margin: '12px 0 4px' }}>No relief requests filed yet</h3>
+          <h3 style={{ margin: '12px 0 4px' }}>
+            {localize('ابھی تک کوئی درخواست جمع نہیں ہوئی', 'Abhi tak koi darkhast jama nahi hui', 'No relief requests filed yet')}
+          </h3>
           <p className="muted small" style={{ margin: '0 0 16px', maxWidth: 360 }}>
-            Submit an application for widow relief or low-income household assistance in minutes.
+            {localize('بیوہ امداد یا کم آمدنی والے خاندان کی امداد کے لیے چند منٹوں میں درخواست جمع کریں۔', 'Imdad ke liye chand minute mein darkhast jama karein.', 'Submit an application for widow relief or low-income household assistance in minutes.')}
           </p>
           <Link to="/c/claim" className="btn">
             {t('claim')}
@@ -184,7 +188,7 @@ export function MyCases() {
 // ============================================================================
 export function CaseView({ helper }) {
   const { id } = useParams()
-  const { t, lang, rtl } = useLang()
+  const { t, lang, rtl, localize } = useLang()
   const c = useAsync(() => apiGet('/cases/' + id), [id])
   const dec = useAsync(() => apiGet(`/cases/${id}/decision`).catch(() => null), [id])
   const tl = useAsync(() => apiGet(`/cases/${id}/timeline`), [id])
@@ -193,7 +197,7 @@ export function CaseView({ helper }) {
   const [copied, setCopied] = useState(false)
   const fileInputRef = useRef(null)
 
-  const L = lang === 'ur' ? 'ur' : 'en'
+  const L = lang === 'ur' ? 'ur' : lang === 'roman' ? 'roman' : 'en'
 
   // Document retake / re-upload
   const retake = async (e) => {
@@ -535,17 +539,17 @@ export function CaseView({ helper }) {
         <div className="row spread">
           <div>
             <span className="small subtle" style={{ textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Relief Case Tracking
+              {localize('امدادی درخواست کی مکمل ٹریکنگ', 'Imdadi Case Tracking', 'Relief Case Tracking')}
             </span>
             <h2 style={{ margin: '4px 0 0', fontSize: '1.5rem' }}>
-              Case #{x.id.slice(0, 8)}
+              {localize('درخواست نمبر', 'Case', 'Case')} #{x.id.slice(0, 8)}
             </h2>
           </div>
           <div className="col" style={{ alignItems: 'flex-end', gap: 4 }}>
-            <span className="small subtle">Filed {when(x.created_at)}</span>
+            <span className="small subtle">{localize('جمع کرائی گئی:', 'Jama karayi:', 'Filed')} {when(x.created_at)}</span>
             {(parsedAmount || x.amount) && (
               <span className="badge" style={{ background: 'var(--sage-soft)', fontSize: '0.92rem' }}>
-                Relief Grant: {money(parsedAmount || x.amount)}
+                {localize('امدادی رقم:', 'Imdadi Raqam:', 'Relief Grant:')} {money(parsedAmount || x.amount)}
               </span>
             )}
           </div>
@@ -564,19 +568,19 @@ export function CaseView({ helper }) {
             <div className="col" style={{ gap: 4, flex: 1 }}>
               <div className="row spread">
                 <span className="badge" style={{ background: 'var(--forest)', color: '#FFFEFA' }}>
-                  {rtl ? 'منظور شدہ' : 'Application Approved'}
+                  {localize('منظور شدہ', 'Manzoor Shuda', 'Application Approved')}
                 </span>
                 <button
                   type="button"
                   className="btn ghost icon-btn small no-print"
                   onClick={() => speak(reason, L)}
-                  title="Read aloud in Urdu"
+                  title={localize('آواز میں سنیں', 'Awaz mein sunein', 'Read aloud')}
                 >
                   <Volume2 size={18} />
                 </button>
               </div>
               <h3 className="decision-title">
-                {rtl ? 'امداد کی درخواست منظور' : 'Relief Application Approved'}
+                {localize('امداد کی درخواست منظور', 'Imdad ki darkhast manzoor', 'Relief Application Approved')}
               </h3>
               <p className="decision-reason">{reason}</p>
             </div>
@@ -607,26 +611,28 @@ export function CaseView({ helper }) {
             <div className="col" style={{ gap: 4, flex: 1 }}>
               <div className="row spread">
                 <span className="badge amber">
-                  {rtl ? 'انسانی افسر کا جائزہ' : 'Under Human Welfare Review'}
+                  {localize('انسانی افسر کا جائزہ', 'Insani officer ka jaiza', 'Under Human Welfare Review')}
                 </span>
                 <button
                   type="button"
                   className="btn ghost icon-btn small no-print"
                   onClick={() =>
                     speak(
-                      rtl
-                        ? 'آپ کی درخواست ایک انسانی افسر کے جائزے کے لیے قطار میں ہے۔'
-                        : 'A human welfare officer needs to review this application.',
+                      localize(
+                        'آپ کی درخواست ایک انسانی افسر کے جائزے کے لیے قطار میں ہے۔',
+                        'Aap ki darkhast ek insani officer ke jaize ke liye qataar mein hai.',
+                        'A human welfare officer needs to review this application.'
+                      ),
                       L
                     )
                   }
-                  title="Read aloud"
+                  title={localize('آواز میں سنیں', 'Awaz mein sunein', 'Read aloud')}
                 >
                   <Volume2 size={18} />
                 </button>
               </div>
               <h3 className="decision-title">
-                {rtl ? 'سرکاری افسر کا جائزہ درکار ہے' : 'Case Assigned for Officer Review'}
+                {localize('سرکاری افسر کا جائزہ درکار ہے', 'Sarkari officer ka jaiza darkaar hai', 'Case Assigned for Officer Review')}
               </h3>
               <p className="decision-reason">{reason}</p>
             </div>
@@ -637,14 +643,14 @@ export function CaseView({ helper }) {
             <UserCheck size={20} style={{ flex: 'none', marginTop: 2, color: 'var(--gold-dark)' }} />
             <div className="col" style={{ gap: 4 }}>
               <b style={{ color: 'var(--forest-dark)' }}>
-                {rtl
-                  ? 'اہم: یہ ابھی حتمی منظوری نہیں ہے۔'
-                  : 'Important: This is not an approval yet.'}
+                {localize('اہم: یہ ابھی حتمی منظوری نہیں ہے۔', 'Ahem: Yeh abhi hatmi manzoori nahi hai.', 'Important: This is not an approval yet.')}
               </b>
               <span>
-                {rtl
-                  ? 'سسٹم نے خودکار طور پر اس کیس کو ایک سرکاری ویلفیئر افسر کے پاس بھیجا ہے تاکہ آپ کے حقوق کا مکمل تحفظ ہو سکے۔ افسر دستاویزات اور معاشی کوائف کی دستی تصدیق کے بعد حتمی فیصلہ جاری کرے گا۔'
-                  : 'A human welfare officer needs to review this application before a final decision can be made. This ensures fairness and protects against algorithmic errors.'}
+                {localize(
+                  'سسٹم نے خودکار طور پر اس کیس کو ایک سرکاری ویلفیئر افسر کے پاس بھیجا ہے تاکہ آپ کے حقوق کا مکمل تحفظ ہو سکے۔ افسر دستاویزات اور معاشی کوائف کی دستی تصدیق کے بعد حتمی فیصلہ جاری کرے گا۔',
+                  'System ne khudkar tor par is case ko sarkari welfare officer ke paas bheja hai taake aap ke huqooq ka tahaffuz ho sakay.',
+                  'A human welfare officer needs to review this application before a final decision can be made. This ensures fairness and protects against algorithmic errors.'
+                )}
               </span>
             </div>
           </div>
@@ -674,19 +680,19 @@ export function CaseView({ helper }) {
             <div className="col" style={{ gap: 4, flex: 1 }}>
               <div className="row spread">
                 <span className="badge amber">
-                  {rtl ? 'دستاویز درکار' : 'More Information Required'}
+                  {localize('دستاویز درکار', 'Dastaweez darkaar', 'More Information Required')}
                 </span>
                 <button
                   type="button"
                   className="btn ghost icon-btn small no-print"
                   onClick={() => speak(reason, L)}
-                  title="Read aloud"
+                  title={localize('آواز میں سنیں', 'Awaz mein sunein', 'Read aloud')}
                 >
                   <Volume2 size={18} />
                 </button>
               </div>
               <h3 className="decision-title">
-                {rtl ? 'شناختی کارڈ کی واضح تصویر درکار ہے' : 'Clear Photo of Original ID Required'}
+                {localize('شناختی کارڈ کی واضح تصویر درکار ہے', 'Shanakhti card ki wazeh tasveer darkaar hai', 'Clear Photo of Original ID Required')}
               </h3>
               <p className="decision-reason">{reason}</p>
             </div>
@@ -705,7 +711,7 @@ export function CaseView({ helper }) {
               }}
             >
               <Camera size={20} />
-              <span>{rtl ? 'شناختی کارڈ کی صاف تصویر لیں' : 'Take / Upload Clear ID Photo'}</span>
+              <span>{localize('شناختی کارڈ کی صاف تصویر لیں', 'Shanakhti card ki saaf tasveer lein', 'Take / Upload Clear ID Photo')}</span>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -731,19 +737,19 @@ export function CaseView({ helper }) {
             <div className="col" style={{ gap: 4, flex: 1 }}>
               <div className="row spread">
                 <span className="badge red">
-                  {rtl ? 'درخواست مسترد' : 'Relief Not Approved'}
+                  {localize('درخواست مسترد', 'Darkhast mustared', 'Relief Not Approved')}
                 </span>
                 <button
                   type="button"
                   className="btn ghost icon-btn small no-print"
                   onClick={() => speak(reason, L)}
-                  title="Read aloud"
+                  title={localize('آواز میں سنیں', 'Awaz mein sunein', 'Read aloud')}
                 >
                   <Volume2 size={18} />
                 </button>
               </div>
               <h3 className="decision-title">
-                {rtl ? 'امداد کی درخواست منظور نہیں ہوئی' : 'Application Not Approved'}
+                {localize('امداد کی درخواست منظور نہیں ہوئی', 'Imdad ki darkhast manzoor nahi hui', 'Application Not Approved')}
               </h3>
               <p className="decision-reason">{reason}</p>
             </div>
@@ -763,7 +769,7 @@ export function CaseView({ helper }) {
             >
               <RotateCcw size={16} />
               <span>
-                {rtl ? 'انسان سے دوبارہ چیک کروائیں (اپیل کریں)' : 'Request Human Appeal (Re-check)'}
+                {localize('انسان سے دوبارہ چیک کروائیں (اپیل کریں)', 'Insaan se dobara check karwayein (Appeal karein)', 'Request Human Appeal (Re-check)')}
               </span>
             </button>
             <span className="small subtle" style={{ textAlign: 'center' }}>
@@ -991,10 +997,10 @@ export function CaseView({ helper }) {
                   <div className="v-timeline-header">
                     <div>
                       <h4 className="v-timeline-title">
-                        {rtl ? stg.titleUrdu : stg.title}
+                        {localize(stg.titleUrdu, stg.titleRoman || stg.title, stg.title)}
                       </h4>
                       <span className="small subtle" style={{ fontWeight: 600 }}>
-                        Stage {stg.id} of 7
+                        {localize(`مرحلہ ${stg.id} از 7`, `Stage ${stg.id} of 7`, `Stage ${stg.id} of 7`)}
                       </span>
                     </div>
 
@@ -1003,7 +1009,7 @@ export function CaseView({ helper }) {
                         <span className="small subtle">{when(stg.at)}</span>
                       )}
                       <span className={`badge small ${stg.statusClass === 'completed' ? '' : stg.statusClass === 'needs_attention' ? 'red' : 'amber'}`}>
-                        {rtl ? stg.statusLabelUrdu : stg.statusLabel}
+                        {localize(stg.statusLabelUrdu, stg.statusLabelRoman || stg.statusLabel, stg.statusLabel)}
                       </span>
                     </div>
                   </div>
@@ -1013,7 +1019,7 @@ export function CaseView({ helper }) {
                   {/* Expandable Technical / Audit Details */}
                   {stg.details?.length > 0 && (
                     <details className="v-timeline-details">
-                      <summary>View audit & verification details</summary>
+                      <summary>{localize('تصدیق اور آڈٹ کی تفصیلی معلومات دیکھیں', 'Verification aur audit details dekhein', 'View audit & verification details')}</summary>
                       <div className="col" style={{ gap: 6, marginTop: 8 }}>
                         {stg.details.map((d, di) => (
                           <div key={di} className="row spread" style={{ fontSize: '0.84rem' }}>
