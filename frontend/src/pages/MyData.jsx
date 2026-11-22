@@ -89,6 +89,9 @@ export default function MyData({ subjectId, subjectName }) {
   const [confirmAllOpen, setConfirmAllOpen] = useState(false) // for panic button confirmation
   const [actionBusy, setActionBusy] = useState(false)
   const [copiedReceipt, setCopiedReceipt] = useState(null)
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileSavedMsg, setProfileSavedMsg] = useState('')
+  const [profileErr, setProfileErr] = useState(null)
 
   const u = getUser()
   const [prof, setProf] = useState({ name: u?.name || '', phone: u?.phone || '' })
@@ -150,11 +153,26 @@ export default function MyData({ subjectId, subjectName }) {
   }
 
   const saveProfile = async () => {
+    setProfileSaving(true)
+    setProfileErr(null)
+    setProfileSavedMsg('')
     try {
-      await apiPatch('/auth/me/profile', prof)
-      setMsg('Profile contact details updated.')
+      const updated = await apiPatch('/auth/me/profile', prof)
+      const current = getUser()
+      if (current) {
+        localStorage.setItem('bh_user', JSON.stringify({ ...current, ...prof, ...(updated || {}) }))
+      }
+      const successMsg = localize(
+        'پروفائل کی تفصیلات کامیابی کے ساتھ محفوظ ہو گئی ہیں۔',
+        'Profile ki maloomat kamyabi se mehfooz ho gayi hain.',
+        'Profile contact details saved successfully!'
+      )
+      setProfileSavedMsg(successMsg)
+      setMsg(successMsg)
     } catch (e) {
-      setErr(e)
+      setProfileErr(e)
+    } finally {
+      setProfileSaving(false)
     }
   }
 
@@ -739,36 +757,105 @@ export default function MyData({ subjectId, subjectName }) {
         <div className="card col" style={{ gap: 14 }}>
           <div>
             <h3 style={{ margin: 0, fontSize: '1.05rem', color: 'var(--forest-dark)' }}>
-              Accurate Notification Channel
+              {localize('درست رابطہ و اطلاعاتی چینل', 'Notification Channel', 'Accurate Notification Channel')}
             </h3>
             <div className="small subtle" style={{ marginTop: 2 }}>
-              Keep your contact phone updated to receive instant SMS notifications when payments are disbursed
+              {localize(
+                'رقم کی منتقلی کے فوری ایس ایم ایس وصول کرنے کے لیے اپنا فون نمبر اپ ڈیٹ رکھیں۔',
+                'Raqam ki muntaqli ke SMS ke liye apna phone number durust rakhein.',
+                'Keep your contact phone updated to receive instant SMS notifications when payments are disbursed'
+              )}
             </div>
           </div>
           <div className="admin-grid-2" style={{ gap: 12 }}>
             <div>
-              <label style={{ fontSize: '0.85rem' }}>Full Legal Name</label>
+              <label style={{ fontSize: '0.85rem' }}>
+                {localize('مکمل قانونی نام', 'Mukammal Naam', 'Full Legal Name')}
+              </label>
               <input
                 value={prof.name}
-                onChange={(e) => setProf({ ...prof, name: e.target.value })}
+                disabled={profileSaving}
+                onChange={(e) => {
+                  setProf({ ...prof, name: e.target.value })
+                  if (profileSavedMsg) setProfileSavedMsg('')
+                }}
               />
             </div>
             <div>
-              <label style={{ fontSize: '0.85rem' }}>Verified Mobile Phone (for 8171 SMS)</label>
+              <label style={{ fontSize: '0.85rem' }}>
+                {localize('تصدیق شدہ موبائل نمبر (8171 ایس ایم ایس کے لیے)', 'Verified Mobile Phone (8171 SMS)', 'Verified Mobile Phone (for 8171 SMS)')}
+              </label>
               <input
                 value={prof.phone || ''}
-                onChange={(e) => setProf({ ...prof, phone: e.target.value })}
+                disabled={profileSaving}
+                onChange={(e) => {
+                  setProf({ ...prof, phone: e.target.value })
+                  if (profileSavedMsg) setProfileSavedMsg('')
+                }}
                 placeholder="0300-1234567"
               />
             </div>
           </div>
+
+          {profileErr && <ErrorBox e={profileErr} />}
+
+          {profileSavedMsg && (
+            <div
+              className="banner ok"
+              style={{
+                margin: 0,
+                padding: '10px 14px',
+                borderRadius: 'var(--radius)',
+                borderLeft: '4px solid var(--forest)',
+                background: 'var(--sage-soft)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10
+              }}
+            >
+              <CheckCircle2 size={18} style={{ color: 'var(--forest)', flexShrink: 0 }} />
+              <div style={{ flex: 1, fontSize: '0.9rem', fontWeight: 600, color: 'var(--forest-dark)' }}>
+                {profileSavedMsg}
+              </div>
+            </div>
+          )}
+
           <button
             onClick={saveProfile}
+            disabled={profileSaving}
             className="btn small"
-            style={{ alignSelf: 'flex-start', background: 'var(--forest)', color: '#fff' }}
+            style={{
+              alignSelf: 'flex-start',
+              background: 'var(--forest)',
+              color: '#fff',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              opacity: profileSaving ? 0.75 : 1,
+              cursor: profileSaving ? 'not-allowed' : 'pointer'
+            }}
           >
-            <Edit3 size={14} />
-            <span>Save Profile</span>
+            {profileSaving ? (
+              <>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 14,
+                    height: 14,
+                    border: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderTopColor: '#fff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite'
+                  }}
+                />
+                <span>{localize('محفوظ ہو رہا ہے...', 'Mehfooz ho raha hai...', 'Saving Profile...')}</span>
+              </>
+            ) : (
+              <>
+                <Edit3 size={14} />
+                <span>{localize('پروفائل محفوظ کریں', 'Profile Mehfooz Karein', 'Save Profile')}</span>
+              </>
+            )}
           </button>
         </div>
       )}
