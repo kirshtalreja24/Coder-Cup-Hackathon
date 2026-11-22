@@ -455,12 +455,12 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
               setTranscript(q)
               handleUtterance(q) // typed text goes through the same "what do you want?" step as speech
             }}
-            style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}
+            style={{ width: '100%', maxWidth: 520, margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}
           >
-            <label htmlFor="typed-question" style={{ fontWeight: 800, color: 'var(--forest-dark, #0D2318)' }}>
+            <label htmlFor="typed-question" style={{ fontWeight: 800, color: 'var(--forest-dark, #0D2318)', textAlign: 'center' }}>
               {lang === 'ur' ? 'اپنا سوال لکھیں (Type your question)' : 'Type your question'}
             </label>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, width: '100%' }}>
               <input
                 id="typed-question"
                 type="text"
@@ -475,7 +475,7 @@ export function VoiceAssistant({ inline = false, onClose, initialPrompt = '' }) 
                 {state === 'processing' ? '…' : (lang === 'ur' ? 'پوچھیں' : 'Ask')}
               </button>
             </div>
-            <div className="small subtle">
+            <div className="small subtle" style={{ textAlign: 'center' }}>
               {lang === 'ur' ? 'یا نیچے مائیک دبا کر بولیں۔' : 'Or tap the microphone below and speak.'}
             </div>
           </form>

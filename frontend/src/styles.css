@@ -498,7 +498,7 @@ button.icon-btn {
   border-radius: var(--radius-md);
 }
 
-input, select, textarea {
+input:not([type="range"]), select, textarea {
   font-family: var(--font-sans);
   font-size: 0.95rem;
   width: 100%;
@@ -516,10 +516,93 @@ textarea {
   resize: vertical;
 }
 
-input:focus, select:focus, textarea:focus {
+input:not([type="range"]):focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px var(--gold-tint);
+}
+
+/* Range Slider (Risk Dial & Loss Matrix) - Clean & 100% Symmetric */
+input[type="range"],
+.risk-dial-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  min-height: 8px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: #e2e8f0;
+  outline: none;
+  cursor: pointer;
+  margin: 12px 0;
+  box-shadow: none;
+  display: block;
+}
+
+input[type="range"]:focus,
+.risk-dial-slider:focus {
+  outline: none;
+  box-shadow: none;
+  border: none;
+}
+
+input[type="range"]::-webkit-slider-runnable-track,
+.risk-dial-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+}
+
+input[type="range"]::-webkit-slider-thumb,
+.risk-dial-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2.5px solid #2F5C8F;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  margin-top: -7px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover,
+.risk-dial-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.12);
+  box-shadow: 0 2px 8px rgba(47, 92, 143, 0.35);
+}
+
+input[type="range"]::-moz-range-track,
+.risk-dial-slider::-moz-range-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+}
+
+input[type="range"]::-moz-range-thumb,
+.risk-dial-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 2.5px solid #2F5C8F;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-progress,
+.risk-dial-slider::-moz-range-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: #2F5C8F;
 }
 
 label {
@@ -857,8 +940,11 @@ tr:hover td {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 14px auto;
+  text-align: center;
   gap: 8px;
-  margin: 12px 0;
 }
 
 .mic {
@@ -1282,11 +1368,15 @@ tr:hover td {
   background: var(--ivory);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 10px 14px;
+  padding: 12px 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: center;
+  flex-direction: column;
+  text-align: center;
+  gap: 10px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .primary-claim-mic-btn {
@@ -1294,14 +1384,16 @@ tr:hover td {
   color: var(--forest-dark);
   border: 1.5px solid rgba(23, 61, 50, 0.2);
   border-radius: var(--radius-full);
-  padding: 8px 16px;
+  padding: 8px 20px;
   font-size: 0.9rem;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   cursor: pointer;
   min-height: 42px;
+  margin: 0 auto;
   transition: all var(--transition-fast);
 }
 
@@ -1764,7 +1856,7 @@ tr:hover td {
 /* Big Marital Status Button Grid */
 .status-option-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 

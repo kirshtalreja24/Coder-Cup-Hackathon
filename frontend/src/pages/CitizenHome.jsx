@@ -408,20 +408,31 @@ export default function CitizenHome() {
           {/* Integrated Microphone Voice Trigger Option */}
           <div
             className="primary-claim-mic-bar"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              gap: 10,
+              padding: '14px 16px',
+              margin: '0 auto',
+              width: '100%'
+            }}
             onClick={(e) => {
               e.preventDefault()
               e.stopPropagation()
               setShowVoiceAssistant(true)
             }}
           >
-            <div className="row" style={{ gap: 8 }}>
+            <div className="row" style={{ gap: 8, justifyContent: 'center', textAlign: 'center' }}>
               <Sparkles size={16} style={{ color: 'var(--gold-dark)' }} />
               <span className="small" style={{ fontWeight: 600 }}>
                 {localize('آواز کے ذریعے معاونت اور سوالات:', 'Awaz ke zariye madad aur sawalaat:', 'Voice Assistant & Guidance:')}
               </span>
             </div>
 
-            <button type="button" className="primary-claim-mic-btn">
+            <button type="button" className="primary-claim-mic-btn" style={{ margin: '0 auto' }}>
               <Mic size={17} style={{ color: 'var(--forest)' }} />
               <span>{localize('بولیں (Assistant)', 'Bolein (Assistant)', 'Voice Assistant')}</span>
             </button>

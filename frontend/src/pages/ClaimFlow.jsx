@@ -30,7 +30,6 @@ import {
   UserCheck,
   Shield,
   Receipt,
-  HeartHandshake,
   Delete
 } from 'lucide-react'
 import { api, apiPost, BASE } from '../api'
@@ -118,18 +117,18 @@ function MicButton({ onText, numeric, label = 'Speak' }) {
   }
 
   return (
-    <div className="mic-container" style={{ margin: '8px 0' }}>
+    <div className="mic-container" style={{ margin: '14px auto', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
       <button
         type="button"
         className={'mic ' + (rec ? 'rec' : '')}
         aria-label={localize('اردو میں بولیں', 'Urdu mein bolein', 'Speak in English')}
         onClick={toggle}
         title={rec ? localize('بولنا ختم کرنے کے لیے دبائیں', 'Bolna khatam karne ke liye dabayein', 'Tap to finish speaking') : localize('اردو میں بولنے کے لیے دبائیں', 'Urdu mein bolne ke liye dabayein', 'Tap to speak in English')}
-        style={{ width: 68, height: 68 }}
+        style={{ width: 68, height: 68, margin: '0 auto' }}
       >
         {rec ? <Square size={24} /> : <MicIcon size={28} />}
       </button>
-      <span className="small muted">
+      <span className="small muted" style={{ textAlign: 'center', display: 'block', width: '100%' }}>
         {rec ? localize('سن رہا ہوں… رکنے کے لیے دبائیں', 'Sun raha hoon… rukne ke liye dabayein', 'Listening in English… tap to stop') : label}
       </span>
     </div>
@@ -860,7 +859,6 @@ export default function ClaimFlow({ helper }) {
 
               <div className="status-option-grid">
                 {[
-                  ['widowed', HeartHandshake, t('widow')],
                   ['married', UsersIcon, t('married')],
                   ['single', User, t('single')]
                 ].map(([v, IconComponent, label]) => (

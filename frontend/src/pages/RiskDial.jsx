@@ -116,26 +116,34 @@ export default function RiskDial() {
             <h3 style={{ margin: 0 }}>Loss Matrix Parameters (PKR)</h3>
           </div>
 
-          {Object.entries(LABEL).map(([k, [l, hint, mn, mx, st]]) => (
-            <div key={k} className="col" style={{ gap: 4 }}>
-              <div className="row spread">
-                <label style={{ margin: 0 }}>{l}</label>
-                <b className="mono" style={{ color: 'var(--forest)' }}>
-                  PKR {Number(c[k]).toLocaleString()}
-                </b>
+          {Object.entries(LABEL).map(([k, [l, hint, mn, mx, st]]) => {
+            const val = Number(c[k]) || 0
+            const pct = Math.min(100, Math.max(0, ((val - mn) / (mx - mn)) * 100))
+            return (
+              <div key={k} className="col" style={{ gap: 4 }}>
+                <div className="row spread">
+                  <label style={{ margin: 0 }}>{l}</label>
+                  <b className="mono" style={{ color: 'var(--forest)' }}>
+                    PKR {val.toLocaleString()}
+                  </b>
+                </div>
+                <input
+                  type="range"
+                  className="risk-dial-slider"
+                  min={mn}
+                  max={mx}
+                  step={st}
+                  value={c[k]}
+                  disabled={me.role === 'auditor'}
+                  style={{
+                    background: `linear-gradient(to right, #2F5C8F 0%, #2F5C8F ${pct}%, #e2e8f0 ${pct}%, #e2e8f0 100%)`
+                  }}
+                  onChange={(e) => setC({ ...c, [k]: Number(e.target.value) })}
+                />
+                <div className="small subtle">{hint}</div>
               </div>
-              <input
-                type="range"
-                min={mn}
-                max={mx}
-                step={st}
-                value={c[k]}
-                disabled={me.role === 'auditor'}
-                onChange={(e) => setC({ ...c, [k]: Number(e.target.value) })}
-              />
-              <div className="small subtle">{hint}</div>
-            </div>
-          ))}
+            )
+          })}
 
           <div className="row spread" style={{ paddingTop: 8 }}>
             <button
