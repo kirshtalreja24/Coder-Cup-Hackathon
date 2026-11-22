@@ -36,7 +36,7 @@ import {
 import { api, apiPost, BASE } from '../api'
 import { useLang } from '../i18n'
 import { EMPTY_FORM, clearDraft, flush, loadDraft, queueClaim, saveDraft, shrinkImage } from '../offline'
-import { canListen, listen, playPrompt, speak, spokenNumber, stop } from '../voice'
+import { canListen, listen, playPrompt, recognitionLang, speak, spokenNumber, stop } from '../voice'
 import { ErrorBox, MockTag } from '../ui'
 import Recourse from '../components/Recourse'
 import DecisionReceipt from '../components/Receipt'
@@ -95,6 +95,7 @@ function fmtCnic(d) {
 
 // Accessible tactile microphone button with speech recording pulse
 function MicButton({ onText, numeric, label = 'Speak' }) {
+  const { lang, localize } = useLang()
   const [rec, setRec] = useState(false)
   const stopRef = useRef(null)
 
@@ -108,7 +109,7 @@ function MicButton({ onText, numeric, label = 'Speak' }) {
     stop()
     setRec(true)
     stopRef.current = listen({
-      lang: 'ur-PK',
+      lang: recognitionLang(lang), // English site -> listens in English and writes English letters
       onResult: (x) => onText(numeric ? spokenNumber(x) : x),
       onEnd: () => setRec(false),
       onError: () => setRec(false)
@@ -120,15 +121,15 @@ function MicButton({ onText, numeric, label = 'Speak' }) {
       <button
         type="button"
         className={'mic ' + (rec ? 'rec' : '')}
-        aria-label="Speak in Urdu"
+        aria-label={localize('اردو میں بولیں', 'Urdu mein bolein', 'Speak in English')}
         onClick={toggle}
-        title={rec ? 'Tap to finish speaking' : 'Tap to speak in Urdu'}
+        title={rec ? localize('بولنا ختم کرنے کے لیے دبائیں', 'Bolna khatam karne ke liye dabayein', 'Tap to finish speaking') : localize('اردو میں بولنے کے لیے دبائیں', 'Urdu mein bolne ke liye dabayein', 'Tap to speak in English')}
         style={{ width: 68, height: 68 }}
       >
         {rec ? <Square size={24} /> : <MicIcon size={28} />}
       </button>
       <span className="small muted">
-        {rec ? 'Listening in Urdu… tap to stop' : label}
+        {rec ? localize('سن رہا ہوں… رکنے کے لیے دبائیں', 'Sun raha hoon… rukne ke liye dabayein', 'Listening in English… tap to stop') : label}
       </span>
     </div>
   )
@@ -254,6 +255,64 @@ export default function ClaimFlow({ helper }) {
     } finally {
       setCompressing(false)
     }
+  }
+
+  // Live camera: getUserMedia works on desktop too (the `capture` attribute is ignored there).
+  const [camOpen, setCamOpen] = useState(false)
+  const [camError, setCamError] = useState('')
+  const videoRef = useRef()
+  const streamRef = useRef(null)
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    streamRef.current = null
+    setCamOpen(false)
+  }
+
+  const openCamera = async () => {
+    setCamError('')
+    if (!navigator.mediaDevices?.getUserMedia) {
+      cameraRef.current?.click() // fallback to native capture input
+      return
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false
+      })
+      streamRef.current = stream
+      setCamOpen(true)
+    } catch {
+      setCamError('Camera permission denied or unavailable. Please allow camera access or use Gallery.')
+      cameraRef.current?.click()
+    }
+  }
+
+  useEffect(() => {
+    if (camOpen && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current
+      videoRef.current.play?.().catch(() => {})
+    }
+  }, [camOpen])
+
+  useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), [])
+
+  const snapPhoto = () => {
+    const v = videoRef.current
+    if (!v || !v.videoWidth) return
+    const canvas = document.createElement('canvas')
+    canvas.width = v.videoWidth
+    canvas.height = v.videoHeight
+    canvas.getContext('2d').drawImage(v, 0, 0)
+    canvas.toBlob(
+      async (blob) => {
+        stopCamera()
+        if (!blob) return
+        await handlePhotoUpload({ target: { files: [new File([blob], 'id-card.jpg', { type: 'image/jpeg' })] } })
+      },
+      'image/jpeg',
+      0.9
+    )
   }
 
   const payload = () => ({
@@ -1088,7 +1147,7 @@ export default function ClaimFlow({ helper }) {
                     <button
                       type="button"
                       className="btn ghost small"
-                      onClick={() => cameraRef.current?.click()}
+                      onClick={openCamera}
                     >
                       <Camera size={14} />
                       <span>{localize('دوبارہ تصویر لیں', 'Dobara tasveer lein', 'Retake with Camera')}</span>
@@ -1130,7 +1189,7 @@ export default function ClaimFlow({ helper }) {
                   <div className="row" style={{ gap: 10, justifyContent: 'center' }}>
                     <button
                       type="button"
-                      onClick={() => cameraRef.current?.click()}
+                      onClick={openCamera}
                       style={{ padding: '10px 18px' }}
                     >
                       <Camera size={16} />
@@ -1154,6 +1213,34 @@ export default function ClaimFlow({ helper }) {
                     </span>
                   )}
                 </>
+              )}
+
+              {camError && <span className="small" style={{ color: 'var(--danger, #b00020)' }}>{camError}</span>}
+              {camOpen && (
+                <div
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 1000, background: '#000',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center',
+                    justifyContent: 'center', gap: 16, padding: 16
+                  }}
+                >
+                  <video
+                    ref={videoRef}
+                    playsInline
+                    muted
+                    autoPlay
+                    style={{ maxWidth: '100%', maxHeight: '75vh', borderRadius: 12 }}
+                  />
+                  <div className="row" style={{ gap: 12 }}>
+                    <button type="button" onClick={snapPhoto} style={{ padding: '12px 24px' }}>
+                      <Camera size={18} />
+                      <span>{localize('تصویر کھینچیں', 'Tasveer khainchein', 'Capture')}</span>
+                    </button>
+                    <button type="button" className="btn secondary" onClick={stopCamera} style={{ padding: '12px 24px' }}>
+                      <span>{localize('منسوخ', 'Cancel', 'Cancel')}</span>
+                    </button>
+                  </div>
+                </div>
               )}
 
               {/* Hidden file inputs */}
