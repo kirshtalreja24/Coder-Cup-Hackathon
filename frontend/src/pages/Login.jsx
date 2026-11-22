@@ -7,8 +7,6 @@ import {
   Lock,
   ArrowRight,
   AlertTriangle,
-  ExternalLink,
-  BookOpen,
   UserCheck,
   Users,
   Briefcase,
@@ -16,7 +14,6 @@ import {
   CheckCircle2,
   RefreshCw
 } from 'lucide-react'
-import { BASE } from '../api'
 import { useAuth, HOME, isRouteAllowed } from '../auth'
 import PrototypeBanner from '../components/PrototypeBanner'
 import { LangSwitch, useLang } from '../i18n'
@@ -366,17 +363,6 @@ export default function Login() {
           <AlertTriangle size={15} style={{ color: 'var(--terracotta)' }} />
           <span>{localize('مشکوک ایس ایم ایس کی تصدیق کریں (عوامی سروس)', 'Mashkook SMS ki jaanch (Public check)', 'Verify a suspicious SMS (public check)')}</span>
         </Link>
-        <a
-          href={BASE + '/docs'}
-          target="_blank"
-          rel="noreferrer"
-          className="row subtle"
-          style={{ gap: 6 }}
-        >
-          <BookOpen size={15} />
-          <span>{localize('API کی دستاویزات (Swagger)', 'API ki dastaweezat (Swagger)', 'API Documentation (Swagger)')}</span>
-          <ExternalLink size={13} />
-        </a>
       </div>
     </div>
   )
